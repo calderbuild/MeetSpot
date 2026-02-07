@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
@@ -31,9 +36,25 @@ jobs:
         id: pr-type
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_TITLE_LOWER="$(echo "$PR_TITLE" | tr '[:upper:]' '[:lower:]')"
           echo "PR Title: $PR_TITLE"
-          
-          if [[ $PR_TITLE == *"Bump"* ]] && [[ $PR_TITLE == *"patch"* || $PR_TITLE =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
+
+          # Auto-merge only patch-level semver updates in title:
+          # "... from X.Y.Z to A.B.C" where X==A and Y==B and C increases.
+          if [[ $PR_TITLE_LOWER =~ from[[:space:]]([0-9]+)\.([0-9]+)\.([0-9]+)[[:space:]]to[[:space:]]([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            FROM_MAJOR="${BASH_REMATCH[1]}"
+            FROM_MINOR="${BASH_REMATCH[2]}"
+            FROM_PATCH="${BASH_REMATCH[3]}"
+            TO_MAJOR="${BASH_REMATCH[4]}"
+            TO_MINOR="${BASH_REMATCH[5]}"
+            TO_PATCH="${BASH_REMATCH[6]}"
+
+            if [[ "$FROM_MAJOR" == "$TO_MAJOR" && "$FROM_MINOR" == "$TO_MINOR" && "$TO_PATCH" -gt "$FROM_PATCH" ]]; then
+              echo "safe-update=true" >> $GITHUB_OUTPUT
+            else
+              echo "safe-update=false" >> $GITHUB_OUTPUT
+            fi
+          elif [[ $PR_TITLE_LOWER == *"patch"* ]]; then
             echo "safe-update=true" >> $GITHUB_OUTPUT
           else
             echo "safe-update=false" >> $GITHUB_OUTPUT
@@ -52,7 +73,8 @@ jobs:
         if: steps.pr-type.outputs.safe-update == 'false'
         run: |
           gh pr edit "${{ github.event.pull_request.number }}" \
-            --add-label "needs-review,major-update"
+            --add-label "needs-review" \
+            --add-label "major-update"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
