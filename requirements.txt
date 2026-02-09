@@ -12,7 +12,7 @@ loguru==0.7.3
 tomli==2.1.0
 python-dateutil==2.9.0
 jieba==0.42.1
-whitenoise==6.6.0
+whitenoise==6.11.0
 slowapi==0.1.9
 markdown2==2.4.12
 asgiref==3.8.1
