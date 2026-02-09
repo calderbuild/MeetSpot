@@ -14,7 +14,7 @@ python-dateutil==2.9.0
 jieba==0.42.1
 whitenoise==6.6.0
 slowapi==0.1.9
-markdown2==2.4.12
+markdown2==2.5.4
 asgiref==3.8.1
 requests==2.32.3
 beautifulsoup4==4.12.3
