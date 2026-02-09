@@ -15,7 +15,7 @@ jieba==0.42.1
 whitenoise==6.6.0
 slowapi==0.1.9
 markdown2==2.4.12
-asgiref==3.8.1
+asgiref==3.11.0
 requests==2.32.3
 beautifulsoup4==4.12.3
 sqlalchemy==2.0.23
