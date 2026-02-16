@@ -131,12 +131,6 @@ class SEOContentGenerator:
                     "price": "0",
                     "priceCurrency": "USD",
                 },
-                "aggregateRating": {
-                    "@type": "AggregateRating",
-                    "ratingValue": "4.9",
-                    "ratingCount": "10000",
-                    "bestRating": "5",
-                },
                 "isAccessibleForFree": True,
                 "applicationSubCategory": "Meeting & Location Planning",
                 "author": {
@@ -145,18 +139,12 @@ class SEOContentGenerator:
                 },
             }
         if page_type == "website":
-            search_path = data.get("search_url", "/search")
             return {
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 "name": "MeetSpot",
                 "url": base_url + "/",
                 "inLanguage": "zh-CN",
-                "potentialAction": {
-                    "@type": "SearchAction",
-                    "target": f"{base_url}{search_path}?q={{query}}",
-                    "query-input": "required name=query",
-                },
             }
         if page_type == "organization":
             return {

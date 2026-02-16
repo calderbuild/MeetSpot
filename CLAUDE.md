@@ -29,6 +29,8 @@ pytest tests/test_file.py::test_name -v  # Single test
 pytest --cov=app tests/                  # Coverage (target: 80%)
 python tests/test_seo.py http://localhost:8000  # SEO validation (standalone)
 
+# NOTE: tests/ is gitignored -- tests exist locally but are not in the repo
+
 # Quality gates (run before PRs)
 black . && ruff check . && mypy app/
 
@@ -75,7 +77,8 @@ Complexity scoring: +10/location, +15 for complex keywords, +10 for special requ
 
 ### Entry Points
 - `web_server.py` - Main entry, auto-detects production vs development
-- `api/index.py` - FastAPI app with all endpoints, middleware, and request handling
+- `api/index.py` - FastAPI app with all endpoints, middleware, rate limiting (slowapi), CORS, and request concurrency control (MAX_CONCURRENT_REQUESTS = 3)
+- `npm run dev` / `npm start` - Proxy to the same Python entry point for platforms that expect Node scripts
 
 ### Three-Tier Configuration (Graceful Degradation)
 
@@ -89,14 +92,15 @@ Complexity scoring: +10/location, +15 for complex keywords, +10 for special requ
 
 ```
 app/tool/meetspot_recommender.py    # Main recommendation engine (CafeRecommender class)
-  |- university_mapping dict        # 45 abbreviations (e.g., "北大" -> "北京市海淀区北京大学")
-  |- landmark_mapping dict          # 45 city landmarks (e.g., "陆家嘴" -> "上海市浦东新区陆家嘴")
+  |- _enhance_address()             # 10 hardcoded aliases with city prefix
   |- PLACE_TYPE_CONFIG dict         # 12 venue themes with colors, icons
+  |- BRAND_FEATURES dict            # 50+ brand profiles with feature scores
   |- _rank_places()                 # 100-point scoring algorithm
   |- _generate_html_content()       # Standalone HTML with Amap JS API
   |- geocode_cache (max 30)         # LRU-style address cache (reduced for free tier)
   |- poi_cache (max 15)             # LRU-style POI cache (reduced for free tier)
 
+data/address_aliases.json           # 48 university + 5 landmark abbreviation mappings
 app/design_tokens.py                # WCAG AA color palette, CSS generation
 api/routers/seo_pages.py            # SEO landing pages
 ```
@@ -112,18 +116,6 @@ When Agent Mode is enabled, final venue scores blend rule-based and LLM semantic
 Final Score = Rule Score * 0.4 + LLM Score * 0.6
 ```
 Agent Mode is currently disabled (`agent_available = False`) to conserve memory on free hosting tiers.
-
-### Data Flow
-
-```
-1. Address enhancement (90+ university/landmark mappings)
-2. Geocoding via Amap API (with retry + rate limiting)
-3. Center point calculation (spherical geometry)
-4. POI search (concurrent for multiple keywords)
-   Fallback: tries 餐厅->咖啡馆->商场->美食, then expands to 50km
-5. Ranking with multi-scenario balancing (max 8 venues)
-6. HTML generation -> workspace/js_src/
-```
 
 ### Optional Components
 
@@ -143,18 +135,16 @@ Edit `_rank_places()` in `meetspot_recommender.py`:
 
 ### Distance Filtering
 Two-stage distance handling in `meetspot_recommender.py`:
-1. **POI Search**: Amap API `radius` parameter (hardcoded 5000m, fallback to 50000m)
+1. **POI Search**: Amap API `radius` parameter (hardcoded 5000m, fallback to 50000m) in `_search_places()` calls
 2. **Post-filter**: `max_distance` parameter in `_rank_places()` (default 100km, in meters)
-
-The `max_distance` filter applies after POI retrieval during ranking. To change search radius, modify `radius=5000` in `_search_places()` calls around lines 556-643.
 
 ### Brand Knowledge Base
 `BRAND_FEATURES` dict in `meetspot_recommender.py` contains 50+ brand profiles (Starbucks, Haidilao, etc.) with feature scores (0.0-1.0) for: quiet, WiFi, business, parking, child-friendly, 24h. Used in requirements matching - brands scoring >=0.7 satisfy the requirement. Place types prefixed with `_` (e.g., `_library`) provide defaults.
 
 ### Adding Address Mappings
-**Preferred**: Edit `data/address_aliases.json` - maps abbreviations to full names (e.g., "北大" → "北京大学").
+**Preferred**: Edit `data/address_aliases.json` -- maps abbreviations to full names (e.g., "北大" -> "北京大学"). This file has `university_aliases` and `landmark_aliases` sections.
 
-**For cross-city issues**: Add to `university_mapping` or `landmark_mapping` dicts in `meetspot_recommender.py` with city prefix (e.g., "华南理工" → "广州市番禺区华南理工大学").
+**For cross-city ambiguity**: Add to the `alias_to_fullname` dict inside `_enhance_address()` in `meetspot_recommender.py` with full city prefix (e.g., "华工" -> "广东省广州市华南理工大学"). These hardcoded aliases include city/district for geocoding precision.
 
 ### Adding Venue Themes
 Add entry to `PLACE_TYPE_CONFIG` with: Chinese name, Boxicons icons, 6 color values.
@@ -191,7 +181,7 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 |-------|----------|
 | `未找到AMAP_API_KEY` | Set environment variable |
 | Import errors in production | Check MinimalConfig fallback |
-| Wrong city geocoding | Add to `landmark_mapping` with city prefix |
+| Wrong city geocoding | Add to `_enhance_address()` alias dict with city prefix |
 | Empty POI results | Fallback mechanism handles this automatically |
 | Render OOM (512MB) | Caches are reduced (30/15 limits); Agent mode disabled |
 | Render service down | Trigger redeploy: `git commit --allow-empty -m "trigger redeploy" && git push` |
@@ -209,8 +199,32 @@ git commit --allow-empty -m "chore: trigger redeploy" && git push origin main
 
 **Generated artifacts**: HTML files in `workspace/js_src/` are runtime-generated and should not be committed.
 
+## CI/CD
+
+9 GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push/PR | Python 3.11 & 3.12 tests, flake8, Docker build |
+| `ci-simple.yml` | Push/PR | Lightweight CI variant |
+| `ci-clean.yml` | Push/PR | Clean CI variant |
+| `postmortem-check.yml` | PRs | Warns if changes match known bug patterns |
+| `postmortem-update.yml` | `fix:` commits to main | Auto-generates postmortem YAML |
+| `keep-alive.yml` | Cron | Prevents Render free tier cold starts |
+| `lighthouse-ci.yml` | On demand | Performance metrics |
+| `update-badges.yml` | On demand | Update repo badges |
+| `auto-merge-clean.yml` | Dependabot PRs | Auto-merge dependency updates |
+
 ## Code Style
 
-- Python: 4-space indent, type hints, `snake_case` functions, `PascalCase` classes
+- Python: 4-space indent, type hints, `snake_case` functions, `PascalCase` classes, `SCREAMING_SNAKE_CASE` constants. Keep functions under ~50 lines; prefer dataclasses for structured payloads.
+- Logging: Use structured messages via `app/logger.py` (loguru): `logger.info("geo_center_calculated", extra={...})`
 - CSS: BEM-like (`meetspot-header__title`), colors from `design_tokens.py`
-- Commits: Conventional Commits (`feat:`, `fix:`, `docs:`)
+- Commits: Conventional Commits (`feat:`, `fix:`, `docs:`) with small scopes (e.g., `feat(tokens): add WCAG palette`)
+
+## Gitignore Gotchas
+
+The `.gitignore` has unusually broad patterns -- be aware:
+- `tests/` directory and all test-like files (`*test*.py`, `test_*.py`) are gitignored. Tests exist locally only.
+- `Dockerfile` and `docker-compose.yml` are gitignored.
+- `workspace/js_src/` is gitignored (runtime-generated HTML).

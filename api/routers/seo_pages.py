@@ -74,7 +74,7 @@ async def homepage(request: Request):
     )
     schema_list = _build_schema_list(
         seo_generator.generate_schema_org("webapp", {}),
-        seo_generator.generate_schema_org("website", {"search_url": "/search"}),
+        seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
         seo_generator.generate_schema_org(
             "breadcrumb", {"items": [{"name": "Home", "url": "/"}]}
@@ -123,7 +123,7 @@ async def city_page(request: Request, city_slug: str):
     )
     schema_list = _build_schema_list(
         seo_generator.generate_schema_org("webapp", {}),
-        seo_generator.generate_schema_org("website", {"search_url": "/search"}),
+        seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
         breadcrumb,
     )
@@ -218,7 +218,7 @@ async def how_it_works(request: Request):
         },
     )
     schema_list = _build_schema_list(
-        seo_generator.generate_schema_org("website", {"search_url": "/search"}),
+        seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
         seo_generator.generate_schema_org(
             "breadcrumb",
@@ -303,7 +303,7 @@ async def faq_page(request: Request):
         },
     ]
     schema_list = _build_schema_list(
-        seo_generator.generate_schema_org("website", {"search_url": "/search"}),
+        seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
         seo_generator.generate_schema_org("faq", {"faqs": faqs}),
         seo_generator.generate_schema_org(
