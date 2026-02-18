@@ -676,6 +676,18 @@
     </style>
 
     {% block extra_head %}{% endblock %}
+
+    {% if baidu_tongji_id %}
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?" + "{{ baidu_tongji_id }}";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+    {% endif %}
 </head>
 <body>
     <a href="#main" class="sr-only">跳转到主内容</a>
@@ -846,5 +858,17 @@
 
     <!-- AI Chat Widget -->
     {% include 'components/ai_chat.html' %}
+
+    {% if baidu_tongji_id %}
+    <script>
+    document.addEventListener("click", function(e) {
+        var el = e.target.closest("[data-track]");
+        if (el && typeof _hmt !== "undefined") {
+            _hmt.push(["_trackEvent", "meetspot", el.dataset.track,
+                        el.dataset.trackLabel || ""]);
+        }
+    });
+    </script>
+    {% endif %}
 </body>
 </html>

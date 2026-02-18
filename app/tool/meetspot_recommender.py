@@ -2548,6 +2548,21 @@ class CafeRecommender(BaseTool):
             --venue-icon-bg: {cfg.get("theme_primary", "#0A4D68")};
         }}"""
 
+        baidu_tongji_id = os.getenv("BAIDU_TONGJI_ID", "")
+        analytics_script = ""
+        if baidu_tongji_id:
+            analytics_script = (
+                "\n    <script>"
+                "\n    var _hmt = _hmt || [];"
+                "\n    (function() {"
+                '\n        var hm = document.createElement("script");'
+                f'\n        hm.src = "https://hm.baidu.com/hm.js?{baidu_tongji_id}";'
+                '\n        var s = document.getElementsByTagName("script")[0];'
+                "\n        s.parentNode.insertBefore(hm, s);"
+                "\n    })();"
+                "\n    </script>"
+            )
+
         html_content = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -2576,7 +2591,7 @@ class CafeRecommender(BaseTool):
     <!-- Modern UI Components -->
     <link rel="stylesheet" href="/public/css/components.css">
 
-    {schema_script}
+    {schema_script}{analytics_script}
     <style>
         {dynamic_style} /* Inject dynamic theme colors here */
 
@@ -3184,6 +3199,13 @@ class CafeRecommender(BaseTool):
 
     <!-- Modern Toast Notification System -->
     <script src="/public/js/toast.js"></script>
+
+    <script>
+    if (typeof _hmt !== "undefined") {{
+        _hmt.push(["_trackEvent", "meetspot", "result_page_view",
+            "{primary_keyword}", {len(places)}]);
+    }}
+    </script>
 </body>
 </html>"""
         return html_content
