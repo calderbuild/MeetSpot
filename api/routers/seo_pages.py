@@ -17,6 +17,7 @@ from api.services.seo_content import seo_content_generator as seo_generator
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["baidu_tongji_id"] = os.getenv("BAIDU_TONGJI_ID", "")
 limiter = Limiter(key_func=get_remote_address)
 
 

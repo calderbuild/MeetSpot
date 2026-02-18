@@ -841,6 +841,14 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
             }
 
             print(f"📤 返回响应: success={response_data['success']}, html_url={response_data['html_url']}")
+            logger.info(
+                "recommendation_completed",
+                location_count=len(request.locations),
+                venue_type=request.keywords or "咖啡馆",
+                has_html=html_url is not None,
+                processing_time_ms=int(processing_time * 1000),
+                mode="rule_llm",
+            )
             # 主动释放内存
             gc.collect()
             return response_data
@@ -996,6 +1004,12 @@ async def get_amap_config():
         "api_key": js_api_key,
         "security_js_code": security_js_code
     }
+
+
+@app.get("/api/config/analytics")
+async def get_analytics_config():
+    """返回分析追踪配置（百度统计 ID）"""
+    return {"baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", "")}
 
 
 @app.get("/api/status")

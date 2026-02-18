@@ -2548,6 +2548,21 @@ class CafeRecommender(BaseTool):
             --venue-icon-bg: {cfg.get("theme_primary", "#0A4D68")};
         }}"""
 
+        baidu_tongji_id = os.getenv("BAIDU_TONGJI_ID", "")
+        analytics_script = ""
+        if baidu_tongji_id:
+            analytics_script = (
+                "\n    <script>"
+                "\n    var _hmt = _hmt || [];"
+                "\n    (function() {"
+                '\n        var hm = document.createElement("script");'
+                f'\n        hm.src = "https://hm.baidu.com/hm.js?{baidu_tongji_id}";'
+                '\n        var s = document.getElementsByTagName("script")[0];'
+                "\n        s.parentNode.insertBefore(hm, s);"
+                "\n    })();"
+                "\n    </script>"
+            )
+
         html_content = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -2576,7 +2591,7 @@ class CafeRecommender(BaseTool):
     <!-- Modern UI Components -->
     <link rel="stylesheet" href="/public/css/components.css">
 
-    {schema_script}
+    {schema_script}{analytics_script}
     <style>
         {dynamic_style} /* Inject dynamic theme colors here */
 
@@ -2991,6 +3006,13 @@ class CafeRecommender(BaseTool):
     </style>
 </head>
 <body>
+    <nav style="background:#001524;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1000;">
+        <a href="/" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;">MeetSpot</a>
+        <div style="display:flex;gap:16px;align-items:center;">
+            <a href="/public/meetspot_finder.html" style="color:#06D6A0;text-decoration:none;font-size:0.9rem;">重新搜索</a>
+            <button onclick="navigator.clipboard.writeText(location.href).then(function(){{this.textContent='已复制!'}}.bind(this))" data-track="result_share" data-track-label="copy_link" style="background:#FF6B35;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;">复制链接</button>
+        </div>
+    </nav>
     <header>
         <div class="container">
             <div class="header-logo">
@@ -3184,6 +3206,20 @@ class CafeRecommender(BaseTool):
 
     <!-- Modern Toast Notification System -->
     <script src="/public/js/toast.js"></script>
+
+    <script>
+    if (typeof _hmt !== "undefined") {{
+        _hmt.push(["_trackEvent", "meetspot", "result_page_view",
+            "{primary_keyword}", {len(places)}]);
+    }}
+    document.addEventListener("click", function(e) {{
+        var el = e.target.closest("[data-track]");
+        if (el && typeof _hmt !== "undefined") {{
+            _hmt.push(["_trackEvent", "meetspot", el.dataset.track,
+                        el.dataset.trackLabel || ""]);
+        }}
+    }});
+    </script>
 </body>
 </html>"""
         return html_content

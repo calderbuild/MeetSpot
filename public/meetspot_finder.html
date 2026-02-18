@@ -1456,8 +1456,24 @@
             right: 12px;
         }
     </style>
+
+    <script>
+    var _hmt = _hmt || [];
+    fetch("/api/config/analytics").then(function(r) { return r.json(); }).then(function(cfg) {
+        if (cfg.baidu_tongji_id) {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?" + cfg.baidu_tongji_id;
+            document.head.appendChild(hm);
+        }
+    }).catch(function() {});
+    </script>
 </head>
 <body>
+    <nav style="background:#001524;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;">
+        <a href="/" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;">MeetSpot</a>
+        <a href="/how-it-works" style="color:#06D6A0;text-decoration:none;font-size:0.85rem;">使用指南</a>
+    </nav>
+
     <!-- Floating Particles Background -->
     <div class="particles">
         <div class="particle"></div>
@@ -2365,6 +2381,12 @@
                     requestBody.location_coords = location_coords;
                 }
 
+                if (typeof _hmt !== "undefined") {
+                    _hmt.push(["_trackEvent", "meetspot", "tool_submit",
+                        keywords, locations.length]);
+                }
+
+                const _submitTime = Date.now();
                 const response = await fetch('/api/find_meetspot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2383,6 +2405,10 @@
                 ThinkingAnimator.complete(mode);
 
                 if (result.success && result.html_url) {
+                    if (typeof _hmt !== "undefined") {
+                        _hmt.push(["_trackEvent", "meetspot", "recommendation_result",
+                            mode, Date.now() - _submitTime]);
+                    }
                     // Show mode-aware success message
                     const modeText = mode === 'agent' ? 'Agent 深度分析' : '快速推荐';
                     showSuccess(`${modeText}完成`, `${keywords}推荐已生成，正在跳转...`);

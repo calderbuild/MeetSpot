@@ -124,6 +124,7 @@ class SEOContentGenerator:
                 "@context": "https://schema.org",
                 "@type": "WebApplication",
                 "name": "MeetSpot",
+                "url": base_url + "/",
                 "description": "Find the perfect meeting location midpoint for groups",
                 "applicationCategory": "UtilitiesApplication",
                 "operatingSystem": "Web",
@@ -153,6 +154,7 @@ class SEOContentGenerator:
                 "@type": "Organization",
                 "name": "MeetSpot",
                 "url": base_url,
+                "logo": base_url + "/public/favicon.svg",
                 "contactPoint": [
                     {
                         "@type": "ContactPoint",
@@ -391,7 +393,7 @@ class SEOContentGenerator:
                 <section class="cta-section">
                     <h2>开始规划{city}聚会</h2>
                     <p>无需注册，输入地址即可获取推荐</p>
-                    <a href="/" class="cta-button">立即使用 MeetSpot</a>
+                    <a href="/public/meetspot_finder.html" class="cta-button" data-track="cta_click" data-track-label="city_page">立即使用 MeetSpot</a>
                 </section>''',
         }
 
