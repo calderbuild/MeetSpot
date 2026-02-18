@@ -124,6 +124,7 @@ class SEOContentGenerator:
                 "@context": "https://schema.org",
                 "@type": "WebApplication",
                 "name": "MeetSpot",
+                "url": base_url + "/",
                 "description": "Find the perfect meeting location midpoint for groups",
                 "applicationCategory": "UtilitiesApplication",
                 "operatingSystem": "Web",
@@ -153,6 +154,7 @@ class SEOContentGenerator:
                 "@type": "Organization",
                 "name": "MeetSpot",
                 "url": base_url,
+                "logo": base_url + "/public/favicon.svg",
                 "contactPoint": [
                     {
                         "@type": "ContactPoint",
