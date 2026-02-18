@@ -53,65 +53,66 @@ class SEOContentGenerator:
     def generate_meta_tags(self, page_type: str, data: Dict) -> Dict[str, str]:
         """根据页面类型生成Meta标签."""
         if page_type == "homepage":
-            title = "MeetSpot - Find Meeting Location Midpoint | 智能聚会地点推荐"
+            title = "MeetSpot 聚点 - 多人聚会地点智能推荐"
             description = (
-                "MeetSpot让2-10人团队快速找到公平会面中点, 智能推荐咖啡馆、餐厅、共享空间, 自动输出路线、"
-                "预算与结构化数据, 15秒生成可索引聚会页面; Midpoint engine saves 30% commute, fuels SEO-ready recaps with clear CTA."
+                "MeetSpot 帮助 2-10 人快速找到公平的聚会中点，"
+                "智能推荐咖啡馆、餐厅、图书馆等场所，"
+                "球面几何算法计算公平中心，覆盖 350+ 城市，免费使用无需注册。"
             )
-            keywords = (
-                "meeting location,find midpoint,group meeting,location finder,"
-                "聚会地点推荐,中点计算,团队聚会"
-            )
+            keywords = "聚会地点推荐,中点计算,团队聚会,meeting location,midpoint"
         elif page_type == "city_page":
             city = data.get("city", "")
             city_en = data.get("city_en", "")
             venue_types = data.get("venue_types", [])
             venue_snippet = "、".join(venue_types[:3]) if venue_types else "热门场所"
-            title = f"{city}聚会地点推荐 | {city_en} Meeting Location Finder - MeetSpot"
+            title = f"{city}聚会地点推荐 - MeetSpot 聚点"
             description = (
-                f"{city or '所在城市'}聚会需要公平中点? MeetSpot根据2-10人轨迹计算平衡路线, 推荐{venue_snippet}等场所, "
-                "输出中文/英文场地文案、预算与交通信息, 15秒生成可索引城市着陆页; Local insights boost trust, shareable cards unlock faster decisions."
+                f"在{city or '所在城市'}找多人聚会的公平中点？"
+                f"MeetSpot 根据 2-10 人位置计算最佳会面点，推荐{venue_snippet}等高评分场所，"
+                f"覆盖{city}主要商圈和高校周边。"
             )
-            keywords = f"{city},{city_en},meeting location,{venue_snippet},midpoint"
+            keywords = f"{city}聚会地点,{city}聚餐推荐,{venue_snippet},{city_en}"
         elif page_type == "about":
-            title = "About MeetSpot - How We Find Perfect Meeting Locations | 关于我们"
+            title = "关于 MeetSpot 聚点 - 智能聚会地点推荐"
             description = (
-                "MeetSpot团队由地图算法、内容运营与产品负责人组成, 公开使命、技术栈、治理方式, 分享用户案例、AMAP合规、安全策略与开源路线图; "
-                "Learn how we guarantee equitable experiences backed by ongoing UX research。"
+                "MeetSpot 是一款开源的多人聚会地点推荐工具，"
+                "使用球面几何算法计算公平中点，结合智能评分推荐最佳场所，"
+                "覆盖 350+ 城市，12 种场景主题。"
             )
-            keywords = "about meetspot,meeting algorithm,location technology,关于,聚会算法"
+            keywords = "关于 MeetSpot,聚会算法,地点推荐技术"
         elif page_type == "faq":
-            title = "FAQ - Meeting Location Questions Answered | 常见问题 - MeetSpot"
+            title = "常见问题 - MeetSpot 聚点"
             description = (
-                "覆盖聚会地点、费用、功能等核心提问, 提供结构化答案, 支持Google FAQ Schema, 让用户与搜索引擎获得清晰指导, "
-                "并附上联系入口与下一步CTA, FAQ hub helps planners resolve objections faster and improve conversions。"
+                "MeetSpot 常见问题解答：如何计算聚会中点、支持多少人、"
+                "覆盖哪些城市、是否免费、推荐速度等核心问题一站式解答。"
             )
-            keywords = "faq,meeting questions,location help,常见问题,使用指南"
+            keywords = "MeetSpot 常见问题,聚会地点帮助,使用指南"
         elif page_type == "how_it_works":
-            title = "How MeetSpot Works | 智能聚会地点中点计算流程"
+            title = "使用指南 - MeetSpot 聚点"
             description = (
-                "4步流程涵盖收集地址、平衡权重、筛选场地与导出SEO文案, 附带动图、清单和风控提示, 指导团队15分钟内发布可索引页面; "
-                "Learn safeguards, KPIs, stakeholder handoffs, and post-launch QA behind MeetSpot。"
+                "MeetSpot 使用指南：输入参与者地址、选择场所类型、"
+                "设置特殊需求，5 步智能推理流程为你找到对所有人都公平的聚会地点。"
             )
-            keywords = "how meetspot works,midpoint guide,workflow,使用指南"
+            keywords = "MeetSpot 使用指南,聚会地点怎么选,中点计算教程"
         elif page_type == "recommendation":
             city = data.get("city", "未知城市")
             keyword = data.get("keyword", "聚会地点")
             count = data.get("locations_count", 2)
-            title = f"{city}{keyword}推荐 - {count}人聚会最佳会面点 | MeetSpot"
+            title = f"{city}{keyword}推荐 - {count}人聚会 | MeetSpot"
             description = (
-                f"{city}{count}人{keyword}推荐由MeetSpot中点引擎生成, 结合每位参与者的路程、预算与场地偏好, "
-                "给出评分、热力图和可复制行程; Share SEO-ready cards、CTA, keep planning transparent, document-ready for clients, and measurable。"
+                f"{city} {count} 人{keyword}推荐，"
+                f"MeetSpot 根据所有参与者位置计算公平中点，"
+                f"智能推荐评分最高的{keyword}。"
             )
-            keywords = f"{city},{keyword},聚会地点推荐,中点计算,{count}人聚会"
+            keywords = f"{city},{keyword},聚会地点推荐,中点计算"
         else:
-            title = "MeetSpot - 智能聚会地点推荐"
-            description = "MeetSpot通过公平的中点计算, 为多人聚会推荐最佳会面地点。"
-            keywords = "meetspot,meeting location,聚会地点"
+            title = "MeetSpot 聚点 - 智能聚会地点推荐"
+            description = "MeetSpot 通过公平的中点计算，为多人聚会推荐最佳会面地点。"
+            keywords = "MeetSpot,聚会地点推荐,中点计算"
 
         return {
             "title": title[:60],
-            "description": description[:160],
+            "description": description[:155],
             "keywords": keywords,
         }
 
@@ -152,13 +153,11 @@ class SEOContentGenerator:
                 "@type": "Organization",
                 "name": "MeetSpot",
                 "url": base_url,
-                "logo": f"{base_url}/static/images/og-image.png",
-                "foundingDate": "2023-08-01",
                 "contactPoint": [
                     {
                         "@type": "ContactPoint",
                         "contactType": "customer support",
-                        "email": "hello@meetspot.app",
+                        "email": "Johnrobertdestiny@gmail.com",
                         "availableLanguage": ["zh-CN", "en"],
                     }
                 ],
@@ -184,12 +183,6 @@ class SEOContentGenerator:
                     "latitude": venue.get("lat"),
                     "longitude": venue.get("lng"),
                 },
-                "aggregateRating": {
-                    "@type": "AggregateRating",
-                    "ratingValue": venue.get("rating", 4.5),
-                    "reviewCount": venue.get("review_count", 100),
-                },
-                "priceRange": venue.get("price_range", "$$"),
             }
         if page_type == "faq":
             faqs = data.get("faqs", [])
@@ -230,8 +223,14 @@ class SEOContentGenerator:
                     }
                     for step in steps
                 ],
-                "supply": data.get("supplies", ["参与者地址", "交通方式偏好"]),
-                "tool": data.get("tools", ["MeetSpot Dashboard"]),
+                "supply": [
+                    {"@type": "HowToSupply", "name": s}
+                    for s in data.get("supplies", ["参与者地址", "交通方式偏好"])
+                ],
+                "tool": [
+                    {"@type": "HowToTool", "name": t}
+                    for t in data.get("tools", ["MeetSpot Dashboard"])
+                ],
             }
         if page_type == "breadcrumb":
             items = data.get("items", [])

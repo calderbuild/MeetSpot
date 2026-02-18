@@ -446,35 +446,7 @@ async def bing_verification():
     # 如果文件不存在，返回404
     raise HTTPException(status_code=404, detail="Bing verification file not found")
 
-@app.api_route("/sitemap.xml", methods=["GET", "HEAD"])
-async def sitemap():
-    """返回站点地图（支持GET和HEAD请求）"""
-    sitemap_file = "public/sitemap.xml"
-    if os.path.exists(sitemap_file):
-        return FileResponse(
-            sitemap_file,
-            media_type="application/xml",
-            headers={
-                "Cache-Control": "public, max-age=3600",
-                "Content-Type": "application/xml; charset=utf-8"
-            }
-        )
-    raise HTTPException(status_code=404, detail="Sitemap not found")
-
-@app.api_route("/robots.txt", methods=["GET", "HEAD"])
-async def robots():
-    """返回robots.txt（支持GET和HEAD请求）"""
-    robots_file = "public/robots.txt"
-    if os.path.exists(robots_file):
-        return FileResponse(
-            robots_file,
-            media_type="text/plain",
-            headers={
-                "Cache-Control": "public, max-age=3600",
-                "Content-Type": "text/plain; charset=utf-8"
-            }
-        )
-    raise HTTPException(status_code=404, detail="robots.txt not found")
+# sitemap.xml 和 robots.txt 由 seo_pages.router 动态生成（含城市页）
 
 @app.api_route("/favicon.ico", methods=["GET", "HEAD"])
 async def favicon_ico():
