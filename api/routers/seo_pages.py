@@ -17,8 +17,12 @@ from api.services.seo_content import seo_content_generator as seo_generator
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
-templates.env.globals["baidu_tongji_id"] = os.getenv("BAIDU_TONGJI_ID", "")
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _common_context() -> dict:
+    """每次请求时动态读取的公共模板变量."""
+    return {"baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", "")}
 
 
 @lru_cache(maxsize=128)
@@ -94,6 +98,7 @@ async def homepage(request: Request):
             "schema_jsonld": schema_list,
             "breadcrumbs": [],
             "cities": load_cities(),
+            **_common_context(),
         },
     )
 
@@ -145,6 +150,7 @@ async def city_page(request: Request, city_slug: str):
             ],
             "city": city,
             "city_content": city_content,
+            **_common_context(),
         },
     )
 
@@ -178,6 +184,7 @@ async def about_page(request: Request):
                 {"name": "首页", "url": "/"},
                 {"name": "关于我们", "url": "/about"},
             ],
+            **_common_context(),
         },
     )
 
@@ -245,6 +252,7 @@ async def how_it_works(request: Request):
                 {"name": "首页", "url": "/"},
                 {"name": "使用指南", "url": "/how-it-works"},
             ],
+            **_common_context(),
         },
     )
 
@@ -331,6 +339,7 @@ async def faq_page(request: Request):
                 {"name": "常见问题", "url": "/faq"},
             ],
             "faqs": faqs,
+            **_common_context(),
         },
     )
 
