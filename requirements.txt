@@ -1,8 +1,8 @@
 # MeetSpot Dependencies
-fastapi==0.116.1
-uvicorn==0.35.0
-pydantic==2.11.7
-pydantic-core==2.33.2
+fastapi==0.131.0
+uvicorn==0.41.0
+pydantic==2.12.5
+pydantic-core==2.41.5
 httpx==0.28.1
 aiohttp==3.12.15
 aiofiles==24.1.0
