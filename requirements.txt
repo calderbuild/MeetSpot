@@ -4,7 +4,7 @@ uvicorn==0.41.0
 pydantic==2.12.5
 pydantic-core==2.41.5
 httpx==0.28.1
-aiohttp==3.12.15
+aiohttp==3.13.3
 aiofiles==25.1.0
 jinja2==3.1.6
 python-multipart==0.0.20
