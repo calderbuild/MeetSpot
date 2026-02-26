@@ -8,47 +8,9 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Dict, List
 
-import jieba
-import jieba.analyse
-
 
 class SEOContentGenerator:
     """封装SEO内容生成逻辑."""
-
-    def __init__(self) -> None:
-        self.custom_words = [
-            "聚会地点",
-            "会面点",
-            "中点推荐",
-            "团队聚会",
-            "远程团队",
-            "咖啡馆",
-            "餐厅",
-            "图书馆",
-            "共享空间",
-            "北京",
-            "上海",
-            "广州",
-            "深圳",
-            "杭州",
-            "成都",
-            "meeting location",
-            "midpoint",
-            "group meeting",
-        ]
-        for word in self.custom_words:
-            jieba.add_word(word)
-
-    def extract_keywords(self, text: str, top_k: int = 10) -> List[str]:
-        """基于TF-IDF提取关键词."""
-        if not text:
-            return []
-        return jieba.analyse.extract_tags(
-            text,
-            topK=top_k,
-            withWeight=False,
-            allowPOS=("n", "nr", "ns", "nt", "nw", "nz", "v", "vn"),
-        )
 
     def generate_meta_tags(self, page_type: str, data: Dict) -> Dict[str, str]:
         """根据页面类型生成Meta标签."""

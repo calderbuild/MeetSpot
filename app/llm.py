@@ -1,7 +1,6 @@
 import math
 from typing import Dict, List, Optional, Union
 
-import tiktoken
 from openai import (APIError, AsyncAzureOpenAI, AsyncOpenAI,
                     AuthenticationError, OpenAIError, RateLimitError)
 from openai.types.chat import ChatCompletion
@@ -38,12 +37,9 @@ class TokenCounter:
     HIGH_DETAIL_TARGET_SHORT_SIDE = 768
     TILE_SIZE = 512
 
-    def __init__(self, tokenizer):
-        self.tokenizer = tokenizer
-
     def count_text(self, text: str) -> int:
-        """Calculate tokens for a text string"""
-        return 0 if not text else len(self.tokenizer.encode(text))
+        """Estimate tokens for a text string using UTF-8 byte length."""
+        return 0 if not text else len(text.encode("utf-8")) // 3
 
     def count_image(self, image_item: dict) -> int:
         """
@@ -197,13 +193,6 @@ class LLM:
                 else None
             )
 
-            # Initialize tokenizer
-            try:
-                self.tokenizer = tiktoken.encoding_for_model(self.model)
-            except KeyError:
-                # If the model is not in tiktoken's presets, use cl100k_base as default
-                self.tokenizer = tiktoken.get_encoding("cl100k_base")
-
             if self.api_type == "azure":
                 self.client = AsyncAzureOpenAI(
                     base_url=self.base_url,
@@ -213,13 +202,13 @@ class LLM:
             else:
                 self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
-            self.token_counter = TokenCounter(self.tokenizer)
+            self.token_counter = TokenCounter()
 
     def count_tokens(self, text: str) -> int:
-        """Calculate the number of tokens in a text"""
+        """Estimate the number of tokens in a text using UTF-8 byte length."""
         if not text:
             return 0
-        return len(self.tokenizer.encode(text))
+        return len(text.encode("utf-8")) // 3
 
     def count_message_tokens(self, messages: List[dict]) -> int:
         return self.token_counter.count_message_tokens(messages)

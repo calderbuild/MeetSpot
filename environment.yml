@@ -33,13 +33,11 @@ dependencies:
   # 日期处理
   - python-dateutil=2.9.0
 
-  # SEO相关依赖
+  # pip依赖
   - pip
   - pip:
-      - jieba==0.42.1          # 中文分词（conda-forge暂无）
       - whitenoise==6.6.0      # 静态文件服务
       - slowapi==0.1.9         # API限流
-      - markdown2==2.4.12      # Markdown解析
 
   # 系统工具（可选，提升开发体验）
   - git

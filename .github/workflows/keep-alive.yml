@@ -13,27 +13,30 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Ping Health Endpoint
+        continue-on-error: true
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://meetspot-irq2.onrender.com/health)
+          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://meetspot-irq2.onrender.com/health || true)
           echo "Health check response: $response"
           if [ "$response" != "200" ]; then
             echo "Warning: Health check returned non-200 status"
           fi
 
       - name: Ping Sitemap (SEO critical)
+        continue-on-error: true
         run: |
-          sitemap_response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://meetspot-irq2.onrender.com/sitemap.xml)
+          sitemap_response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://meetspot-irq2.onrender.com/sitemap.xml || true)
           echo "Sitemap response: $sitemap_response"
 
       - name: Ping Sitemap as Googlebot (simulate crawler)
+        continue-on-error: true
         run: |
-          # Simulate Googlebot to ensure server responds to Google's crawler
           googlebot_response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
             -H "User-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" \
-            https://meetspot-irq2.onrender.com/sitemap.xml)
+            https://meetspot-irq2.onrender.com/sitemap.xml || true)
           echo "Sitemap (Googlebot UA) response: $googlebot_response"
 
       - name: Ping Robots.txt
+        continue-on-error: true
         run: |
-          robots_response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://meetspot-irq2.onrender.com/robots.txt)
+          robots_response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://meetspot-irq2.onrender.com/robots.txt || true)
           echo "Robots.txt response: $robots_response"
