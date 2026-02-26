@@ -1,0 +1,46 @@
+id: PM-2026-004
+created_at: '2026-02-26T06:09:58.482287+00:00'
+source_commit: b5f1ca5
+severity: medium
+title: remove heavy unused deps (jieba/tiktoken) to preve
+description: '- Remove jieba (~150MB) from seo_content.py; extract_keywords() was
+  never called
+
+  - Replace tiktoken (~80MB) with UTF-8 byte estimation in app/llm.py
+
+  - Remove 6 dead dependencies: jieba, tiktoken, redis, websockets, beautifulsoup4,
+  markdown2
+
+  - Fix keep-alive workflow: add continue-on-error + || true '
+root_cause: See commit body for details
+triggers:
+  files:
+  - .github/workflows/keep-alive.yml
+  - api/services/seo_content.py
+  - app/llm.py
+  - environment.yml
+  - requirements.txt
+  functions:
+  - count_image
+  - count_text
+  - extract_keywords
+  - count_tokens
+  - generate_meta_tags
+  patterns: []
+  keywords:
+  - general
+fix_pattern:
+  approach: remove heavy unused deps (jieba/tiktoken) to prevent Render OOM
+  key_changes:
+  - remove heavy unused deps (jieba/tiktoken) to prevent Render OOM
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - .github/workflows/keep-alive.yml
+  - api/services/seo_content.py
+  - app/llm.py
+  - environment.yml
+  - requirements.txt
+tags:
+- general
