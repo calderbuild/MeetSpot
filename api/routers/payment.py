@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/payment", tags=["payment"])
 PAY302_APP_ID = os.getenv("PAY302_APP_ID", "ccff86524c")
 PAY302_SECRET = os.getenv("PAY302_SECRET", "")
 PAY302_API_URL = os.getenv("PAY302_API_URL", "https://api.302.ai/v1/checkout")
-FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "5"))
+FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
 CREDIT_PRICE_CENTS = int(os.getenv("CREDIT_PRICE_CENTS", "100"))
 CREDITS_PER_PURCHASE = int(os.getenv("CREDITS_PER_PURCHASE", "10"))
 

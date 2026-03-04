@@ -290,7 +290,7 @@ AMAP_JS_API_KEY = os.getenv("AMAP_JS_API_KEY", "")  # JS API key for frontend ma
 AMAP_SECURITY_JS_CODE = os.getenv("AMAP_SECURITY_JS_CODE", "")
 
 # 免费次数限制
-FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "5"))
+FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
 
 # 创建 FastAPI 应用
 app = FastAPI(
