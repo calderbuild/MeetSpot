@@ -37,6 +37,13 @@ async def create_order(
     return order
 
 
+async def get_order_by_id(db: AsyncSession, order_id: str) -> Optional[PaymentOrder]:
+    """按主键 id 查询订单。"""
+    stmt = select(PaymentOrder).where(PaymentOrder.id == order_id)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def update_order_status(
     db: AsyncSession,
     checkout_id: str,
