@@ -1,0 +1,28 @@
+id: PM-2026-006
+created_at: '2026-03-04T08:20:58.952111+00:00'
+source_commit: 2a63aef
+severity: medium
+title: reduce free daily limit from 5 to 1
+description: 'fix(payment): reduce free daily limit from 5 to 1'
+root_cause: See commit body for details
+triggers:
+  files:
+  - .env.example
+  - api/index.py
+  - api/routers/payment.py
+  functions: []
+  patterns: []
+  keywords: &id001
+  - payment
+fix_pattern:
+  approach: reduce free daily limit from 5 to 1
+  key_changes:
+  - reduce free daily limit from 5 to 1
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - .env.example
+  - api/index.py
+  - api/routers/payment.py
+tags: *id001
