@@ -1,0 +1,28 @@
+id: PM-2026-007
+created_at: '2026-03-04T08:27:44.691746+00:00'
+source_commit: 4d96bb1
+severity: medium
+title: align 302 API field names with latest spec
+description: 'price (not amount), customer.id (not user_name),
+
+  success_url (not suc_url), metadata (not extra).'
+root_cause: See commit body for details
+triggers:
+  files:
+  - api/routers/payment.py
+  functions:
+  - payment_webhook
+  - create_order
+  patterns: []
+  keywords: &id001
+  - payment
+fix_pattern:
+  approach: align 302 API field names with latest spec
+  key_changes:
+  - align 302 API field names with latest spec
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - api/routers/payment.py
+tags: *id001
