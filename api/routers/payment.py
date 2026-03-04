@@ -86,18 +86,16 @@ async def create_order(
         credits=credits_to_buy,
     )
 
-    # 构建 302 API 请求参数（参考 demo create/route.ts）
+    # 构建 302 API 请求参数（字段名对齐官方 API 文档 2026-03）
     base_url = str(request.base_url).rstrip("/")
     pay_params = {
         "app_id": PAY302_APP_ID,
         "secret": PAY302_SECRET,
-        "amount": amount_cents,
-        "user_name": client_ip,
-        "email": "",
-        "suc_url": f"{base_url}/api/payment/success",
+        "price": amount_cents,
+        "customer": {"id": client_ip, "email": ""},
+        "success_url": f"{base_url}/api/payment/success",
         "back_url": base_url,
-        "fail_url": base_url,
-        "extra": {"order_id": order.id, "credits": credits_to_buy},
+        "metadata": {"order_id": order.id, "credits": credits_to_buy},
     }
 
     # 生成签名并加入请求体
@@ -107,11 +105,14 @@ async def create_order(
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(PAY302_API_URL, json=pay_params)
             resp.raise_for_status()
-            data = resp.json()
+            resp_json = resp.json()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"支付网关错误: {e}")
 
-    # 302 API 返回 id 即为 checkout_id
+    if resp_json.get("code") != 0:
+        raise HTTPException(status_code=502, detail=resp_json.get("msg", "302 API 错误"))
+
+    data = resp_json.get("data", {})
     checkout_id = data.get("id", "")
     checkout_url = data.get("checkout_url", "")
 
@@ -137,9 +138,9 @@ async def create_order(
 async def payment_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """接收 302 支付回调，验签后更新订单并充值 credits。
 
-    302 回调 body 结构：
+    302 回调 body 结构（webhook header 含 302_signature）：
     {
-        "extra": {"order_id": "...", "credits": 10},
+        "metadata": {"order_id": "...", "credits": 10},
         "payment_order": "302平台订单号",
         "payment_fee": 0,
         "payment_amount": 100,
@@ -156,8 +157,8 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     if body.get("app_id") != PAY302_APP_ID:
         raise HTTPException(status_code=403, detail="app_id 不匹配")
 
-    # 提取签名（signature 字段在验签时会被自动排除）
-    received_signature = body.get("signature", "")
+    # 提取签名（body 或 header 中都可能有）
+    received_signature = body.get("signature", "") or request.headers.get("302_signature", "")
     if not received_signature:
         raise HTTPException(status_code=400, detail="缺少签名")
 
@@ -167,8 +168,9 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     # 提取支付信息
     payment_status_code = body.get("payment_status", 0)
     pay302_payment_order = body.get("payment_order", "")
-    extra = body.get("extra", {})
-    order_id = extra.get("order_id", "") if isinstance(extra, dict) else ""
+    # 302 API 使用 metadata 字段，兼容旧版 extra
+    meta = body.get("metadata") or body.get("extra") or {}
+    order_id = meta.get("order_id", "") if isinstance(meta, dict) else ""
 
     if not order_id:
         raise HTTPException(status_code=400, detail="缺少 order_id")
