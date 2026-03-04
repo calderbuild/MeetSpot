@@ -36,6 +36,9 @@ _engine_kwargs = {"echo": False, "future": True}
 if DATABASE_URL.startswith("postgresql"):
     _engine_kwargs["pool_size"] = 5
     _engine_kwargs["max_overflow"] = 10
+    # pgbouncer (transaction mode) 不支持 prepared statements，
+    # 必须禁用 asyncpg 的 statement cache 否则启动即报错
+    _engine_kwargs["connect_args"] = {"statement_cache_size": 0}
 engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
