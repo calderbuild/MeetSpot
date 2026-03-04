@@ -1083,12 +1083,13 @@ if os.path.exists("static"):
 if os.path.exists("public"):
     app.mount("/public", StaticFiles(directory="public", html=True), name="public")
 
-# 添加缓存控制头（用于静态资源）
+# 添加缓存控制头（用于静态资源，HTML 除外）
 @app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
     response = await call_next(request)
-    # 对静态资源添加长期缓存
-    if request.url.path.startswith(("/static/", "/public/")):
+    path = request.url.path
+    # 对静态资源添加长期缓存，HTML 文件走上层中间件的短缓存策略
+    if path.startswith(("/static/", "/public/")) and not path.endswith(".html"):
         response.headers["Cache-Control"] = "public, max-age=31536000"  # 1年
     return response
 
