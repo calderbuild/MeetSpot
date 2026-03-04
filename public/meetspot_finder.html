@@ -1050,6 +1050,209 @@
             font-size: 1.4rem;
         }
 
+        /* ========== Payment Status Bar ========== */
+        .payment-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .payment-status__item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .payment-status__value {
+            color: var(--coral-400);
+            font-weight: 600;
+        }
+
+        .payment-status__sep {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .payment-status__buy {
+            color: var(--coral-400);
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .payment-status__buy:hover {
+            color: var(--coral-300);
+        }
+
+        @media (max-width: 600px) {
+            .payment-status {
+                display: none;
+            }
+        }
+
+        /* ========== Payment Modal ========== */
+        .payment-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 21, 36, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .payment-overlay.active {
+            opacity: 1;
+        }
+
+        .payment-modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 400px;
+            background: rgba(10, 37, 64, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 36px 28px 28px;
+            text-align: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .payment-modal.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .payment-modal__icon {
+            font-size: 48px;
+            color: var(--coral-400);
+            margin-bottom: 12px;
+        }
+
+        .payment-modal__title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .payment-modal__desc {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.65);
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .payment-modal__price {
+            font-size: 15px;
+            color: var(--mint-400);
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .payment-modal__balance {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .payment-modal__btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--coral-500), var(--coral-400));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .payment-modal__btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+        }
+
+        .payment-modal__btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .payment-modal__btn-secondary {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .payment-modal__btn-secondary:hover {
+            color: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .payment-modal__close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .payment-modal__close:hover {
+            color: white;
+        }
+
+        @media (max-width: 600px) {
+            .payment-modal {
+                top: auto;
+                bottom: 0;
+                left: 0;
+                transform: translateY(100%);
+                width: 100%;
+                max-width: 100%;
+                border-radius: 20px 20px 0 0;
+                padding-bottom: max(28px, env(safe-area-inset-bottom));
+            }
+
+            .payment-modal.active {
+                transform: translateY(0);
+            }
+        }
+
         /* ========== Enhanced Agent Thinking Experience ========== */
         .loading {
             display: none;
@@ -1494,6 +1697,16 @@
             <i class='bx bx-home'></i>
             <span>首页</span>
         </a>
+        <div class="payment-status" id="paymentStatus">
+            <span class="payment-status__item">
+                免费 <span class="payment-status__value" id="psFreeRemaining">-</span>/<span id="psFreeLimit">-</span>
+            </span>
+            <span class="payment-status__sep">|</span>
+            <span class="payment-status__item">
+                Credits: <span class="payment-status__value" id="psBalance">-</span>
+            </span>
+            <a class="payment-status__buy" onclick="openPaymentModal()" id="psBuyLink" style="display:none">购买</a>
+        </div>
         <div class="nav-links">
             <a href="/how-it-works">使用指南</a>
             <a href="/faq">常见问题</a>
@@ -1786,7 +1999,7 @@
 
                 <button type="submit" class="submit-btn" id="submitBtn">
                     <i class='bx bx-search-alt-2'></i>
-                    查找最佳会面点
+                    <span id="submitBtnText">查找最佳会面点</span>
                 </button>
             </form>
 
@@ -2400,6 +2613,15 @@
 
                 const result = await response.json();
 
+                // Intercept payment-required response
+                if (result.need_payment) {
+                    ThinkingAnimator.reset();
+                    loading.style.display = 'none';
+                    submitBtn.disabled = false;
+                    openPaymentModal();
+                    return;
+                }
+
                 // Complete the animation with mode info
                 const mode = result.mode || 'rule_llm';
                 ThinkingAnimator.complete(mode);
@@ -2412,6 +2634,13 @@
                     // Show mode-aware success message
                     const modeText = mode === 'agent' ? 'Agent 深度分析' : '快速推荐';
                     showSuccess(`${modeText}完成`, `${keywords}推荐已生成，正在跳转...`);
+                    // Refresh payment status bar after successful request
+                    refreshPaymentStatus().then(() => {
+                        const rem = parseInt(document.getElementById('psFreeRemaining').textContent);
+                        if (rem === 0) {
+                            showInfo('提示', '今日免费次数已用完，下次使用需购买 credits');
+                        }
+                    });
                     setTimeout(() => {
                         window.location.href = result.html_url;
                     }, 800);
@@ -2432,6 +2661,189 @@
             }
         });
 
+        // ========== Payment System ==========
+
+        // Payment state
+        let _paymentState = { freeRemaining: null, freeLimit: null, balance: null };
+
+        async function refreshPaymentStatus() {
+            try {
+                const [freeRes, balRes] = await Promise.all([
+                    fetch('/api/payment/free-remaining').then(r => r.ok ? r.json() : null).catch(() => null),
+                    fetch('/api/payment/balance').then(r => r.ok ? r.json() : null).catch(() => null),
+                ]);
+
+                if (freeRes) {
+                    _paymentState.freeRemaining = freeRes.remaining;
+                    _paymentState.freeLimit = freeRes.daily_limit;
+                    document.getElementById('psFreeRemaining').textContent = freeRes.remaining;
+                    document.getElementById('psFreeLimit').textContent = freeRes.daily_limit;
+                }
+
+                if (balRes) {
+                    _paymentState.balance = balRes.balance;
+                    document.getElementById('psBalance').textContent = balRes.balance;
+                }
+
+                // Show buy link when free uses exhausted and no credits
+                const buyLink = document.getElementById('psBuyLink');
+                if (_paymentState.freeRemaining === 0 && _paymentState.balance === 0) {
+                    buyLink.style.display = 'inline';
+                } else {
+                    buyLink.style.display = 'none';
+                }
+
+                updateSubmitButton();
+            } catch (e) {
+                console.warn('Payment status unavailable:', e);
+            }
+        }
+
+        function updateSubmitButton() {
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('submitBtnText');
+            if (!btn || !btnText) return;
+            if (_paymentState.freeRemaining === 0 && _paymentState.balance === 0) {
+                btn.querySelector('i').className = 'bx bx-coin-stack';
+                btnText.textContent = '购买 Credits 后使用';
+                btn.dataset.needPayment = 'true';
+            } else {
+                btn.querySelector('i').className = 'bx bx-search-alt-2';
+                btnText.textContent = '查找最佳会面点';
+                btn.dataset.needPayment = '';
+            }
+        }
+
+        function openPaymentModal() {
+            const overlay = document.getElementById('paymentOverlay');
+            const modal = document.getElementById('paymentModal');
+            overlay.style.display = 'block';
+            modal.style.display = 'block';
+
+            // Update balance info in modal
+            const balEl = document.getElementById('pmBalance');
+            if (_paymentState.balance !== null && _paymentState.balance > 0) {
+                document.getElementById('pmTitle').textContent = '余额不足';
+                document.getElementById('pmDesc').textContent = '购买更多 credits 继续获取推荐';
+                balEl.textContent = `当前余额: ${_paymentState.balance} credits`;
+            } else {
+                document.getElementById('pmTitle').textContent = '免费次数已用完';
+                document.getElementById('pmDesc').textContent = '购买 credits 继续获取推荐';
+                balEl.textContent = '';
+            }
+
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+                modal.classList.add('active');
+            });
+
+            document.addEventListener('keydown', _paymentEscHandler);
+        }
+
+        function closePaymentModal() {
+            const overlay = document.getElementById('paymentOverlay');
+            const modal = document.getElementById('paymentModal');
+            overlay.classList.remove('active');
+            modal.classList.remove('active');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                modal.style.display = 'none';
+            }, 300);
+            document.removeEventListener('keydown', _paymentEscHandler);
+        }
+
+        function _paymentEscHandler(e) {
+            if (e.key === 'Escape') closePaymentModal();
+        }
+
+        async function handleBuyCredits() {
+            const btn = document.getElementById('pmBuyBtn');
+            const btnText = document.getElementById('pmBuyText');
+            btn.disabled = true;
+            btnText.textContent = '跳转中...';
+
+            try {
+                const resp = await fetch('/api/payment/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ credits: 10 }),
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${resp.status}`);
+                }
+
+                const data = await resp.json();
+                if (data.checkout_url) {
+                    // Save checkout_id for callback verification
+                    localStorage.setItem('meetspot_checkout_id', data.checkout_id || '');
+                    window.location.href = data.checkout_url;
+                } else {
+                    throw new Error('未获取到支付链接');
+                }
+            } catch (e) {
+                showError('支付创建失败', e.message || '请稍后重试');
+                btn.disabled = false;
+                btnText.textContent = '购买 Credits';
+            }
+        }
+
+        async function handlePaymentCallback() {
+            const params = new URLSearchParams(window.location.search);
+            const paymentResult = params.get('payment');
+            const checkoutId = params.get('checkout_id');
+
+            if (paymentResult !== 'success' || !checkoutId) return;
+
+            // Clean URL immediately
+            history.replaceState(null, '', window.location.pathname);
+
+            showInfo('支付确认中...', '正在查询支付结果');
+
+            let attempts = 0;
+            const maxAttempts = 15;
+            const interval = 2000;
+
+            const poll = async () => {
+                attempts++;
+                try {
+                    const resp = await fetch(`/api/payment/status/${checkoutId}`);
+                    if (!resp.ok) throw new Error('查询失败');
+                    const data = await resp.json();
+
+                    if (data.status === 'paid') {
+                        showSuccess('充值成功', `${data.credits} credits 已到账`);
+                        await refreshPaymentStatus();
+                        localStorage.removeItem('meetspot_checkout_id');
+                        return;
+                    }
+
+                    if (data.status === 'failed') {
+                        showWarning('支付未完成', '如已扣款请稍后刷新页面');
+                        localStorage.removeItem('meetspot_checkout_id');
+                        return;
+                    }
+
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, interval);
+                    } else {
+                        showWarning('支付确认超时', '如已扣款请稍后刷新页面查看余额');
+                        localStorage.removeItem('meetspot_checkout_id');
+                    }
+                } catch (e) {
+                    if (attempts < maxAttempts) {
+                        setTimeout(poll, interval);
+                    } else {
+                        showWarning('查询异常', '请稍后刷新页面查看余额');
+                        localStorage.removeItem('meetspot_checkout_id');
+                    }
+                }
+            };
+
+            await poll();
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updatePlaceTypeHint();
@@ -2451,8 +2863,44 @@
                 .catch(err => {
                     console.warn('Address autocomplete not available:', err);
                 });
+
+            // Load payment status
+            refreshPaymentStatus();
+
+            // Handle payment callback (if redirected from 302 checkout)
+            handlePaymentCallback();
+
+            // If no free uses + no credits, intercept submit button click
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.addEventListener('click', function(e) {
+                if (this.dataset.needPayment === 'true') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    openPaymentModal();
+                }
+            }, true);  // capture phase to fire before form submit
         });
     </script>
+
+    <!-- Payment Modal -->
+    <div class="payment-overlay" id="paymentOverlay" onclick="closePaymentModal()"></div>
+    <div class="payment-modal" id="paymentModal">
+        <button class="payment-modal__close" onclick="closePaymentModal()" aria-label="关闭">
+            <i class='bx bx-x'></i>
+        </button>
+        <div class="payment-modal__icon">
+            <i class='bx bx-coin-stack'></i>
+        </div>
+        <div class="payment-modal__title" id="pmTitle">免费次数已用完</div>
+        <div class="payment-modal__desc" id="pmDesc">购买 credits 继续获取推荐</div>
+        <div class="payment-modal__price">10 credits = $1.00</div>
+        <div class="payment-modal__balance" id="pmBalance"></div>
+        <button class="payment-modal__btn-primary" id="pmBuyBtn" onclick="handleBuyCredits()">
+            <i class='bx bx-cart'></i>
+            <span id="pmBuyText">购买 Credits</span>
+        </button>
+        <button class="payment-modal__btn-secondary" onclick="closePaymentModal()">稍后再说</button>
+    </div>
 
     <!-- Modern Toast Notification System -->
     <script src="/public/js/toast.js"></script>

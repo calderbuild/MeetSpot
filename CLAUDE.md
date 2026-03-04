@@ -183,6 +183,7 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 | Import errors in production | Check MinimalConfig fallback |
 | Wrong city geocoding | Add to `_enhance_address()` alias dict with city prefix |
 | Empty POI results | Fallback mechanism handles this automatically |
+| SSR 页面 env var 读取为空 | 勿用 `templates.env.globals["key"] = os.getenv(...)` (模块导入时求值)；改用 `TemplateResponse` context 字典在每次请求时动态传入 (见 `_common_context()` in `api/routers/seo_pages.py`) |
 | Render OOM (512MB) | Caches are reduced (30/15 limits); Agent mode disabled |
 | Render service down | Trigger redeploy: `git commit --allow-empty -m "trigger redeploy" && git push` |
 

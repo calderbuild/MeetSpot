@@ -222,7 +222,7 @@ async def payment_success(request: Request):
 
     checkout_id = request.query_params.get("checkout_id", "")
     base_url = str(request.base_url).rstrip("/")
-    redirect_url = f"{base_url}/?payment=success&checkout_id={checkout_id}"
+    redirect_url = f"{base_url}/public/meetspot_finder.html?payment=success&checkout_id={checkout_id}"
     return RedirectResponse(url=redirect_url)
 
 
