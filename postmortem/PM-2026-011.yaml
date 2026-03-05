@@ -1,0 +1,24 @@
+id: PM-2026-011
+created_at: '2026-03-05T13:00:33.273169+00:00'
+source_commit: e784478
+severity: medium
+title: clarify daily free quota as 1 use
+description: 'fix(finder): clarify daily free quota as 1 use'
+root_cause: See commit body for details
+triggers:
+  files:
+  - public/meetspot_finder.html
+  functions: []
+  patterns: []
+  keywords: &id001
+  - finder
+fix_pattern:
+  approach: clarify daily free quota as 1 use
+  key_changes:
+  - clarify daily free quota as 1 use
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - public/meetspot_finder.html
+tags: *id001
