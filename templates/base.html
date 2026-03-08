@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,12 @@
     <meta name="description" content="{{ meta_description }}">
     <meta name="keywords" content="{{ meta_keywords }}">
     <link rel="canonical" href="{{ canonical_url }}">
+
+    {% if hreflang %}
+    {% for hl in hreflang %}
+    <link rel="alternate" hreflang="{{ hl.lang }}" href="{{ hl.href }}">
+    {% endfor %}
+    {% endif %}
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="{{ meta_title }}">
@@ -690,25 +696,31 @@
     {% endif %}
 </head>
 <body>
-    <a href="#main" class="sr-only">跳转到主内容</a>
+    <a href="#main" class="sr-only">{{ t['nav.skip_to_main'] }}</a>
 
     <!-- Header - Navigation Theme -->
     <header class="site-header">
         <div class="header-content">
-            <a href="/" class="brand">
+            <a href="{{ '/en/' if lang == 'en' else '/' }}" class="brand">
                 <span class="logo-icon">📍</span>
                 <span class="logo-text">MeetSpot</span>
-                <span class="tagline">Fair Meetups</span>
+                <span class="tagline">{{ t['nav.brand_tagline'] }}</span>
             </a>
             <nav class="main-nav">
-                <a href="/">首页</a>
-                <a href="/about">关于</a>
-                <a href="/how-it-works">使用指南</a>
-                <a href="/faq">FAQ</a>
+                {% set prefix = '/en' if lang == 'en' else '' %}
+                <a href="{{ prefix }}/">{{ t['nav.home'] }}</a>
+                <a href="{{ prefix }}/about">{{ t['nav.about'] }}</a>
+                <a href="{{ prefix }}/how-it-works">{{ t['nav.how_it_works'] }}</a>
+                <a href="{{ prefix }}/faq">{{ t['nav.faq'] }}</a>
+                {% if lang == 'en' %}
+                <a href="{{ request.url.path.replace('/en/', '/').replace('/en', '/') }}" class="lang-switch" onclick="document.cookie='lang=zh;path=/;max-age=31536000;SameSite=Lax'">中文</a>
+                {% else %}
+                <a href="/en{{ request.url.path }}" class="lang-switch" onclick="document.cookie='lang=en;path=/;max-age=31536000;SameSite=Lax'">EN</a>
+                {% endif %}
             </nav>
             <a href="https://github.com/calderbuild/MeetSpot" class="github-badge" target="_blank" rel="noopener">
                 <i class='bx bxl-github'></i>
-                <span>Star on GitHub</span>
+                <span>{{ t['nav.star_github'] }}</span>
             </a>
         </div>
     </header>
@@ -735,63 +747,64 @@
     <footer class="enhanced-footer">
         <div class="footer-container">
             <div class="footer-about">
-                <h3>MeetSpot 聚点</h3>
-                <p>智能聚会地点推荐系统，基于地理算法计算公平中点，让每次聚会都高效便捷。</p>
+                <h3>{{ t['footer.brand'] }}</h3>
+                <p>{{ t['footer.brand_desc'] }}</p>
                 <div class="author-info">
-                    <p>作者：<a href="https://jasonrobert.me/" target="_blank" rel="noopener">Jason Robert</a></p>
-                    <p class="project-stat">开源项目 · 持续更新中</p>
+                    <p>{{ t['footer.author_label'] }}<a href="https://jasonrobert.me/" target="_blank" rel="noopener">Jason Robert</a></p>
+                    <p class="project-stat">{{ t['footer.project_stat'] }}</p>
                 </div>
             </div>
 
             <div class="footer-community">
-                <h3>加入社区</h3>
+                <h3>{{ t['footer.community'] }}</h3>
                 <div class="social-links">
                     <button class="social-btn wechat-btn" onclick="showWeChatGroupModal()">
                         <i class='bx bxl-wechat'></i>
-                        <span>个人微信</span>
+                        <span>{{ t['footer.wechat'] }}</span>
                     </button>
                     <a href="https://github.com/calderbuild/MeetSpot" class="social-btn github-btn" target="_blank" rel="noopener">
                         <i class='bx bxl-github'></i>
-                        <span>GitHub仓库</span>
+                        <span>{{ t['footer.github_repo'] }}</span>
                     </a>
                     <a href="https://jasonrobert.me/" class="social-btn blog-btn" target="_blank" rel="noopener">
                         <i class='bx bx-link-external'></i>
-                        <span>作者博客</span>
+                        <span>{{ t['footer.author_blog'] }}</span>
                     </a>
                 </div>
             </div>
 
             <div class="footer-links">
-                <h3>快速链接</h3>
-                <a href="/how-it-works">使用指南</a>
-                <a href="/faq">常见问题</a>
-                <a href="/about">关于项目</a>
-                <a href="/sitemap.xml">网站地图</a>
+                <h3>{{ t['footer.quick_links'] }}</h3>
+                {% set prefix = '/en' if lang == 'en' else '' %}
+                <a href="{{ prefix }}/how-it-works">{{ t['footer.guide'] }}</a>
+                <a href="{{ prefix }}/faq">{{ t['footer.faq'] }}</a>
+                <a href="{{ prefix }}/about">{{ t['footer.about_project'] }}</a>
+                <a href="/sitemap.xml">{{ t['footer.sitemap'] }}</a>
             </div>
 
             <div class="footer-support">
-                <h3>支持项目</h3>
-                <p>如果MeetSpot对你有帮助</p>
+                <h3>{{ t['footer.support'] }}</h3>
+                <p>{{ t['footer.support_desc'] }}</p>
                 <button class="support-btn" onclick="showSupportModal()">
-                    请我喝杯咖啡
+                    {{ t['footer.buy_coffee'] }}
                 </button>
-                <p class="support-text">MeetSpot是开源项目，您的支持是最大动力</p>
+                <p class="support-text">{{ t['footer.support_note'] }}</p>
             </div>
         </div>
 
         <div class="footer-bottom">
-            <p>© 2025-2026 MeetSpot · Built with ❤️ by <a href="https://jasonrobert.me/" target="_blank">Jason Robert</a></p>
+            <p>{{ t['footer.copyright'] }} <a href="https://jasonrobert.me/" target="_blank">Jason Robert</a></p>
         </div>
     </footer>
 
     <!-- 个人微信 Modal -->
     <div id="wechat-modal" class="modal" onclick="closeModal(event, 'wechat-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal(event, 'wechat-modal')" aria-label="关闭">&times;</button>
-            <h3>添加个人微信</h3>
-            <p>扫码添加好友，交流使用心得</p>
+            <button class="modal-close" onclick="closeModal(event, 'wechat-modal')" aria-label="{{ t['modal.close'] }}">&times;</button>
+            <h3>{{ t['modal.wechat_title'] }}</h3>
+            <p>{{ t['modal.wechat_desc'] }}</p>
             <div class="qr-container">
-                <img src="/public/docs/vx_chat.png" alt="个人微信二维码" title="扫描二维码添加微信好友" loading="lazy">
+                <img src="/public/docs/vx_chat.png" alt="{{ t['modal.wechat_qr_alt'] }}" title="{{ t['modal.wechat_qr_title'] }}" loading="lazy">
             </div>
         </div>
     </div>
@@ -799,20 +812,20 @@
     <!-- 打赏 Modal -->
     <div id="support-modal" class="modal" onclick="closeModal(event, 'support-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal(event, 'support-modal')" aria-label="关闭">&times;</button>
-            <h3>感谢你的支持</h3>
-            <p>MeetSpot是完全免费的开源项目，你的赞赏将帮助项目持续改进</p>
+            <button class="modal-close" onclick="closeModal(event, 'support-modal')" aria-label="{{ t['modal.close'] }}">&times;</button>
+            <h3>{{ t['modal.support_title'] }}</h3>
+            <p>{{ t['modal.support_desc'] }}</p>
             <div class="qr-container">
-                <img src="/public/docs/vx_payment.png" alt="微信支付码" title="使用微信赞赏MeetSpot" loading="lazy">
-                <p class="support-message">你的每一份支持都是最大的动力</p>
+                <img src="/public/docs/vx_payment.png" alt="{{ t['modal.support_qr_alt'] }}" title="{{ t['modal.support_qr_title'] }}" loading="lazy">
+                <p class="support-message">{{ t['modal.support_message'] }}</p>
             </div>
             <div class="other-support">
-                <p>也可以通过以下方式支持：</p>
+                <p>{{ t['modal.other_support'] }}</p>
                 <ul>
-                    <li>在GitHub上给项目点Star</li>
-                    <li>分享给需要的朋友</li>
-                    <li>提交Issue帮助改进</li>
-                    <li>贡献代码和想法</li>
+                    <li>{{ t['modal.star_github'] }}</li>
+                    <li>{{ t['modal.share_friends'] }}</li>
+                    <li>{{ t['modal.submit_issue'] }}</li>
+                    <li>{{ t['modal.contribute_code'] }}</li>
                 </ul>
             </div>
         </div>

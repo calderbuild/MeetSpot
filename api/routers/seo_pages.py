@@ -14,15 +14,24 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from api.services.seo_content import seo_content_generator as seo_generator
+from app.i18n import get_translations, detect_language, DEFAULT_LANG
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 limiter = Limiter(key_func=get_remote_address)
 
+BASE_URL = "https://meetspot-irq2.onrender.com"
 
-def _common_context() -> dict:
-    """每次请求时动态读取的公共模板变量."""
-    return {"baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", "")}
+
+def _common_context(request: Request, lang: str = "zh") -> dict:
+    """每次请求时动态读取的公共模板变量 + i18n."""
+    t = get_translations(lang)
+    return {
+        "request": request,
+        "baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", ""),
+        "t": t,
+        "lang": lang,
+    }
 
 
 @lru_cache(maxsize=128)
@@ -52,64 +61,100 @@ def _build_schema_list(*schemas: Dict) -> List[Dict]:
     return [schema for schema in schemas if schema]
 
 
-@router.get("/", response_class=HTMLResponse)
-@limiter.limit("60/minute")
-async def homepage(request: Request):
-    """首页 - 提供SEO友好内容."""
+def _get_faqs(lang: str) -> List[Dict[str, str]]:
+    """从翻译文件构建 FAQ 列表."""
+    t = get_translations(lang)
+    faqs = []
+    for i in range(1, 13):
+        q_key = f"faq.q{i}"
+        a_key = f"faq.a{i}"
+        if q_key in t and a_key in t:
+            faqs.append({"question": t[q_key], "answer": t[a_key]})
+    return faqs
 
-    meta_tags = seo_generator.generate_meta_tags("homepage", {})
+
+def _lang_prefix(lang: str) -> str:
+    return "/en" if lang == "en" else ""
+
+
+def _hreflang_links(path: str) -> List[Dict[str, str]]:
+    """生成 hreflang 链接对."""
+    zh_path = path
+    en_path = f"/en{path}" if path != "/" else "/en/"
+    return [
+        {"lang": "zh", "href": f"{BASE_URL}{zh_path}"},
+        {"lang": "en", "href": f"{BASE_URL}{en_path}"},
+        {"lang": "x-default", "href": f"{BASE_URL}{zh_path}"},
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Homepage
+# ---------------------------------------------------------------------------
+
+def _render_homepage(request: Request, lang: str):
+    t = get_translations(lang)
+    prefix = _lang_prefix(lang)
+    meta_tags = {
+        "title": t.get("seo.home.title", "MeetSpot"),
+        "description": t.get("seo.home.description", ""),
+        "keywords": "聚会地点推荐,中点计算,meeting location,midpoint",
+    }
     faq_schema = seo_generator.generate_schema_org(
         "faq",
-        {
-            "faqs": [
-                {
-                    "question": "MeetSpot如何计算最佳聚会地点？",
-                    "answer": "我们使用球面几何算法计算所有参与者位置的地理中点, 再推荐附近高评分场所。",
-                },
-                {
-                    "question": "MeetSpot支持多少人的聚会?",
-                    "answer": "默认支持2-10人, 满足大多数团队与家人聚会需求。",
-                },
-                {
-                    "question": "需要付费吗?",
-                    "answer": "MeetSpot完全免费且开源, 无需注册即可使用。",
-                },
-            ]
-        },
+        {"faqs": _get_faqs(lang)[:3]},
     )
     schema_list = _build_schema_list(
         seo_generator.generate_schema_org("webapp", {}),
         seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
         seo_generator.generate_schema_org(
-            "breadcrumb", {"items": [{"name": "Home", "url": "/"}]}
+            "breadcrumb", {"items": [{"name": "Home", "url": f"{prefix}/"}]}
         ),
         faq_schema,
     )
-
+    canonical = f"{BASE_URL}{prefix}/" if lang == "en" else f"{BASE_URL}/"
     return templates.TemplateResponse(
         "pages/home.html",
         {
-            "request": request,
-            "meta_title": meta_tags["title"],
-            "meta_description": meta_tags["description"],
+            **_common_context(request, lang),
+            "meta_title": meta_tags["title"][:60],
+            "meta_description": meta_tags["description"][:155],
             "meta_keywords": meta_tags["keywords"],
-            "canonical_url": "https://meetspot-irq2.onrender.com/",
+            "canonical_url": canonical,
             "schema_jsonld": schema_list,
             "breadcrumbs": [],
             "cities": load_cities(),
-            **_common_context(),
+            "hreflang": _hreflang_links("/"),
         },
     )
 
 
-@router.get("/meetspot/{city_slug}", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 @limiter.limit("60/minute")
-async def city_page(request: Request, city_slug: str):
+async def homepage(request: Request):
+    return _render_homepage(request, "zh")
+
+
+@router.get("/en/", response_class=HTMLResponse)
+@router.get("/en", response_class=HTMLResponse)
+@limiter.limit("60/minute")
+async def homepage_en(request: Request):
+    return _render_homepage(request, "en")
+
+
+# ---------------------------------------------------------------------------
+# City page
+# ---------------------------------------------------------------------------
+
+def _render_city_page(request: Request, city_slug: str, lang: str):
     city = _get_city_by_slug(city_slug)
     if not city:
         raise HTTPException(status_code=404, detail="City not found")
 
+    t = get_translations(lang)
+    prefix = _lang_prefix(lang)
+    city_name = city.get("name_en", city.get("name")) if lang == "en" else city.get("name")
     meta_tags = seo_generator.generate_meta_tags(
         "city_page",
         {
@@ -118,39 +163,79 @@ async def city_page(request: Request, city_slug: str):
             "venue_types": city.get("popular_venues", []),
         },
     )
-    breadcrumb = seo_generator.generate_schema_org(
-        "breadcrumb",
-        {
-            "items": [
-                {"name": "Home", "url": "/"},
-                {"name": city.get("name"), "url": f"/meetspot/{city_slug}"},
-            ]
-        },
-    )
+    breadcrumb_items = [
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": city_name, "url": f"{prefix}/meetspot/{city_slug}"},
+    ]
     schema_list = _build_schema_list(
         seo_generator.generate_schema_org("webapp", {}),
         seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
-        breadcrumb,
+        seo_generator.generate_schema_org("breadcrumb", {"items": breadcrumb_items}),
     )
-    city_content = seo_generator.generate_city_content(city)
-
+    city_content = seo_generator.generate_city_content(city, lang=lang)
+    path = f"/meetspot/{city_slug}"
     return templates.TemplateResponse(
         "pages/city.html",
         {
-            "request": request,
-            "meta_title": meta_tags["title"],
-            "meta_description": meta_tags["description"],
+            **_common_context(request, lang),
+            "meta_title": meta_tags["title"][:60],
+            "meta_description": meta_tags["description"][:155],
             "meta_keywords": meta_tags["keywords"],
-            "canonical_url": f"https://meetspot-irq2.onrender.com/meetspot/{city_slug}",
+            "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
-            "breadcrumbs": [
-                {"name": "首页", "url": "/"},
-                {"name": city.get("name"), "url": f"/meetspot/{city_slug}"},
-            ],
+            "breadcrumbs": breadcrumb_items,
             "city": city,
             "city_content": city_content,
-            **_common_context(),
+            "hreflang": _hreflang_links(path),
+        },
+    )
+
+
+@router.get("/meetspot/{city_slug}", response_class=HTMLResponse)
+@limiter.limit("60/minute")
+async def city_page(request: Request, city_slug: str):
+    return _render_city_page(request, city_slug, "zh")
+
+
+@router.get("/en/meetspot/{city_slug}", response_class=HTMLResponse)
+@limiter.limit("60/minute")
+async def city_page_en(request: Request, city_slug: str):
+    return _render_city_page(request, city_slug, "en")
+
+
+# ---------------------------------------------------------------------------
+# About
+# ---------------------------------------------------------------------------
+
+def _render_about(request: Request, lang: str):
+    t = get_translations(lang)
+    prefix = _lang_prefix(lang)
+    meta_tags = {
+        "title": t.get("seo.about.title", "About MeetSpot"),
+        "description": t.get("seo.home.description", ""),
+        "keywords": "about MeetSpot,meeting algorithm",
+    }
+    breadcrumb_items = [
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.about", "About"), "url": f"{prefix}/about"},
+    ]
+    schema_list = _build_schema_list(
+        seo_generator.generate_schema_org("organization", {}),
+        seo_generator.generate_schema_org("breadcrumb", {"items": breadcrumb_items}),
+    )
+    path = "/about"
+    return templates.TemplateResponse(
+        "pages/about.html",
+        {
+            **_common_context(request, lang),
+            "meta_title": meta_tags["title"][:60],
+            "meta_description": meta_tags["description"][:155],
+            "meta_keywords": meta_tags["keywords"],
+            "canonical_url": f"{BASE_URL}{prefix}{path}",
+            "schema_jsonld": schema_list,
+            "breadcrumbs": breadcrumb_items,
+            "hreflang": _hreflang_links(path),
         },
     )
 
@@ -158,33 +243,70 @@ async def city_page(request: Request, city_slug: str):
 @router.get("/about", response_class=HTMLResponse)
 @limiter.limit("30/minute")
 async def about_page(request: Request):
-    meta_tags = seo_generator.generate_meta_tags("about", {})
-    schema_list = _build_schema_list(
-        seo_generator.generate_schema_org("organization", {}),
-        seo_generator.generate_schema_org(
-            "breadcrumb",
-            {
-                "items": [
-                    {"name": "Home", "url": "/"},
-                    {"name": "About", "url": "/about"},
-                ]
-            },
-        )
-    )
-    return templates.TemplateResponse(
-        "pages/about.html",
+    return _render_about(request, "zh")
+
+
+@router.get("/en/about", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def about_page_en(request: Request):
+    return _render_about(request, "en")
+
+
+# ---------------------------------------------------------------------------
+# How it works
+# ---------------------------------------------------------------------------
+
+def _render_how_it_works(request: Request, lang: str):
+    t = get_translations(lang)
+    prefix = _lang_prefix(lang)
+    meta_tags = {
+        "title": t.get("seo.how.title", "How It Works - MeetSpot"),
+        "description": t.get("how.hero_desc", ""),
+        "keywords": "MeetSpot guide,how to use,meeting point tutorial",
+    }
+    how_to_schema = seo_generator.generate_schema_org(
+        "how_to",
         {
-            "request": request,
-            "meta_title": meta_tags["title"],
-            "meta_description": meta_tags["description"],
-            "meta_keywords": meta_tags["keywords"],
-            "canonical_url": "https://meetspot-irq2.onrender.com/about",
-            "schema_jsonld": schema_list,
-            "breadcrumbs": [
-                {"name": "首页", "url": "/"},
-                {"name": "关于我们", "url": "/about"},
+            "name": t.get("how.hero_title", "How It Works"),
+            "description": t.get("how.hero_desc", ""),
+            "total_time": "PT1M",
+            "steps": [
+                {"name": t.get("how.step1_title", ""), "text": t.get("how.step1_desc", "")},
+                {"name": t.get("how.step2_title", ""), "text": t.get("how.step2_desc", "")},
+                {"name": t.get("how.step3_title", ""), "text": t.get("how.step3_desc", "")},
+                {"name": t.get("how.step4_title", ""), "text": t.get("how.step4_desc", "")},
+                {"name": t.get("how.step5_title", ""), "text": t.get("how.step5_desc", "")},
             ],
-            **_common_context(),
+            "tools": ["MeetSpot AI Agent", "AMap API", "GPT-4o"],
+            "supplies": [
+                t.get("how.step1_title", "Participant addresses"),
+                t.get("how.step2_title", "Venue type"),
+                t.get("how.step3_title", "Special requirements"),
+            ],
+        },
+    )
+    breadcrumb_items = [
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.guide", "Guide"), "url": f"{prefix}/how-it-works"},
+    ]
+    schema_list = _build_schema_list(
+        seo_generator.generate_schema_org("website", {}),
+        seo_generator.generate_schema_org("organization", {}),
+        seo_generator.generate_schema_org("breadcrumb", {"items": breadcrumb_items}),
+        how_to_schema,
+    )
+    path = "/how-it-works"
+    return templates.TemplateResponse(
+        "pages/how_it_works.html",
+        {
+            **_common_context(request, lang),
+            "meta_title": meta_tags["title"][:60],
+            "meta_description": meta_tags["description"][:155],
+            "meta_keywords": meta_tags["keywords"],
+            "canonical_url": f"{BASE_URL}{prefix}{path}",
+            "schema_jsonld": schema_list,
+            "breadcrumbs": breadcrumb_items,
+            "hreflang": _hreflang_links(path),
         },
     )
 
@@ -192,67 +314,51 @@ async def about_page(request: Request):
 @router.get("/how-it-works", response_class=HTMLResponse)
 @limiter.limit("30/minute")
 async def how_it_works(request: Request):
-    meta_tags = seo_generator.generate_meta_tags("how_it_works", {})
-    how_to_schema = seo_generator.generate_schema_org(
-        "how_to",
-        {
-            "name": "使用MeetSpot AI Agent规划公平会面",
-            "description": "5步AI推理流程, 从输入地址到生成推荐, 5-30秒内完成。",
-            "total_time": "PT1M",
-            "steps": [
-                {
-                    "name": "解析地址",
-                    "text": "AI智能识别地址/地标/简称，'北大'自动转换为'北京市海淀区北京大学'，校验经纬度。",
-                },
-                {
-                    "name": "计算中心点",
-                    "text": "使用球面几何（Haversine公式）计算地球曲面真实中点，数学上对每个人公平。",
-                },
-                {
-                    "name": "搜索周边场所",
-                    "text": "在中心点周边搜索匹配场景的POI，支持咖啡馆、餐厅、图书馆等12种场景主题。",
-                },
-                {
-                    "name": "GPT-4o智能评分",
-                    "text": "AI对候选场所进行多维度评分：距离、评分、停车、环境、交通便利度。",
-                },
-                {
-                    "name": "生成推荐",
-                    "text": "综合排序输出最优推荐，包含地图、评分、导航链接，可直接分享给朋友。",
-                },
-            ],
-            "tools": ["MeetSpot AI Agent", "AMap API", "GPT-4o"],
-            "supplies": ["参与者地址", "场景选择", "特殊需求（可选）"],
-        },
-    )
+    return _render_how_it_works(request, "zh")
+
+
+@router.get("/en/how-it-works", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def how_it_works_en(request: Request):
+    return _render_how_it_works(request, "en")
+
+
+# ---------------------------------------------------------------------------
+# FAQ
+# ---------------------------------------------------------------------------
+
+def _render_faq(request: Request, lang: str):
+    t = get_translations(lang)
+    prefix = _lang_prefix(lang)
+    faqs = _get_faqs(lang)
+    meta_tags = {
+        "title": t.get("seo.faq.title", "FAQ - MeetSpot"),
+        "description": t.get("faq.hero_desc", ""),
+        "keywords": "MeetSpot FAQ,meeting point help",
+    }
+    breadcrumb_items = [
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.faq", "FAQ"), "url": f"{prefix}/faq"},
+    ]
     schema_list = _build_schema_list(
         seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
-        seo_generator.generate_schema_org(
-            "breadcrumb",
-            {
-                "items": [
-                    {"name": "Home", "url": "/"},
-                    {"name": "How it Works", "url": "/how-it-works"},
-                ]
-            },
-        ),
-        how_to_schema,
+        seo_generator.generate_schema_org("faq", {"faqs": faqs}),
+        seo_generator.generate_schema_org("breadcrumb", {"items": breadcrumb_items}),
     )
+    path = "/faq"
     return templates.TemplateResponse(
-        "pages/how_it_works.html",
+        "pages/faq.html",
         {
-            "request": request,
-            "meta_title": meta_tags["title"],
-            "meta_description": meta_tags["description"],
+            **_common_context(request, lang),
+            "meta_title": meta_tags["title"][:60],
+            "meta_description": meta_tags["description"][:155],
             "meta_keywords": meta_tags["keywords"],
-            "canonical_url": "https://meetspot-irq2.onrender.com/how-it-works",
+            "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
-            "breadcrumbs": [
-                {"name": "首页", "url": "/"},
-                {"name": "使用指南", "url": "/how-it-works"},
-            ],
-            **_common_context(),
+            "breadcrumbs": breadcrumb_items,
+            "faqs": faqs,
+            "hreflang": _hreflang_links(path),
         },
     )
 
@@ -260,127 +366,76 @@ async def how_it_works(request: Request):
 @router.get("/faq", response_class=HTMLResponse)
 @limiter.limit("30/minute")
 async def faq_page(request: Request):
-    meta_tags = seo_generator.generate_meta_tags("faq", {})
-    faqs = [
-        {
-            "question": "MeetSpot 是什么？",
-            "answer": "MeetSpot（聚点）是一个智能会面地点推荐系统，帮助多人找到最公平的聚会地点。无论是商务会谈、朋友聚餐还是学习讨论，都能快速找到合适的场所。",
-        },
-        {
-            "question": "支持多少人一起查找？",
-            "answer": "支持 2-10 个参与者位置，系统会根据所有人的位置计算最佳中点。",
-        },
-        {
-            "question": "支持哪些城市？",
-            "answer": "目前覆盖北京、上海、广州、深圳、杭州等 350+ 城市，使用高德地图数据，持续扩展中。",
-        },
-        {
-            "question": "可以搜索哪些类型的场所？",
-            "answer": "支持咖啡馆、餐厅、图书馆、KTV、健身房、密室逃脱等多种场所类型，还可以同时搜索多种类型（如'咖啡馆+餐厅'）。",
-        },
-        {
-            "question": "如何保证推荐公平？",
-            "answer": "系统使用几何中心算法，确保每位参与者到聚会地点的距离都在合理范围内，没有人需要跑特别远。",
-        },
-        {
-            "question": "推荐结果如何排序？",
-            "answer": "基于评分、距离、用户需求的综合排序算法，优先推荐评分高、距离中心近、符合特殊需求的场所。",
-        },
-        {
-            "question": "可以输入简称吗？",
-            "answer": "支持！系统内置 60+ 大学简称映射，如'北大'会自动识别为'北京大学'。也支持输入地标名称如'国贸'、'东方明珠'等。",
-        },
-        {
-            "question": "是否免费？需要注册吗？",
-            "answer": "完全免费使用，无需注册，直接输入地址即可获得推荐结果。",
-        },
-        {
-            "question": "推荐速度如何？",
-            "answer": "AI Agent 会经历完整的5步推理流程：解析地址 → 计算中心点 → 搜索周边 → GPT-4o智能评分 → 生成推荐。单场景5-8秒，双场景8-12秒，复杂Agent模式15-30秒。",
-        },
-        {
-            "question": "和高德地图有什么区别？",
-            "answer": "高德搜索'我附近'，MeetSpot搜索'我们中间'。我们先用球面几何算出多人公平中点，再推荐那里的好店。这是高德/百度都没有的功能。",
-        },
-        {
-            "question": "AI Agent是什么意思？",
-            "answer": "MeetSpot不是简单的搜索工具，而是一个AI Agent。它有5步完整的推理链条，使用GPT-4o进行多维度评分（距离、评分、停车、环境），你可以看到AI每一步是怎么'思考'的，完全透明可解释。",
-        },
-        {
-            "question": "如何反馈问题或建议？",
-            "answer": "欢迎通过 GitHub Issues 反馈问题或建议，也可以发送邮件至 Johnrobertdestiny@gmail.com。",
-        },
-    ]
-    schema_list = _build_schema_list(
-        seo_generator.generate_schema_org("website", {}),
-        seo_generator.generate_schema_org("organization", {}),
-        seo_generator.generate_schema_org("faq", {"faqs": faqs}),
-        seo_generator.generate_schema_org(
-            "breadcrumb",
-            {
-                "items": [
-                    {"name": "Home", "url": "/"},
-                    {"name": "FAQ", "url": "/faq"},
-                ]
-            },
-        ),
-    )
-    return templates.TemplateResponse(
-        "pages/faq.html",
-        {
-            "request": request,
-            "meta_title": meta_tags["title"],
-            "meta_description": meta_tags["description"],
-            "meta_keywords": meta_tags["keywords"],
-            "canonical_url": "https://meetspot-irq2.onrender.com/faq",
-            "schema_jsonld": schema_list,
-            "breadcrumbs": [
-                {"name": "首页", "url": "/"},
-                {"name": "常见问题", "url": "/faq"},
-            ],
-            "faqs": faqs,
-            **_common_context(),
-        },
-    )
+    return _render_faq(request, "zh")
 
+
+@router.get("/en/faq", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def faq_page_en(request: Request):
+    return _render_faq(request, "en")
+
+
+# ---------------------------------------------------------------------------
+# Sitemap & Robots
+# ---------------------------------------------------------------------------
 
 @router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
 async def sitemap():
-    base_url = "https://meetspot-irq2.onrender.com"
     today = datetime.now().strftime("%Y-%m-%d")
-    urls = [
+    pages = [
         {"loc": "/", "priority": "1.0", "changefreq": "daily"},
         {"loc": "/about", "priority": "0.8", "changefreq": "monthly"},
         {"loc": "/faq", "priority": "0.8", "changefreq": "weekly"},
         {"loc": "/how-it-works", "priority": "0.7", "changefreq": "monthly"},
     ]
-    city_urls = [
-        {
-            "loc": f"/meetspot/{city['slug']}",
-            "priority": "0.9",
-            "changefreq": "weekly",
-        }
+    city_pages = [
+        {"loc": f"/meetspot/{city['slug']}", "priority": "0.9", "changefreq": "weekly"}
         for city in load_cities()
     ]
+    all_pages = pages + city_pages
+
     entries = []
-    for item in urls + city_urls:
+    for item in all_pages:
+        zh_url = f"{BASE_URL}{item['loc']}"
+        en_loc = f"/en{item['loc']}" if item["loc"] != "/" else "/en/"
+        en_url = f"{BASE_URL}{en_loc}"
+        hreflang_zh = f'        <xhtml:link rel="alternate" hreflang="zh" href="{zh_url}"/>'
+        hreflang_en = f'        <xhtml:link rel="alternate" hreflang="en" href="{en_url}"/>'
+        hreflang_default = f'        <xhtml:link rel="alternate" hreflang="x-default" href="{zh_url}"/>'
+        # Chinese URL entry
         entries.append(
-            f"    <url>\n        <loc>{base_url}{item['loc']}</loc>\n        <lastmod>{today}</lastmod>\n        <changefreq>{item['changefreq']}</changefreq>\n        <priority>{item['priority']}</priority>\n    </url>"
+            f"    <url>\n"
+            f"        <loc>{zh_url}</loc>\n"
+            f"        <lastmod>{today}</lastmod>\n"
+            f"        <changefreq>{item['changefreq']}</changefreq>\n"
+            f"        <priority>{item['priority']}</priority>\n"
+            f"{hreflang_zh}\n{hreflang_en}\n{hreflang_default}\n"
+            f"    </url>"
         )
+        # English URL entry
+        entries.append(
+            f"    <url>\n"
+            f"        <loc>{en_url}</loc>\n"
+            f"        <lastmod>{today}</lastmod>\n"
+            f"        <changefreq>{item['changefreq']}</changefreq>\n"
+            f"        <priority>{item['priority']}</priority>\n"
+            f"{hreflang_zh}\n{hreflang_en}\n{hreflang_default}\n"
+            f"    </url>"
+        )
+
     sitemap_xml = (
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
+        '        xmlns:xhtml="http://www.w3.org/1999/xhtml">\n'
         + "\n".join(entries)
         + "\n</urlset>"
     )
-    # Long cache with stale-while-revalidate to handle Render cold starts
-    # CDN can serve stale content while revalidating in background
     return Response(
         content=sitemap_xml,
         media_type="application/xml",
         headers={
             "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-            "X-Robots-Tag": "noindex",  # Sitemap itself shouldn't be indexed
+            "X-Robots-Tag": "noindex",
         },
     )
 
@@ -388,8 +443,7 @@ async def sitemap():
 @router.api_route("/robots.txt", methods=["GET", "HEAD"])
 async def robots_txt():
     today = datetime.now().strftime("%Y-%m-%d")
-    robots = f"""# MeetSpot Robots.txt\n# Generated: {today}\n\nUser-agent: *\nAllow: /\nCrawl-delay: 1\n\nDisallow: /admin/\nDisallow: /api/internal/\nDisallow: /*.json$\n\nSitemap: https://meetspot-irq2.onrender.com/sitemap.xml\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Baiduspider\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: CCBot\nDisallow: /\n"""
-    # Long cache with stale-while-revalidate to handle Render cold starts
+    robots = f"""# MeetSpot Robots.txt\n# Generated: {today}\n\nUser-agent: *\nAllow: /\nCrawl-delay: 1\n\nDisallow: /admin/\nDisallow: /api/internal/\nDisallow: /*.json$\n\nSitemap: {BASE_URL}/sitemap.xml\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Baiduspider\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: CCBot\nDisallow: /\n"""
     return Response(
         content=robots,
         media_type="text/plain",

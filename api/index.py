@@ -292,6 +292,30 @@ AMAP_SECURITY_JS_CODE = os.getenv("AMAP_SECURITY_JS_CODE", "")
 # 免费次数限制
 FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
 
+
+def _parse_cors_origins(raw_value: str) -> List[str]:
+    origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
+def _get_client_ip(request: Request) -> str:
+    """获取客户端 IP，优先读取代理头。"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _quota_exceeded_response(used_today: int, start_time: float) -> dict:
+    return {
+        "success": False,
+        "need_payment": True,
+        "message": "今日免费次数已用完，请购买 credits 继续使用",
+        "free_used": used_today,
+        "free_limit": FREE_DAILY_LIMIT,
+        "processing_time": time.time() - start_time,
+    }
+
 # 创建 FastAPI 应用
 app = FastAPI(
     title="MeetSpot",
@@ -327,11 +351,13 @@ async def startup_database():
         raise
 
 
-# 配置CORS
+# 配置CORS（生产环境禁止 "*" + credentials 组合）
+cors_origins = _parse_cors_origins(os.getenv("CORS_ALLOW_ORIGINS", "*"))
+cors_allow_all = "*" in cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"] if cors_allow_all else cors_origins,
+    allow_credentials=not cors_allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -380,21 +406,25 @@ try:
 
     if os.path.exists(workspace_dir):
         app.mount("/workspace", StaticFiles(directory=workspace_dir), name="workspace")
-        print("✅ 挂载 /workspace 静态文件")
+        logger.info("mounted_static_workspace")
 
     if os.path.exists("public"):
         app.mount("/public", StaticFiles(directory="public"), name="public")
-        print("✅ 挂载 /public 静态文件")
+        logger.info("mounted_static_public")
 
     if os.path.exists("docs"):
         app.mount("/docs-static", StaticFiles(directory="docs"), name="docs-static")
-        print("✅ 挂载 /docs 静态文件")
+        logger.info("mounted_static_docs")
 
     if os.path.exists("static"):
         app.mount("/static", StaticFiles(directory="static"), name="static")
-        print("✅ 挂载 /static 静态文件")
+        logger.info("mounted_static_assets")
+
+    if os.path.exists("locales"):
+        app.mount("/locales", StaticFiles(directory="locales"), name="locales")
+        logger.info("mounted_static_locales")
 except Exception as e:
-    print(f"⚠️ 静态文件挂载失败: {e}")
+    logger.warning(f"静态文件挂载失败: {e}")
     # 在Vercel环境下，静态文件挂载可能失败，这是正常的
 
 app.include_router(auth.router)
@@ -686,56 +716,43 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
     - 复杂请求: Agent模式 (深度分析，3-8秒)
     """
     start_time = time.time()
+    client_ip = _get_client_ip(raw_request) if raw_request else None
 
     # 免费次数限制检查
-    if raw_request and FREE_DAILY_LIMIT > 0:
+    if client_ip and FREE_DAILY_LIMIT > 0:
         try:
             from app.db.database import AsyncSessionLocal
             from app.db import payment_crud
 
-            forwarded = raw_request.headers.get("x-forwarded-for")
-            client_ip = (
-                forwarded.split(",")[0].strip()
-                if forwarded
-                else (raw_request.client.host if raw_request.client else "unknown")
-            )
-
             async with AsyncSessionLocal() as db:
                 used_today = await payment_crud.get_free_usage_today(db, client_ip)
                 if used_today >= FREE_DAILY_LIMIT:
-                    return {
-                        "success": False,
-                        "need_payment": True,
-                        "message": "今日免费次数已用完，请购买 credits 继续使用",
-                        "free_used": used_today,
-                        "free_limit": FREE_DAILY_LIMIT,
-                        "processing_time": time.time() - start_time,
-                    }
+                    return _quota_exceeded_response(used_today, start_time)
         except Exception as e:
             # 免费次数检查失败不阻塞主流程
-            print(f"免费次数检查异常（不影响请求）: {e}")
+            logger.warning(f"免费次数检查异常（不影响请求）: {e}")
 
     # 并发控制：排队处理，保证每个请求都能完成
     async with _request_semaphore:
         result = await _process_meetspot_request(request, start_time)
 
     # 请求成功后记录免费使用
-    if raw_request and FREE_DAILY_LIMIT > 0 and isinstance(result, dict) and result.get("success"):
+    if client_ip and FREE_DAILY_LIMIT > 0 and isinstance(result, dict) and result.get("success"):
         try:
             from app.db.database import AsyncSessionLocal
             from app.db import payment_crud
 
-            forwarded = raw_request.headers.get("x-forwarded-for")
-            client_ip = (
-                forwarded.split(",")[0].strip()
-                if forwarded
-                else (raw_request.client.host if raw_request.client else "unknown")
-            )
-
             async with AsyncSessionLocal() as db:
-                await payment_crud.record_free_use(db, client_ip)
+                consumed, used_today = await payment_crud.try_consume_free_use(
+                    db=db,
+                    ip_address=client_ip,
+                    daily_limit=FREE_DAILY_LIMIT,
+                )
+                if not consumed:
+                    logger.info("free_quota_race_lost")
+                    return _quota_exceeded_response(used_today, start_time)
         except Exception as e:
-            print(f"记录免费使用异常: {e}")
+            logger.warning(f"记录免费使用异常: {e}")
 
     return result
 
@@ -744,20 +761,22 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
     """实际处理推荐请求的内部函数"""
     # 评估请求复杂度
     complexity = assess_request_complexity(request)
-    print(f"🧠 [智能路由] 复杂度评估: {complexity['complexity_score']}分, 模式: {complexity['mode_name']}")
+    logger.info(
+        f"[智能路由] 复杂度评估: {complexity['complexity_score']}分, 模式: {complexity['mode_name']}"
+    )
     if complexity['reasons']:
-        print(f"   原因: {', '.join(complexity['reasons'])}")
+        logger.info(f"[智能路由] 触发原因: {', '.join(complexity['reasons'])}")
 
     try:
-        print(f"📝 收到请求: {request.model_dump()}")
+        logger.debug(f"收到请求: {request.model_dump()}")
 
         # 检查配置
-        if config:
+        if config and getattr(config, "amap", None):
             api_key = config.amap.api_key
-            print(f"✅ 使用配置文件中的API密钥: {api_key[:10]}...")
+            logger.info("using_amap_key_source=config")
         else:
             api_key = AMAP_API_KEY
-            print(f"✅ 使用环境变量中的API密钥: {api_key[:10]}...")
+            logger.info("using_amap_key_source=env")
 
         if not api_key:
             raise HTTPException(
@@ -1075,23 +1094,6 @@ async def api_status():
         "features": "Complete" if config else "Limited",
         "timestamp": time.time()
     }
-
-# 静态文件服务（替代WhiteNoise，使用FastAPI原生StaticFiles）
-# StaticFiles自带gzip压缩和缓存控制
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-if os.path.exists("public"):
-    app.mount("/public", StaticFiles(directory="public", html=True), name="public")
-
-# 添加缓存控制头（用于静态资源，HTML 除外）
-@app.middleware("http")
-async def add_cache_headers(request: Request, call_next):
-    response = await call_next(request)
-    path = request.url.path
-    # 对静态资源添加长期缓存，HTML 文件走上层中间件的短缓存策略
-    if path.startswith(("/static/", "/public/")) and not path.endswith(".html"):
-        response.headers["Cache-Control"] = "public, max-age=31536000"  # 1年
-    return response
 
 # Vercel 处理函数
 app_instance = app

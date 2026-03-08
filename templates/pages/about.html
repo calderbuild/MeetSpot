@@ -172,60 +172,60 @@
 </style>
 
 <div class="about-hero">
-    <h1>关于 MeetSpot</h1>
-    <p>MeetSpot（聚点）是一款多人会面地点推荐的 <strong>AI Agent</strong>。基于球面几何算法计算公平中点，结合 GPT-4o 智能评分，5步透明推理帮你找到对所有人都公平的聚会地点。</p>
+    <h1>{{ t['about.hero_title'] }}</h1>
+    <p>{{ t['about.hero_desc'] | safe }}</p>
 </div>
 
 <section class="about-section">
-    <h2>我们的故事</h2>
-    <p>MeetSpot 始于一个简单的问题：当多个朋友分散在城市不同角落时，如何找到对所有人都公平的聚会地点？</p>
-    <p>传统方式往往是让某一个人跑最远，或者随意选一个"中间"的地方。我们认为应该有更好的解决方案——一个基于算法的、公平的中点计算系统。</p>
-    <p>于是，MeetSpot 诞生了。从最初的内部工具，到现在覆盖 350+ 城市的在线服务，我们始终坚持一个原则：让每个人的路程都在合理范围内。</p>
+    <h2>{{ t['about.story_title'] }}</h2>
+    <p>{{ t['about.story_p1'] }}</p>
+    <p>{{ t['about.story_p2'] }}</p>
+    <p>{{ t['about.story_p3'] }}</p>
 </section>
 
 <section class="about-section">
-    <h2>核心价值</h2>
+    <h2>{{ t['about.values_title'] }}</h2>
     <div class="value-grid">
         <div class="value-card">
-            <h3>🎯 数学公平</h3>
-            <p>使用球面几何（Haversine公式）计算地球曲面真实中点，比简单平均精确15-20%，确保每个人距离均衡。</p>
+            <h3>{{ t['about.val_fair_title'] }}</h3>
+            <p>{{ t['about.val_fair_desc'] }}</p>
         </div>
         <div class="value-card">
-            <h3>🤖 AI Agent</h3>
-            <p>不是简单搜索工具，而是完整的AI Agent。5步透明推理：解析地址 → 计算中点 → 搜索周边 → GPT-4o评分 → 生成推荐。</p>
+            <h3>{{ t['about.val_agent_title'] }}</h3>
+            <p>{{ t['about.val_agent_desc'] }}</p>
         </div>
         <div class="value-card">
-            <h3>🏢 多场景支持</h3>
-            <p>12种场景主题（咖啡馆、餐厅、图书馆、KTV等），支持多场景并发搜索，一次获得多种推荐。</p>
+            <h3>{{ t['about.val_themes_title'] }}</h3>
+            <p>{{ t['about.val_themes_desc'] }}</p>
         </div>
         <div class="value-card">
-            <h3>📊 GPT-4o智能评分</h3>
-            <p>AI综合评估评分、距离、场景匹配、用户需求（停车、安静、包间），给出智能排序和推荐理由。</p>
+            <h3>{{ t['about.val_scoring_title'] }}</h3>
+            <p>{{ t['about.val_scoring_desc'] }}</p>
         </div>
     </div>
 </section>
 
 <section class="about-section">
-    <h2>技术架构</h2>
-    <p>MeetSpot 采用现代化的 AI Agent 技术栈：</p>
+    <h2>{{ t['about.tech_title'] }}</h2>
+    <p>{{ t['about.tech_desc'] }}</p>
     <div class="tech-list">
         <span class="tech-tag">GPT-4o</span>
         <span class="tech-tag">FastAPI</span>
         <span class="tech-tag">Python 3.11+</span>
-        <span class="tech-tag">高德地图 API</span>
-        <span class="tech-tag">球面几何算法</span>
-        <span class="tech-tag">异步并发</span>
+        <span class="tech-tag">Amap API</span>
+        <span class="tech-tag">Haversine</span>
+        <span class="tech-tag">Async</span>
     </div>
-    <p style="margin-top: 20px;"><strong>性能指标：</strong>单场景 5-8 秒，双场景 8-12 秒，Agent模式 15-30 秒。项目完全开源，欢迎在 GitHub 上查看源代码。</p>
+    <p style="margin-top: 20px;">{{ t['about.tech_perf'] | safe }}</p>
 </section>
 
 <section class="contact-section">
-    <h2>联系我们</h2>
-    <p>有问题、建议或合作意向？欢迎通过以下方式联系：</p>
+    <h2>{{ t['about.contact_title'] }}</h2>
+    <p>{{ t['about.contact_desc'] }}</p>
     <div class="contact-links">
         <a href="mailto:Johnrobertdestiny@gmail.com" class="contact-btn">
             <i class='bx bx-envelope'></i>
-            邮箱联系
+            {{ t['about.contact_email'] }}
         </a>
         <a href="https://github.com/calderbuild/MeetSpot" target="_blank" rel="noopener" class="contact-btn">
             <i class='bx bxl-github'></i>
@@ -233,7 +233,7 @@
         </a>
         <a href="https://github.com/calderbuild/MeetSpot/issues" target="_blank" rel="noopener" class="contact-btn">
             <i class='bx bx-bug'></i>
-            问题反馈
+            {{ t['about.contact_issues'] }}
         </a>
     </div>
 </section>
