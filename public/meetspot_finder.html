@@ -1661,6 +1661,14 @@
     </style>
 
     <script>
+    // i18n stub - full implementation at end of body
+    var _translations = {};
+    var _currentLang = 'zh';
+    var _i18nReady = null;
+    function _t(key) { return (_translations && _translations[key]) || key; }
+    </script>
+
+    <script>
     var _hmt = _hmt || [];
     fetch("/api/config/analytics").then(function(r) { return r.json(); }).then(function(cfg) {
         if (cfg.baidu_tongji_id) {
@@ -1674,7 +1682,10 @@
 <body>
     <nav style="background:#001524;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;">
         <a href="/" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;">MeetSpot</a>
-        <a href="/how-it-works" style="color:#06D6A0;text-decoration:none;font-size:0.85rem;">使用指南</a>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/how-it-works" style="color:#06D6A0;text-decoration:none;font-size:0.85rem;" data-i18n="finder.nav_guide">使用指南</a>
+            <a href="javascript:void(0)" onclick="toggleFinderLang()" id="finderLangToggle" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.85rem;padding:2px 8px;border:1px solid rgba(255,255,255,0.2);border-radius:4px;">EN</a>
+        </div>
     </nav>
 
     <!-- Floating Particles Background -->
@@ -1695,22 +1706,22 @@
     <nav class="nav-bar">
         <a href="/" class="nav-home">
             <i class='bx bx-home'></i>
-            <span>首页</span>
+            <span data-i18n="finder.nav_home">首页</span>
         </a>
         <div class="payment-status" id="paymentStatus">
             <span class="payment-status__item">
-                今日免费 <span class="payment-status__value" id="psFreeRemaining">1</span>/<span id="psFreeLimit">1</span>
+                <span data-i18n="finder.payment_free_label">今日免费</span> <span class="payment-status__value" id="psFreeRemaining">1</span>/<span id="psFreeLimit">1</span>
             </span>
             <span class="payment-status__sep">|</span>
             <span class="payment-status__item">
                 Credits: <span class="payment-status__value" id="psBalance">0</span>
             </span>
-            <a class="payment-status__buy" onclick="openPaymentModal()" id="psBuyLink" style="display:none">购买</a>
+            <a class="payment-status__buy" onclick="openPaymentModal()" id="psBuyLink" style="display:none" data-i18n="finder.payment_buy">购买</a>
         </div>
         <div class="nav-links">
-            <a href="/how-it-works">使用指南</a>
-            <a href="/faq">常见问题</a>
-            <a href="/about">关于我们</a>
+            <a href="/how-it-works" data-i18n="finder.nav_guide">使用指南</a>
+            <a href="/faq" data-i18n="finder.nav_faq">常见问题</a>
+            <a href="/about" data-i18n="finder.nav_about">关于我们</a>
         </div>
     </nav>
 
@@ -1721,25 +1732,25 @@
                     <i class='bx bxs-map-pin'></i>
                 </div>
             </div>
-            <h1>MeetSpot 聚点</h1>
-            <p>智能会面点推荐系统 - 让每次聚会都找到完美地点</p>
+            <h1 data-i18n="finder.header_title">MeetSpot 聚点</h1>
+            <p data-i18n="finder.header_desc">智能会面点推荐系统 - 让每次聚会都找到完美地点</p>
         </div>
 
         <!-- Step Indicator -->
         <div class="step-indicator">
             <div class="step active" data-step="1">
                 <span class="step-number">1</span>
-                <span>输入地点</span>
+                <span data-i18n="finder.step1">输入地点</span>
             </div>
             <div class="step-connector"></div>
             <div class="step" data-step="2">
                 <span class="step-number">2</span>
-                <span>选择场景</span>
+                <span data-i18n="finder.step2">选择场景</span>
             </div>
             <div class="step-connector"></div>
             <div class="step" data-step="3">
                 <span class="step-number">3</span>
-                <span>获取推荐</span>
+                <span data-i18n="finder.step3">获取推荐</span>
             </div>
         </div>
 
@@ -1752,31 +1763,33 @@
                             <i class='bx bxs-map-pin'></i>
                         </div>
                         <div>
-                            <h3>参与者地点</h3>
-                            <p class="section-subtitle">输入2-10个地点，系统将计算最佳中点</p>
+                            <h3 data-i18n="finder.section_locations">参与者地点</h3>
+                            <p class="section-subtitle" data-i18n="finder.section_locations_hint">输入2-10个地点，系统将计算最佳中点</p>
                         </div>
                     </div>
 
                     <div class="locations-container" id="locationsContainer">
                         <div class="location-input" data-index="0">
                             <i class='bx bxs-location-plus'></i>
-                            <input type="text" name="location" id="location-0" placeholder="输入第一个地点，如：北京朝阳区望京" required>
+                            <input type="text" name="location" id="location-0" placeholder="输入第一个地点，如：北京朝阳区望京" data-i18n-placeholder="finder.location_placeholder_1" required>
                             <span class="coord-indicator"><i class='bx bx-check'></i></span>
                         </div>
                         <div class="location-input" data-index="1">
                             <i class='bx bxs-location-plus'></i>
-                            <input type="text" name="location" id="location-1" placeholder="输入第二个地点，如：海淀区中关村" required>
+                            <input type="text" name="location" id="location-1" placeholder="输入第二个地点，如：海淀区中关村" data-i18n-placeholder="finder.location_placeholder_2" required>
                             <span class="coord-indicator"><i class='bx bx-check'></i></span>
                         </div>
                     </div>
 
-                    <div id="location-count-hint" class="location-hint">
+                    <p id="amapNote" class="section-subtitle" data-i18n="finder.amap_note" style="display:none;text-align:center;margin-bottom:8px;font-size:0.8rem;color:var(--slate-400);"></p>
+
+                    <div id="location-count-hint" class="location-hint" data-i18n="finder.location_count_hint">
                         已输入2个地点，可添加更多（最多10个）
                     </div>
 
                     <button type="button" class="add-location-btn" onclick="addLocation()">
                         <i class='bx bx-plus-circle'></i>
-                        添加更多地点
+                        <span data-i18n="finder.add_location">添加更多地点</span>
                     </button>
                 </div>
 
@@ -1787,8 +1800,8 @@
                             <i class='bx bxs-store'></i>
                         </div>
                         <div>
-                            <h3>选择场景类型</h3>
-                            <p class="section-subtitle">可选择1-3种场景，推荐更精准</p>
+                            <h3 data-i18n="finder.section_themes">选择场景类型</h3>
+                            <p class="section-subtitle" data-i18n="finder.section_themes_hint">可选择1-3种场景，推荐更精准</p>
                         </div>
                     </div>
 
@@ -1797,27 +1810,27 @@
                         <div class="venue-category">
                             <div class="category-header">
                                 <span class="category-icon">🍽️</span>
-                                <span class="category-title">美食饮品</span>
+                                <span class="category-title" data-i18n="finder.cat_food">美食饮品</span>
                             </div>
                             <div class="venue-grid">
                                 <div class="place-type" data-type="咖啡馆" data-theme="coffee">
                                     <i class='bx bxs-coffee-togo'></i>
-                                    <span>咖啡馆</span>
+                                    <span data-i18n="finder.type_cafe">咖啡馆</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="餐厅" data-theme="restaurant">
                                     <i class='bx bx-food-menu'></i>
-                                    <span>餐厅</span>
+                                    <span data-i18n="finder.type_restaurant">餐厅</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="茶楼" data-theme="teahouse">
                                     <i class='bx bxs-coffee-bean'></i>
-                                    <span>茶楼</span>
+                                    <span data-i18n="finder.type_teahouse">茶楼</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="酒吧" data-theme="bar">
                                     <i class='bx bxs-drink'></i>
-                                    <span>酒吧</span>
+                                    <span data-i18n="finder.type_bar">酒吧</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                             </div>
@@ -1827,12 +1840,12 @@
                         <div class="venue-category">
                             <div class="category-header">
                                 <span class="category-icon">🎬</span>
-                                <span class="category-title">休闲娱乐</span>
+                                <span class="category-title" data-i18n="finder.cat_leisure">休闲娱乐</span>
                             </div>
                             <div class="venue-grid">
                                 <div class="place-type" data-type="电影院" data-theme="cinema">
                                     <i class='bx bxs-film'></i>
-                                    <span>电影院</span>
+                                    <span data-i18n="finder.type_cinema">电影院</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="KTV" data-theme="ktv">
@@ -1842,12 +1855,12 @@
                                 </div>
                                 <div class="place-type" data-type="游戏厅" data-theme="ktv">
                                     <i class='bx bxs-joystick'></i>
-                                    <span>游戏厅</span>
+                                    <span data-i18n="finder.type_arcade">游戏厅</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="健身房" data-theme="gym">
                                     <i class='bx bx-body'></i>
-                                    <span>健身房</span>
+                                    <span data-i18n="finder.type_gym">健身房</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                             </div>
@@ -1857,27 +1870,27 @@
                         <div class="venue-category">
                             <div class="category-header">
                                 <span class="category-icon">📚</span>
-                                <span class="category-title">文化学习</span>
+                                <span class="category-title" data-i18n="finder.cat_culture">文化学习</span>
                             </div>
                             <div class="venue-grid">
                                 <div class="place-type" data-type="图书馆" data-theme="library">
                                     <i class='bx bxs-book'></i>
-                                    <span>图书馆</span>
+                                    <span data-i18n="finder.type_library">图书馆</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="书店" data-theme="library">
                                     <i class='bx bxs-book-open'></i>
-                                    <span>书店</span>
+                                    <span data-i18n="finder.type_bookstore">书店</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="博物馆" data-theme="museum">
                                     <i class='bx bxs-institution'></i>
-                                    <span>博物馆</span>
+                                    <span data-i18n="finder.type_museum">博物馆</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="景点" data-theme="attraction">
                                     <i class='bx bxs-landmark'></i>
-                                    <span>景点</span>
+                                    <span data-i18n="finder.type_attraction">景点</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                             </div>
@@ -1887,34 +1900,34 @@
                         <div class="venue-category">
                             <div class="category-header">
                                 <span class="category-icon">🛍️</span>
-                                <span class="category-title">购物休闲</span>
+                                <span class="category-title" data-i18n="finder.cat_shopping">购物休闲</span>
                             </div>
                             <div class="venue-grid">
                                 <div class="place-type" data-type="商场" data-theme="shopping">
                                     <i class='bx bxs-shopping-bag'></i>
-                                    <span>商场</span>
+                                    <span data-i18n="finder.type_mall">商场</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="购物中心" data-theme="shopping">
                                     <i class='bx bxs-shopping-bags'></i>
-                                    <span>购物中心</span>
+                                    <span data-i18n="finder.type_shopping_center">购物中心</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                                 <div class="place-type" data-type="公园" data-theme="park">
                                     <i class='bx bxs-tree'></i>
-                                    <span>公园</span>
+                                    <span data-i18n="finder.type_park">公园</span>
                                     <div class="selection-badge"><i class='bx bx-check'></i></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div id="place-type-hint" class="venue-hint">
+                    <div id="place-type-hint" class="venue-hint" data-i18n="finder.themes_hint">
                         请选择您喜欢的场景类型（最多3个）
                     </div>
 
                     <div class="custom-keywords">
-                        <input type="text" id="customKeywords" placeholder="或输入自定义关键词：游泳馆、瑜伽馆、密室逃脱...">
+                        <input type="text" id="customKeywords" placeholder="或输入自定义关键词：游泳馆、瑜伽馆、密室逃脱..." data-i18n-placeholder="finder.custom_keywords_placeholder">
                     </div>
                 </div>
 
@@ -1925,40 +1938,40 @@
                             <i class='bx bxs-filter-alt'></i>
                         </div>
                         <div>
-                            <h3>筛选条件</h3>
-                            <p class="section-subtitle">可选，帮助您找到更匹配的场所</p>
+                            <h3 data-i18n="finder.section_filters">筛选条件</h3>
+                            <p class="section-subtitle" data-i18n="finder.section_filters_hint">可选，帮助您找到更匹配的场所</p>
                         </div>
                     </div>
 
                     <div class="filters-grid">
                         <div class="filter-group">
-                            <label for="minRating">最低评分</label>
+                            <label for="minRating" data-i18n="finder.min_rating">最低评分</label>
                             <select id="minRating">
-                                <option value="0">不限制</option>
-                                <option value="3.0">3.0分以上</option>
-                                <option value="3.5">3.5分以上</option>
-                                <option value="4.0">4.0分以上</option>
-                                <option value="4.5">4.5分以上</option>
+                                <option value="0" data-i18n="finder.rating_any">不限制</option>
+                                <option value="3.0" data-i18n="finder.rating_3">3.0分以上</option>
+                                <option value="3.5" data-i18n="finder.rating_35">3.5分以上</option>
+                                <option value="4.0" data-i18n="finder.rating_4">4.0分以上</option>
+                                <option value="4.5" data-i18n="finder.rating_45">4.5分以上</option>
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="maxDistance">最大距离</label>
+                            <label for="maxDistance" data-i18n="finder.max_distance">最大距离</label>
                             <select id="maxDistance">
-                                <option value="100000">不限制</option>
-                                <option value="5000">5公里内</option>
-                                <option value="10000" selected>10公里内</option>
-                                <option value="20000">20公里内</option>
-                                <option value="30000">30公里内</option>
-                                <option value="50000">50公里内</option>
+                                <option value="100000" data-i18n="finder.distance_any">不限制</option>
+                                <option value="5000" data-i18n="finder.distance_5km">5公里内</option>
+                                <option value="10000" selected data-i18n="finder.distance_10km">10公里内</option>
+                                <option value="20000" data-i18n="finder.distance_20km">20公里内</option>
+                                <option value="30000" data-i18n="finder.distance_30km">30公里内</option>
+                                <option value="50000" data-i18n="finder.distance_50km">50公里内</option>
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="priceRange">价格区间</label>
+                            <label for="priceRange" data-i18n="finder.price_range">价格区间</label>
                             <select id="priceRange">
-                                <option value="">不限制</option>
-                                <option value="economy">经济实惠</option>
-                                <option value="mid">中等消费</option>
-                                <option value="high">高端消费</option>
+                                <option value="" data-i18n="finder.price_any">不限制</option>
+                                <option value="economy" data-i18n="finder.price_economy">经济实惠</option>
+                                <option value="mid" data-i18n="finder.price_mid">中等消费</option>
+                                <option value="high" data-i18n="finder.price_high">高端消费</option>
                             </select>
                         </div>
                     </div>
@@ -1971,8 +1984,8 @@
                             <i class='bx bxs-star'></i>
                         </div>
                         <div>
-                            <h3>特殊需求</h3>
-                            <p class="section-subtitle">可选，描述您的特殊要求</p>
+                            <h3 data-i18n="finder.section_requirements">特殊需求</h3>
+                            <p class="section-subtitle" data-i18n="finder.section_requirements_hint">可选，描述您的特殊要求</p>
                         </div>
                     </div>
 
@@ -1980,26 +1993,27 @@
                         id="userRequirements"
                         class="requirements-input"
                         placeholder="请描述您的特殊需求，例如：&#10;• 停车方便&#10;• 环境安静&#10;• 适合商务洽谈"
+                        data-i18n-placeholder="finder.requirements_placeholder"
                     ></textarea>
 
                     <div class="suggestions">
-                        <h4><i class='bx bx-bulb'></i>常用需求（点击添加）</h4>
+                        <h4><i class='bx bx-bulb'></i><span data-i18n="finder.common_requirements">常用需求（点击添加）</span></h4>
                         <div class="suggestion-tags">
-                            <span class="suggestion-tag" onclick="addRequirement('停车方便')">停车方便</span>
-                            <span class="suggestion-tag" onclick="addRequirement('环境安静')">环境安静</span>
-                            <span class="suggestion-tag" onclick="addRequirement('有Wi-Fi')">有Wi-Fi</span>
-                            <span class="suggestion-tag" onclick="addRequirement('适合商务')">适合商务</span>
-                            <span class="suggestion-tag" onclick="addRequirement('适合儿童')">适合儿童</span>
-                            <span class="suggestion-tag" onclick="addRequirement('有包间')">有包间</span>
-                            <span class="suggestion-tag" onclick="addRequirement('可以久坐')">可以久坐</span>
-                            <span class="suggestion-tag" onclick="addRequirement('24小时营业')">24小时营业</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_parking" data-req="停车方便" onclick="addRequirement(this.dataset.req)">停车方便</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_quiet" data-req="环境安静" onclick="addRequirement(this.dataset.req)">环境安静</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_wifi" data-req="有Wi-Fi" onclick="addRequirement(this.dataset.req)">有Wi-Fi</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_business" data-req="适合商务" onclick="addRequirement(this.dataset.req)">适合商务</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_children" data-req="适合儿童" onclick="addRequirement(this.dataset.req)">适合儿童</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_private_room" data-req="有包间" onclick="addRequirement(this.dataset.req)">有包间</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_long_stay" data-req="可以久坐" onclick="addRequirement(this.dataset.req)">可以久坐</span>
+                            <span class="suggestion-tag" data-i18n="finder.req_24h" data-req="24小时营业" onclick="addRequirement(this.dataset.req)">24小时营业</span>
                         </div>
                     </div>
                 </div>
 
                 <button type="submit" class="submit-btn" id="submitBtn">
                     <i class='bx bx-search-alt-2'></i>
-                    <span id="submitBtnText">查找最佳会面点</span>
+                    <span id="submitBtnText" data-i18n="finder.submit_btn">查找最佳会面点</span>
                 </button>
             </form>
 
@@ -2015,8 +2029,8 @@
 
                     <!-- Loading Text -->
                     <div class="loading-text">
-                        <h4 id="loadingTitle">智能分析中</h4>
-                        <p id="loadingText">正在为您寻找最佳会面点...</p>
+                        <h4 id="loadingTitle" data-i18n="finder.loading_title">智能分析中</h4>
+                        <p id="loadingText" data-i18n="finder.loading_text">正在为您寻找最佳会面点...</p>
                     </div>
 
                     <!-- Thinking Steps -->
@@ -2024,36 +2038,36 @@
                         <div class="thinking-step" data-step="1">
                             <div class="step-icon"><i class='bx bx-map-pin'></i></div>
                             <div class="step-content">
-                                <p class="step-title">解析地址</p>
-                                <p class="step-desc">获取各位置坐标信息</p>
+                                <p class="step-title" data-i18n="finder.loading_step1">解析地址</p>
+                                <p class="step-desc" data-i18n="finder.loading_step1_desc">获取各位置坐标信息</p>
                             </div>
                         </div>
                         <div class="thinking-step" data-step="2">
                             <div class="step-icon"><i class='bx bx-target-lock'></i></div>
                             <div class="step-content">
-                                <p class="step-title">计算中心点</p>
-                                <p class="step-desc">寻找最公平的会面位置</p>
+                                <p class="step-title" data-i18n="finder.loading_step2">计算中心点</p>
+                                <p class="step-desc" data-i18n="finder.loading_step2_desc">寻找最公平的会面位置</p>
                             </div>
                         </div>
                         <div class="thinking-step" data-step="3">
                             <div class="step-icon"><i class='bx bx-search-alt'></i></div>
                             <div class="step-content">
-                                <p class="step-title">搜索周边场所</p>
-                                <p class="step-desc">发现附近优质地点</p>
+                                <p class="step-title" data-i18n="finder.loading_step3">搜索周边场所</p>
+                                <p class="step-desc" data-i18n="finder.loading_step3_desc">发现附近优质地点</p>
                             </div>
                         </div>
                         <div class="thinking-step" data-step="4">
                             <div class="step-icon"><i class='bx bx-analyse'></i></div>
                             <div class="step-content">
-                                <p class="step-title">智能评分排序</p>
-                                <p class="step-desc">综合评估最佳选择</p>
+                                <p class="step-title" data-i18n="finder.loading_step4">智能评分排序</p>
+                                <p class="step-desc" data-i18n="finder.loading_step4_desc">综合评估最佳选择</p>
                             </div>
                         </div>
                         <div class="thinking-step" data-step="5">
                             <div class="step-icon"><i class='bx bx-check-double'></i></div>
                             <div class="step-content">
-                                <p class="step-title">生成推荐</p>
-                                <p class="step-desc">为您定制专属方案</p>
+                                <p class="step-title" data-i18n="finder.loading_step5">生成推荐</p>
+                                <p class="step-desc" data-i18n="finder.loading_step5_desc">为您定制专属方案</p>
                             </div>
                         </div>
                     </div>
@@ -2240,7 +2254,7 @@
                     selectedThemeOrder = selectedThemeOrder.filter(theme => theme !== themeValue);
                 } else {
                     if (selectedPlaceTypes.size >= MAX_PLACE_TYPES) {
-                        showWarning('已达上限', `最多选择${MAX_PLACE_TYPES}个场景类型`);
+                        showWarning(_t('finder.warn_max_types'), _t('finder.warn_max_types_msg').replace('{max}', MAX_PLACE_TYPES));
                         return;
                     }
                     this.classList.add('selected');
@@ -2281,13 +2295,19 @@
 
             const remaining = MAX_PLACE_TYPES - selectedPlaceTypes.size;
             if (selectedPlaceTypes.size === 0) {
-                hintElement.textContent = `请选择您喜欢的场景类型（最多${MAX_PLACE_TYPES}个）`;
+                hintElement.textContent = _t('finder.themes_hint');
                 hintElement.className = 'venue-hint';
             } else if (remaining > 0) {
-                hintElement.textContent = `已选择${selectedPlaceTypes.size}个，还可选择${remaining}个`;
+                const lang = _currentLang || 'zh';
+                hintElement.textContent = lang === 'en'
+                    ? `${selectedPlaceTypes.size} selected, ${remaining} more available`
+                    : `已选择${selectedPlaceTypes.size}个，还可选择${remaining}个`;
                 hintElement.className = 'venue-hint active';
             } else {
-                hintElement.textContent = `已选择${selectedPlaceTypes.size}个场景类型`;
+                const lang = _currentLang || 'zh';
+                hintElement.textContent = lang === 'en'
+                    ? `${selectedPlaceTypes.size} venue types selected`
+                    : `已选择${selectedPlaceTypes.size}个场景类型`;
                 hintElement.className = 'venue-hint limit';
             }
         }
@@ -2297,7 +2317,7 @@
             const locationInputs = container.querySelectorAll('.location-input');
 
             if (locationInputs.length >= 10) {
-                showWarning('已达上限', '最多支持10个地点');
+                showWarning(_t('finder.warn_max_locations'), _t('finder.warn_max_locations'));
                 return;
             }
 
@@ -2308,7 +2328,7 @@
             newLocationDiv.style.animationDelay = '0s';
             newLocationDiv.innerHTML = `
                 <i class='bx bxs-location-plus'></i>
-                <input type="text" name="location" id="${inputId}" placeholder="输入地点">
+                <input type="text" name="location" id="${inputId}" placeholder="${_t('finder.location_placeholder_n')}">
                 <span class="coord-indicator"><i class='bx bx-check'></i></span>
                 <button type="button" class="remove-location-btn" onclick="removeLocation(this)">
                     <i class='bx bx-x'></i>
@@ -2332,15 +2352,20 @@
 
             const count = locationInputs.length;
             const remaining = 10 - count;
+            const lang = _currentLang || 'zh';
 
             if (count === 2) {
-                hintElement.textContent = `已输入${count}个地点，可添加更多（最多10个）`;
+                hintElement.textContent = _t('finder.location_count_hint').replace('{count}', count);
                 hintElement.className = 'location-hint';
             } else if (remaining > 0) {
-                hintElement.textContent = `已输入${count}个地点，还可添加${remaining}个`;
+                hintElement.textContent = lang === 'en'
+                    ? `${count} locations entered. You can add ${remaining} more`
+                    : `已输入${count}个地点，还可添加${remaining}个`;
                 hintElement.className = 'location-hint active';
             } else {
-                hintElement.textContent = `已输入${count}个地点（已达上限）`;
+                hintElement.textContent = lang === 'en'
+                    ? `${count} locations entered (limit reached)`
+                    : `已输入${count}个地点（已达上限）`;
                 hintElement.className = 'location-hint limit';
             }
         }
@@ -2363,7 +2388,7 @@
                     updateStepIndicator();
                 }, 280);
             } else {
-                showWarning('无法删除', '至少需要保留两个地点');
+                showWarning(_t('finder.warn_min_locations'), _t('finder.warn_min_locations'));
             }
         }
 
@@ -2383,7 +2408,7 @@
 
         function updateRequirementButton(requirement, isSelected) {
             document.querySelectorAll('.suggestion-tag').forEach(button => {
-                if (button.textContent.trim() === requirement) {
+                if (button.dataset.req === requirement) {
                     button.classList.toggle('selected', isSelected);
                 }
             });
@@ -2478,11 +2503,11 @@
                 const loadingText = document.getElementById('loadingText');
 
                 if (mode === 'agent') {
-                    if (loadingTitle) loadingTitle.textContent = 'Agent 深度分析完成';
-                    if (loadingText) loadingText.textContent = '已为您生成个性化推荐方案';
+                    if (loadingTitle) loadingTitle.textContent = _t('finder.success_agent');
+                    if (loadingText) loadingText.textContent = _t('finder.success_agent_desc');
                 } else {
-                    if (loadingTitle) loadingTitle.textContent = '快速推荐完成';
-                    if (loadingText) loadingText.textContent = '已为您找到最佳会面点';
+                    if (loadingTitle) loadingTitle.textContent = _t('finder.success_rule');
+                    if (loadingText) loadingText.textContent = _t('finder.success_rule_desc');
                 }
             }
         };
@@ -2525,12 +2550,12 @@
             locations = [...new Set(locations)];
 
             if (locations.length < 2) {
-                showError('地点不足', '请至少输入两个地点');
+                showError(_t('finder.error_too_few'), _t('finder.error_too_few'));
                 return;
             }
 
             if (locations.length > 10) {
-                showError('地点过多', '最多支持10个地点');
+                showError(_t('finder.error_too_many'), _t('finder.error_too_many'));
                 return;
             }
 
@@ -2565,8 +2590,8 @@
 
             submitBtn.disabled = true;
             // Update loading text with specific keywords
-            document.getElementById('loadingTitle').textContent = '智能分析中';
-            document.getElementById('loadingText').textContent = `正在为您推荐${keywords}...`;
+            document.getElementById('loadingTitle').textContent = _t('finder.loading_title');
+            document.getElementById('loadingText').textContent = _t('finder.loading_text');
             loading.style.display = 'block';
 
             // Start the thinking animation
@@ -2632,26 +2657,27 @@
                             mode, Date.now() - _submitTime]);
                     }
                     // Show mode-aware success message
-                    const modeText = mode === 'agent' ? 'Agent 深度分析' : '快速推荐';
-                    showSuccess(`${modeText}完成`, `${keywords}推荐已生成，正在跳转...`);
+                    const modeKey = mode === 'agent' ? 'finder.success_agent' : 'finder.success_rule';
+                    const modeDescKey = mode === 'agent' ? 'finder.success_agent_desc' : 'finder.success_rule_desc';
+                    showSuccess(_t(modeKey), _t(modeDescKey));
                     // Refresh payment status bar after successful request
                     refreshPaymentStatus().then(() => {
                         const rem = parseInt(document.getElementById('psFreeRemaining').textContent);
                         if (rem === 0) {
-                            showInfo('提示', '今日 1 次免费已用完，可购买 credits 或明日再试');
+                            showInfo(_t('finder.info_quota_used'), '');
                         }
                     });
                     setTimeout(() => {
                         window.location.href = result.html_url;
                     }, 800);
                 } else if (result.success && !result.html_url) {
-                    showWarning('未找到结果', '请尝试更换关键词或使用更详细的地址');
+                    showWarning(_t('finder.warn_no_result'), _t('finder.warn_no_result_desc'));
                 } else {
-                    throw new Error(result.error || '处理异常');
+                    throw new Error(result.error || (_currentLang === 'en' ? 'Processing error' : '处理异常'));
                 }
             } catch (error) {
                 ThinkingAnimator.reset();
-                showError('请求失败', error.message || '请重试');
+                showError(_t('finder.error_request'), error.message || '');
             } finally {
                 submitBtn.disabled = false;
                 // Don't hide loading immediately on success - let the redirect happen
@@ -2709,11 +2735,11 @@
             if (!btn || !btnText) return;
             if (_paymentState.freeRemaining === 0 && _paymentState.balance === 0) {
                 btn.querySelector('i').className = 'bx bx-coin-stack';
-                btnText.textContent = '购买 Credits 后使用';
+                btnText.textContent = _t('finder.btn_buy_credits');
                 btn.dataset.needPayment = 'true';
             } else {
                 btn.querySelector('i').className = 'bx bx-search-alt-2';
-                btnText.textContent = '查找最佳会面点';
+                btnText.textContent = _t('finder.submit_btn');
                 btn.dataset.needPayment = '';
             }
         }
@@ -2727,12 +2753,12 @@
             // Update balance info in modal
             const balEl = document.getElementById('pmBalance');
             if (_paymentState.balance !== null && _paymentState.balance > 0) {
-                document.getElementById('pmTitle').textContent = '余额不足';
-                document.getElementById('pmDesc').textContent = '购买更多 credits 继续获取推荐';
-                balEl.textContent = `当前余额: ${_paymentState.balance} credits`;
+                document.getElementById('pmTitle').textContent = _t('finder.payment_balance_title');
+                document.getElementById('pmDesc').textContent = _t('finder.payment_balance_desc');
+                balEl.textContent = `${_t('finder.payment_balance_prefix')}${_paymentState.balance} ${_t('finder.payment_balance_suffix')}`;
             } else {
-                document.getElementById('pmTitle').textContent = '每日 1 次免费已用完';
-                document.getElementById('pmDesc').textContent = '可购买 credits 继续使用，或明日再试';
+                document.getElementById('pmTitle').textContent = _t('finder.payment_modal_title');
+                document.getElementById('pmDesc').textContent = _t('finder.payment_modal_desc');
                 balEl.textContent = '';
             }
 
@@ -2764,7 +2790,7 @@
             const btn = document.getElementById('pmBuyBtn');
             const btnText = document.getElementById('pmBuyText');
             btn.disabled = true;
-            btnText.textContent = '跳转中...';
+            btnText.textContent = _currentLang === 'en' ? 'Redirecting...' : '跳转中...';
 
             try {
                 const resp = await fetch('/api/payment/create', {
@@ -2784,12 +2810,12 @@
                     localStorage.setItem('meetspot_checkout_id', data.checkout_id || '');
                     window.location.href = data.checkout_url;
                 } else {
-                    throw new Error('未获取到支付链接');
+                    throw new Error(_currentLang === 'en' ? 'No checkout URL received' : '未获取到支付链接');
                 }
             } catch (e) {
-                showError('支付创建失败', e.message || '请稍后重试');
+                showError(_t('finder.error_request'), e.message || '');
                 btn.disabled = false;
-                btnText.textContent = '购买 Credits';
+                btnText.textContent = _t('finder.payment_buy_btn');
             }
         }
 
@@ -2803,7 +2829,10 @@
             // Clean URL immediately
             history.replaceState(null, '', window.location.pathname);
 
-            showInfo('支付确认中...', '正在查询支付结果');
+            showInfo(
+                _currentLang === 'en' ? 'Confirming payment...' : '支付确认中...',
+                _currentLang === 'en' ? 'Checking payment result' : '正在查询支付结果'
+            );
 
             let attempts = 0;
             const maxAttempts = 15;
@@ -2813,18 +2842,24 @@
                 attempts++;
                 try {
                     const resp = await fetch(`/api/payment/status/${checkoutId}`);
-                    if (!resp.ok) throw new Error('查询失败');
+                    if (!resp.ok) throw new Error(_currentLang === 'en' ? 'Query failed' : '查询失败');
                     const data = await resp.json();
 
                     if (data.status === 'paid') {
-                        showSuccess('充值成功', `${data.credits} credits 已到账`);
+                        showSuccess(
+                            _currentLang === 'en' ? 'Payment Successful' : '充值成功',
+                            `${data.credits} credits ${_currentLang === 'en' ? 'added' : '已到账'}`
+                        );
                         await refreshPaymentStatus();
                         localStorage.removeItem('meetspot_checkout_id');
                         return;
                     }
 
                     if (data.status === 'failed') {
-                        showWarning('支付未完成', '如已扣款请稍后刷新页面');
+                        showWarning(
+                            _currentLang === 'en' ? 'Payment Incomplete' : '支付未完成',
+                            _currentLang === 'en' ? 'If charged, please refresh later' : '如已扣款请稍后刷新页面'
+                        );
                         localStorage.removeItem('meetspot_checkout_id');
                         return;
                     }
@@ -2832,14 +2867,20 @@
                     if (attempts < maxAttempts) {
                         setTimeout(poll, interval);
                     } else {
-                        showWarning('支付确认超时', '如已扣款请稍后刷新页面查看余额');
+                        showWarning(
+                            _currentLang === 'en' ? 'Confirmation Timeout' : '支付确认超时',
+                            _currentLang === 'en' ? 'If charged, please refresh later to check balance' : '如已扣款请稍后刷新页面查看余额'
+                        );
                         localStorage.removeItem('meetspot_checkout_id');
                     }
                 } catch (e) {
                     if (attempts < maxAttempts) {
                         setTimeout(poll, interval);
                     } else {
-                        showWarning('查询异常', '请稍后刷新页面查看余额');
+                        showWarning(
+                            _currentLang === 'en' ? 'Query Error' : '查询异常',
+                            _currentLang === 'en' ? 'Please refresh later to check balance' : '请稍后刷新页面查看余额'
+                        );
                         localStorage.removeItem('meetspot_checkout_id');
                     }
                 }
@@ -2849,7 +2890,10 @@
         }
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Wait for i18n translations to be loaded
+            if (_i18nReady) await _i18nReady;
+
             updatePlaceTypeHint();
             updateLocationCountHint();
 
@@ -2895,18 +2939,145 @@
         <div class="payment-modal__icon">
             <i class='bx bx-coin-stack'></i>
         </div>
-        <div class="payment-modal__title" id="pmTitle">每日 1 次免费已用完</div>
-        <div class="payment-modal__desc" id="pmDesc">可购买 credits 继续使用，或明日再试</div>
+        <div class="payment-modal__title" id="pmTitle" data-i18n="finder.payment_modal_title">每日 1 次免费已用完</div>
+        <div class="payment-modal__desc" id="pmDesc" data-i18n="finder.payment_modal_desc">可购买 credits 继续使用，或明日再试</div>
         <div class="payment-modal__price">10 credits = $1.00</div>
         <div class="payment-modal__balance" id="pmBalance"></div>
         <button class="payment-modal__btn-primary" id="pmBuyBtn" onclick="handleBuyCredits()">
             <i class='bx bx-cart'></i>
-            <span id="pmBuyText">购买 Credits</span>
+            <span id="pmBuyText" data-i18n="finder.payment_buy_btn">购买 Credits</span>
         </button>
-        <button class="payment-modal__btn-secondary" onclick="closePaymentModal()">稍后再说</button>
+        <button class="payment-modal__btn-secondary" onclick="closePaymentModal()" data-i18n="finder.payment_later">稍后再说</button>
     </div>
 
     <!-- Modern Toast Notification System -->
     <script src="/public/js/toast.js"></script>
+
+    <!-- i18n Initialization -->
+    <script>
+        /**
+         * Get translation by key. Falls back to key if not found.
+         * Overrides the stub declared in <head>.
+         */
+        _t = function(key) {
+            if (!key) return '';
+            return (_translations && _translations[key]) || key;
+        };
+
+        /**
+         * Detect language: cookie > browser > default 'zh'
+         */
+        function detectLang() {
+            // Check cookie
+            const match = document.cookie.match(/(?:^|;\s*)lang=([^;]*)/);
+            if (match) {
+                const lang = match[1].trim();
+                if (lang === 'en' || lang === 'zh') return lang;
+            }
+            // Check browser language
+            const browserLang = navigator.language || navigator.userLanguage || '';
+            if (browserLang.startsWith('en')) return 'en';
+            return 'zh';
+        }
+
+        /**
+         * Apply translations to DOM elements
+         */
+        function applyTranslations() {
+            // textContent replacements
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                const val = _t(key);
+                if (val && val !== key) {
+                    el.textContent = val;
+                }
+            });
+
+            // placeholder replacements
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                const val = _t(key);
+                if (val && val !== key) {
+                    el.placeholder = val;
+                }
+            });
+
+            // Set document lang and title
+            document.documentElement.lang = _currentLang === 'en' ? 'en' : 'zh-CN';
+            const titleVal = _t('finder.title');
+            if (titleVal && titleVal !== 'finder.title') {
+                document.title = titleVal;
+            }
+
+            // Show/hide AMap note for English users
+            const amapNote = document.getElementById('amapNote');
+            if (amapNote) {
+                amapNote.style.display = _currentLang === 'en' ? 'block' : 'none';
+            }
+
+            // Update language toggle button text
+            const toggle = document.getElementById('finderLangToggle');
+            if (toggle) {
+                toggle.textContent = _currentLang === 'en' ? '中文' : 'EN';
+            }
+
+            // Update nav links for English prefix
+            document.querySelectorAll('.nav-links a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (_currentLang === 'en') {
+                    if (href && href.startsWith('/') && !href.startsWith('/en/') && !href.startsWith('/en')) {
+                        a.setAttribute('href', '/en' + href);
+                    }
+                } else {
+                    if (href && href.startsWith('/en/')) {
+                        a.setAttribute('href', href.replace('/en/', '/'));
+                    } else if (href && href.startsWith('/en')) {
+                        a.setAttribute('href', href.replace('/en', '/'));
+                    }
+                }
+            });
+            // Also update the top nav guide link
+            const topGuideLink = document.querySelector('nav:first-of-type a[href*="how-it-works"]');
+            if (topGuideLink) {
+                if (_currentLang === 'en') {
+                    if (!topGuideLink.getAttribute('href').startsWith('/en')) {
+                        topGuideLink.setAttribute('href', '/en/how-it-works');
+                    }
+                } else {
+                    topGuideLink.setAttribute('href', '/how-it-works');
+                }
+            }
+        }
+
+        /**
+         * Toggle language and reload translations
+         */
+        function toggleFinderLang() {
+            const newLang = _currentLang === 'zh' ? 'en' : 'zh';
+            document.cookie = `lang=${newLang};path=/;max-age=31536000;SameSite=Lax`;
+            _currentLang = newLang;
+            initI18n();
+        }
+
+        /**
+         * Fetch translations and apply
+         */
+        var _i18nReady = null;
+        async function initI18n() {
+            _currentLang = detectLang();
+            try {
+                const resp = await fetch(`/locales/${_currentLang}.json`);
+                if (resp.ok) {
+                    _translations = await resp.json();
+                }
+            } catch (e) {
+                console.warn('Failed to load translations:', e);
+            }
+            applyTranslations();
+        }
+
+        // Run i18n init and store promise for DOMContentLoaded to await
+        _i18nReady = initI18n();
+    </script>
 </body>
 </html>

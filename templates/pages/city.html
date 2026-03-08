@@ -416,7 +416,7 @@
 {% block content %}
 <!-- Venue Tags Header -->
 <div class="venue-tags-header">
-    <h2>{{ city.name }}热门聚会场所类型</h2>
+    <h2>{{ t['city.venues_header'].replace('{city}', city.name) }}</h2>
     <div class="venue-tags">
         {% for venue in city.popular_venues %}
         <span class="venue-tag">{{ venue }}</span>
