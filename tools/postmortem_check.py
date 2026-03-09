@@ -18,7 +18,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -30,6 +30,7 @@ class MatchResult:
     """单个匹配结果"""
 
     pm_id: str
+    kind: str
     reason: str
     confidence: float
 
@@ -44,18 +45,20 @@ class AggregatedMatch:
     match_count: int = 0
     final_confidence: float = 0.0
     has_file_match: bool = False
-    has_content_match: bool = False
+    has_function_match: bool = False
+    has_pattern_match: bool = False
+    keyword_match_count: int = 0
 
 
 class PostmortemMatcher:
     """Postmortem 匹配器"""
 
     # 匹配权重
-    WEIGHT_FILE_EXACT = 0.8
-    WEIGHT_FILE_PATTERN = 0.6
-    WEIGHT_FUNCTION = 0.7
-    WEIGHT_PATTERN = 0.5
-    WEIGHT_KEYWORD = 0.4
+    WEIGHT_FILE_EXACT = 0.45
+    WEIGHT_FILE_PATTERN = 0.35
+    WEIGHT_FUNCTION = 0.65
+    WEIGHT_PATTERN = 0.6
+    WEIGHT_KEYWORD = 0.25
 
     def __init__(self):
         self.postmortems = self._load_all_postmortems()
@@ -97,6 +100,7 @@ class PostmortemMatcher:
                         matches.append(
                             MatchResult(
                                 pm_id=pm_id,
+                                kind="file",
                                 reason=f"File: {changed} ~ {pattern}",
                                 confidence=confidence,
                             )
@@ -104,13 +108,23 @@ class PostmortemMatcher:
 
         return matches
 
-    def match_diff_content(self, diff: str) -> List[MatchResult]:
+    def match_diff_content(self, diff_by_file: Dict[str, str]) -> List[MatchResult]:
         """匹配 diff 内容中的函数名和模式"""
         matches = []
 
         for pm in self.postmortems:
             triggers = pm.get("triggers", {})
             pm_id = pm.get("id", "unknown")
+            pm_files = triggers.get("files", [])
+            relevant_diff_parts = []
+
+            for filepath, changed_text in diff_by_file.items():
+                if not pm_files or any(self._file_matches(filepath, pattern) for pattern in pm_files):
+                    relevant_diff_parts.append(changed_text)
+
+            diff = "\n".join(part for part in relevant_diff_parts if part)
+            if not diff:
+                continue
 
             # 函数名匹配
             for func in triggers.get("functions", []):
@@ -121,6 +135,7 @@ class PostmortemMatcher:
                         matches.append(
                             MatchResult(
                                 pm_id=pm_id,
+                                kind="function",
                                 reason=f"Function: {func}",
                                 confidence=self.WEIGHT_FUNCTION,
                             )
@@ -137,6 +152,7 @@ class PostmortemMatcher:
                         matches.append(
                             MatchResult(
                                 pm_id=pm_id,
+                                kind="pattern",
                                 reason=f"Pattern: {pattern}",
                                 confidence=self.WEIGHT_PATTERN,
                             )
@@ -152,6 +168,7 @@ class PostmortemMatcher:
                     matches.append(
                         MatchResult(
                             pm_id=pm_id,
+                            kind="keyword",
                             reason=f"Keyword: {keyword}",
                             confidence=self.WEIGHT_KEYWORD,
                         )
@@ -188,19 +205,31 @@ class PostmortemMatcher:
             agg.max_confidence = max(agg.max_confidence, match.confidence)
             agg.match_count += 1
 
-            if "File" in match.reason:
+            if match.kind == "file":
                 agg.has_file_match = True
-            if "Function" in match.reason or "Pattern" in match.reason:
-                agg.has_content_match = True
+            if match.kind == "function":
+                agg.has_function_match = True
+            if match.kind == "pattern":
+                agg.has_pattern_match = True
+            if match.kind == "keyword":
+                agg.keyword_match_count += 1
 
         # 计算综合置信度
         for pm_id, agg in result.items():
             base = agg.max_confidence
-            # 每增加一个匹配项，加 0.1 bonus（最多 0.3）
-            count_bonus = min(0.3, 0.1 * (agg.match_count - 1))
-            # 如果同时有文件匹配和内容匹配，额外加 0.1
-            cross_bonus = 0.1 if (agg.has_file_match and agg.has_content_match) else 0
-            agg.final_confidence = min(1.0, base + count_bonus + cross_bonus)
+            strong_signal_count = sum(
+                [agg.has_file_match, agg.has_function_match, agg.has_pattern_match]
+            )
+            count_bonus = min(0.2, 0.1 * max(0, strong_signal_count - 1))
+            cross_bonus = 0.1 if (
+                agg.has_file_match and (agg.has_function_match or agg.has_pattern_match)
+            ) else 0
+            keyword_bonus = 0.05 if (
+                agg.keyword_match_count and (agg.has_function_match or agg.has_pattern_match)
+            ) else 0
+            agg.final_confidence = min(
+                1.0, base + count_bonus + cross_bonus + keyword_bonus
+            )
 
         return result
 
@@ -240,18 +269,49 @@ def get_diff_content(base_ref: str) -> str:
 
     # 只看代码文件的 diff
     extensions = ["*.py", "*.js", "*.ts", "*.jsx", "*.tsx"]
-    cmd = ["git", "diff", f"{base_ref}...HEAD", "--"] + extensions
+    cmd = ["git", "diff", "--unified=0", f"{base_ref}...HEAD", "--"] + extensions
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0:
-        cmd = ["git", "diff", f"{base_ref}..HEAD", "--"] + extensions
+        cmd = ["git", "diff", "--unified=0", f"{base_ref}..HEAD", "--"] + extensions
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     if result.returncode != 0:
-        cmd = ["git", "diff", base_ref, "--"] + extensions
+        cmd = ["git", "diff", "--unified=0", base_ref, "--"] + extensions
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
 
     return result.stdout
+
+
+def extract_changed_lines(diff: str) -> str:
+    """只保留真正变更的行，避免 diff 上下文导致误报"""
+    return "\n".join(extract_changed_lines_by_file(diff).values())
+
+
+def extract_changed_lines_by_file(diff: str) -> Dict[str, str]:
+    """按文件提取真正变更的行，避免跨文件拼接造成误报"""
+    changed_by_file: Dict[str, List[str]] = {}
+    current_file: Optional[str] = None
+
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            parts = line.split()
+            if len(parts) >= 4:
+                current_file = parts[3][2:] if parts[3].startswith("b/") else parts[3]
+                changed_by_file.setdefault(current_file, [])
+            else:
+                current_file = None
+            continue
+        if line.startswith(("+++", "---", "@@")):
+            continue
+        if current_file and line.startswith(("+", "-")):
+            changed_by_file[current_file].append(line[1:])
+
+    return {
+        filepath: "\n".join(lines)
+        for filepath, lines in changed_by_file.items()
+        if lines
+    }
 
 
 def main():
@@ -289,7 +349,7 @@ def main():
 
     # 获取变更
     changed_files = get_changed_files(args.base)
-    diff_content = get_diff_content(args.base)
+    diff_content_by_file = extract_changed_lines_by_file(get_diff_content(args.base))
 
     if not changed_files:
         print("No changes detected.")
@@ -299,7 +359,7 @@ def main():
 
     # 执行匹配
     file_matches = matcher.match_files(changed_files)
-    content_matches = matcher.match_diff_content(diff_content)
+    content_matches = matcher.match_diff_content(diff_content_by_file)
 
     # 聚合结果
     results = matcher.aggregate_matches(file_matches, content_matches)
