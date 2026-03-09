@@ -44,7 +44,7 @@ jobs:
           lhci autorun --config=lighthouserc.json
 
       - name: Upload Lighthouse results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-results
           path: .lighthouseci/
