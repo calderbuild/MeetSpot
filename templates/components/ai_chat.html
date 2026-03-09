@@ -497,7 +497,7 @@
             <div class="ai-avatar">🤖</div>
             <div class="ai-chat-title">
                 <h4>MeetSpot AI Agent</h4>
-                <p><span class="status-dot"></span> 在线 · GPT-4o 驱动</p>
+                <p><span class="status-dot"></span> {{ t['chat.status'] }}</p>
             </div>
         </div>
     </div>
@@ -505,18 +505,14 @@
     <!-- Messages -->
     <div class="ai-chat-messages" id="chatMessages">
         <div class="welcome-message">
-            <h5>MeetSpot AI Agent 助手</h5>
-            <p>球面几何 + GPT-4o智能评分 · 5步透明推理</p>
+            <h5>{{ t['chat.welcome_title'] }}</h5>
+            <p>{{ t['chat.welcome_subtitle'] }}</p>
         </div>
         <!-- AI Welcome -->
         <div class="chat-message ai">
             <div class="message-avatar">🤖</div>
             <div class="message-content">
-                您好！我是 MeetSpot AI Agent 助手，可以帮您了解：<br><br>
-                • <strong>5步AI推理</strong>：地址解析 → 中点计算 → 周边搜索 → GPT-4o评分 → 智能推荐<br>
-                • <strong>核心优势</strong>：球面几何算法，数学上对每个人都公平<br>
-                • <strong>产品能力</strong>：350+城市 · 12种场景 · 60+高校简称<br><br>
-                请问有什么可以帮您的？
+                {{ t['chat.welcome_msg'] | safe }}
             </div>
         </div>
     </div>
@@ -527,13 +523,13 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
             </svg>
-            快捷问题
+            {{ t['chat.presets_label'] }}
         </div>
         <div class="presets-container" id="presetsContainer">
-            <button class="preset-btn" onclick="sendPreset('AI Agent怎么工作的？')">AI Agent原理</button>
-            <button class="preset-btn" onclick="sendPreset('推荐需要多久？')">推荐速度</button>
-            <button class="preset-btn" onclick="sendPreset('和高德地图有什么区别？')">vs高德地图</button>
-            <button class="preset-btn" onclick="sendPreset('是否收费？')">是否收费</button>
+            <button class="preset-btn" onclick="sendPreset('{{ t['chat.preset_principle_q'] }}')">{{ t['chat.preset_principle'] }}</button>
+            <button class="preset-btn" onclick="sendPreset('{{ t['chat.preset_speed_q'] }}')">{{ t['chat.preset_speed'] }}</button>
+            <button class="preset-btn" onclick="sendPreset('{{ t['chat.preset_vs_amap_q'] }}')">{{ t['chat.preset_vs_amap'] }}</button>
+            <button class="preset-btn" onclick="sendPreset('{{ t['chat.preset_pricing_q'] }}')">{{ t['chat.preset_pricing'] }}</button>
         </div>
     </div>
 
@@ -541,7 +537,7 @@
     <div class="ai-chat-input">
         <textarea
             id="chatInput"
-            placeholder="输入您的问题..."
+            placeholder="{{ t['chat.input_placeholder'] }}"
             rows="1"
             onkeydown="handleKeyDown(event)"
             oninput="autoResize(this)"
@@ -618,7 +614,8 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: message,
-                conversation_history: conversationHistory.slice(-10)
+                conversation_history: conversationHistory.slice(-10),
+                lang: '{{ lang }}'
             })
         });
 
@@ -632,12 +629,12 @@ async function sendMessage() {
             addMessage(data.response, 'ai');
             conversationHistory.push({ role: 'assistant', content: data.response });
         } else {
-            addMessage('抱歉，我遇到了一些问题。请稍后再试。', 'ai');
+            addMessage('{{ t["chat.error_generic"] }}', 'ai');
         }
     } catch (error) {
         hideTypingIndicator();
         isTyping = false;
-        addMessage('网络连接出现问题，请检查网络后重试。', 'ai');
+        addMessage('{{ t["chat.error_network"] }}', 'ai');
     }
 }
 

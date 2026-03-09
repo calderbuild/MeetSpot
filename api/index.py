@@ -27,6 +27,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 # WhiteNoise将通过StaticFiles中间件集成，不需要ASGI↔WSGI转换
 from api.routers import auth, payment, seo_pages
+from app.i18n import detect_language, t as _t
 
 # 导入应用模块
 try:
@@ -228,6 +229,7 @@ class MeetSpotRequest(BaseModel):
 class AIChatRequest(BaseModel):
     message: str
     conversation_history: Optional[List[dict]] = []
+    lang: Optional[str] = ""
 
 # MeetSpot AI客服系统提示词
 MEETSPOT_SYSTEM_PROMPT = """你是MeetSpot（聚点）的AI Agent智能助手。MeetSpot是一款多人会面地点推荐的AI Agent，核心解决"在哪见面最公平"的问题。
@@ -274,6 +276,43 @@ MeetSpot不是简单的搜索工具，而是一个完整的AI Agent：
 - 回答简洁明了，使用中文
 - 如果用户问无关问题，礼貌引导了解产品功能"""
 
+MEETSPOT_SYSTEM_PROMPT_EN = """You are the MeetSpot AI Assistant. MeetSpot is an AI Agent for multi-person meeting point recommendations, solving the problem of "where to meet that's fair for everyone."
+
+## Core Positioning
+MeetSpot is not a simple search tool — it's a complete AI Agent:
+- Map apps search "near me"; MeetSpot searches "between us"
+- Review apps find "good places"; MeetSpot finds "good places that are fair for everyone"
+
+## Technical Highlights
+1. **Spherical Geometry**: Uses Haversine formula for true surface midpoint calculation, 15-20% more accurate than planar algorithms
+2. **GPT-4o Smart Scoring**: AI evaluates venues across multiple dimensions (distance, rating, parking, ambiance, transit)
+3. **5-Step Transparent Reasoning**: Parse addresses → Calculate midpoint → Search nearby → GPT-4o scoring → Generate recommendations
+4. **Explainable AI**: Users can see how the Agent "thinks" at every step — fully transparent
+
+## Capabilities
+- **Coverage**: 350+ cities across China, powered by Amap data
+- **Venue Types**: 12 themes (cafes, restaurants, libraries, KTV, gyms, escape rooms, etc.)
+- **Smart Recognition**: 60+ university abbreviations pre-loaded
+- **Group Size**: 2-10 participants
+
+## Response Times
+- Single scenario: 5-8 seconds
+- Dual scenario: 8-12 seconds
+- Agent complex mode: 15-30 seconds
+
+## How to Use
+1. Enter 2+ participant locations (addresses, landmarks, or abbreviations)
+2. Choose venue type(s) (multiple allowed)
+3. Optional: Set special requirements (parking, quiet environment, etc.)
+4. Click recommend — get AI Agent results in 5-30 seconds
+
+## Response Guidelines
+- Use friendly, professional tone
+- Emphasize MeetSpot is an AI Agent, not a simple search tool
+- Highlight "fairness," "transparent explainability," and "GPT-4o smart scoring"
+- Keep answers concise and clear, respond in English
+- If users ask unrelated questions, politely guide them to explore the product"""
+
 # 预设问题列表
 PRESET_QUESTIONS = [
     {"id": 1, "question": "MeetSpot是什么？", "category": "产品介绍"},
@@ -284,6 +323,15 @@ PRESET_QUESTIONS = [
     {"id": 6, "question": "是否收费？", "category": "其他"},
 ]
 
+PRESET_QUESTIONS_EN = [
+    {"id": 1, "question": "What is MeetSpot?", "category": "Product"},
+    {"id": 2, "question": "How does the AI Agent work?", "category": "Technology"},
+    {"id": 3, "question": "What venue types are supported?", "category": "Features"},
+    {"id": 4, "question": "How fast are recommendations?", "category": "Performance"},
+    {"id": 5, "question": "How is it different from map apps?", "category": "Comparison"},
+    {"id": 6, "question": "Is it free to use?", "category": "Other"},
+]
+
 # 环境变量配置（用于 Vercel）
 AMAP_API_KEY = os.getenv("AMAP_API_KEY", "")
 AMAP_JS_API_KEY = os.getenv("AMAP_JS_API_KEY", "")  # JS API key for frontend map
@@ -291,6 +339,30 @@ AMAP_SECURITY_JS_CODE = os.getenv("AMAP_SECURITY_JS_CODE", "")
 
 # 免费次数限制
 FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
+
+
+def _parse_cors_origins(raw_value: str) -> List[str]:
+    origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
+def _get_client_ip(request: Request) -> str:
+    """获取客户端 IP，优先读取代理头。"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _quota_exceeded_response(used_today: int, start_time: float, lang: str = "zh") -> dict:
+    return {
+        "success": False,
+        "need_payment": True,
+        "message": _t("api.error.quota_exceeded", lang),
+        "free_used": used_today,
+        "free_limit": FREE_DAILY_LIMIT,
+        "processing_time": time.time() - start_time,
+    }
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -327,11 +399,13 @@ async def startup_database():
         raise
 
 
-# 配置CORS
+# 配置CORS（生产环境禁止 "*" + credentials 组合）
+cors_origins = _parse_cors_origins(os.getenv("CORS_ALLOW_ORIGINS", "*"))
+cors_allow_all = "*" in cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"] if cors_allow_all else cors_origins,
+    allow_credentials=not cors_allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -361,10 +435,11 @@ async def add_cache_headers(request: Request, call_next):
     return response
 
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    """全局限流处理器."""
+    """Global rate limit handler."""
+    lang = detect_language(request)
     return JSONResponse(
         status_code=429,
-        content={"detail": "请求过于频繁, 请稍后再试"},
+        content={"detail": _t("api.error.rate_limit", lang)},
     )
 
 app.state.limiter = seo_pages.limiter
@@ -380,21 +455,25 @@ try:
 
     if os.path.exists(workspace_dir):
         app.mount("/workspace", StaticFiles(directory=workspace_dir), name="workspace")
-        print("✅ 挂载 /workspace 静态文件")
+        logger.info("mounted_static_workspace")
 
     if os.path.exists("public"):
         app.mount("/public", StaticFiles(directory="public"), name="public")
-        print("✅ 挂载 /public 静态文件")
+        logger.info("mounted_static_public")
 
     if os.path.exists("docs"):
         app.mount("/docs-static", StaticFiles(directory="docs"), name="docs-static")
-        print("✅ 挂载 /docs 静态文件")
+        logger.info("mounted_static_docs")
 
     if os.path.exists("static"):
         app.mount("/static", StaticFiles(directory="static"), name="static")
-        print("✅ 挂载 /static 静态文件")
+        logger.info("mounted_static_assets")
+
+    if os.path.exists("locales"):
+        app.mount("/locales", StaticFiles(directory="locales"), name="locales")
+        logger.info("mounted_static_locales")
 except Exception as e:
-    print(f"⚠️ 静态文件挂载失败: {e}")
+    logger.warning(f"静态文件挂载失败: {e}")
     # 在Vercel环境下，静态文件挂载可能失败，这是正常的
 
 app.include_router(auth.router)
@@ -502,27 +581,29 @@ async def get_config():
 # ==================== AI 客服接口 ====================
 
 @app.get("/api/ai_chat/preset_questions")
-async def get_preset_questions():
-    """获取预设问题列表"""
+async def get_preset_questions(raw_request: Request):
+    """Get preset question list, language-aware."""
+    lang = detect_language(raw_request)
+    questions = PRESET_QUESTIONS_EN if lang == "en" else PRESET_QUESTIONS
     return {
         "success": True,
-        "questions": PRESET_QUESTIONS
+        "questions": questions
     }
 
 @app.post("/api/ai_chat")
-async def ai_chat(request: AIChatRequest):
-    """AI客服聊天接口"""
+async def ai_chat(request: AIChatRequest, raw_request: Request = None):
+    """AI chat endpoint - bilingual."""
     start_time = time.time()
+    lang = request.lang or (detect_language(raw_request) if raw_request else "zh")
 
     try:
-        print(f"🤖 [AI客服] 收到消息: {request.message[:50]}...")
+        print(f"[AI Chat] message: {request.message[:50]}...")
 
         if not llm_available:
-            # LLM不可用时返回预设回复
-            print("⚠️ LLM模块不可用，使用预设回复")
+            print("LLM module unavailable, using fallback")
             return {
                 "success": True,
-                "response": "抱歉，AI客服暂时不可用。您可以直接使用我们的会面点推荐功能，或查看页面上的使用说明。如有问题请稍后再试。",
+                "response": _t("api.chat.fallback", lang),
                 "processing_time": time.time() - start_time,
                 "mode": "fallback"
             }
@@ -530,18 +611,17 @@ async def ai_chat(request: AIChatRequest):
         # 获取LLM API配置
         llm_api_key = os.getenv("LLM_API_KEY", "")
         llm_api_base = os.getenv("LLM_API_BASE", "https://newapi.deepwisdom.ai/v1")
-        llm_model = os.getenv("LLM_MODEL", "deepseek-chat")  # 默认使用deepseek，中文能力强
+        llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
 
         if not llm_api_key:
-            print("⚠️ LLM_API_KEY未配置")
+            print("LLM_API_KEY not configured")
             return {
                 "success": True,
-                "response": "AI客服配置中，请稍后再试。您也可以直接体验我们的会面点推荐功能！",
+                "response": _t("api.chat.configuring", lang),
                 "processing_time": time.time() - start_time,
                 "mode": "fallback"
             }
 
-        # 使用openai库直接调用（兼容DeepWisdom API）
         from openai import AsyncOpenAI
 
         client = AsyncOpenAI(
@@ -549,22 +629,19 @@ async def ai_chat(request: AIChatRequest):
             base_url=llm_api_base
         )
 
-        # 构建消息列表
+        system_prompt = MEETSPOT_SYSTEM_PROMPT_EN if lang == "en" else MEETSPOT_SYSTEM_PROMPT
         messages = [
-            {"role": "system", "content": MEETSPOT_SYSTEM_PROMPT}
+            {"role": "system", "content": system_prompt}
         ]
 
-        # 添加历史对话（最多保留最近5轮）
         if request.conversation_history:
-            recent_history = request.conversation_history[-10:]  # 最多10条消息
+            recent_history = request.conversation_history[-10:]
             messages.extend(recent_history)
 
-        # 添加当前用户消息
         messages.append({"role": "user", "content": request.message})
 
-        print(f"🚀 [AI客服] 调用LLM ({llm_model})，消息数: {len(messages)}")
+        print(f"[AI Chat] calling LLM ({llm_model}), messages: {len(messages)}")
 
-        # 调用LLM
         response = await client.chat.completions.create(
             model=llm_model,
             messages=messages,
@@ -575,7 +652,7 @@ async def ai_chat(request: AIChatRequest):
         ai_response = response.choices[0].message.content
         processing_time = time.time() - start_time
 
-        print(f"✅ [AI客服] 回复生成成功，耗时: {processing_time:.2f}秒")
+        print(f"[AI Chat] response generated, time: {processing_time:.2f}s")
 
         return {
             "success": True,
@@ -585,10 +662,10 @@ async def ai_chat(request: AIChatRequest):
         }
 
     except Exception as e:
-        print(f"💥 [AI客服] 错误: {str(e)}")
+        print(f"[AI Chat] error: {str(e)}")
         return {
             "success": False,
-            "response": f"抱歉，AI客服遇到了问题。您可以直接使用会面点推荐功能，或稍后再试。",
+            "response": _t("api.chat.error", lang),
             "error": str(e),
             "processing_time": time.time() - start_time,
             "mode": "error"
@@ -686,56 +763,44 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
     - 复杂请求: Agent模式 (深度分析，3-8秒)
     """
     start_time = time.time()
+    client_ip = _get_client_ip(raw_request) if raw_request else None
+    lang = detect_language(raw_request) if raw_request else "zh"
 
     # 免费次数限制检查
-    if raw_request and FREE_DAILY_LIMIT > 0:
+    if client_ip and FREE_DAILY_LIMIT > 0:
         try:
             from app.db.database import AsyncSessionLocal
             from app.db import payment_crud
 
-            forwarded = raw_request.headers.get("x-forwarded-for")
-            client_ip = (
-                forwarded.split(",")[0].strip()
-                if forwarded
-                else (raw_request.client.host if raw_request.client else "unknown")
-            )
-
             async with AsyncSessionLocal() as db:
                 used_today = await payment_crud.get_free_usage_today(db, client_ip)
                 if used_today >= FREE_DAILY_LIMIT:
-                    return {
-                        "success": False,
-                        "need_payment": True,
-                        "message": "今日免费次数已用完，请购买 credits 继续使用",
-                        "free_used": used_today,
-                        "free_limit": FREE_DAILY_LIMIT,
-                        "processing_time": time.time() - start_time,
-                    }
+                    return _quota_exceeded_response(used_today, start_time, lang)
         except Exception as e:
             # 免费次数检查失败不阻塞主流程
-            print(f"免费次数检查异常（不影响请求）: {e}")
+            logger.warning(f"免费次数检查异常（不影响请求）: {e}")
 
     # 并发控制：排队处理，保证每个请求都能完成
     async with _request_semaphore:
         result = await _process_meetspot_request(request, start_time)
 
     # 请求成功后记录免费使用
-    if raw_request and FREE_DAILY_LIMIT > 0 and isinstance(result, dict) and result.get("success"):
+    if client_ip and FREE_DAILY_LIMIT > 0 and isinstance(result, dict) and result.get("success"):
         try:
             from app.db.database import AsyncSessionLocal
             from app.db import payment_crud
 
-            forwarded = raw_request.headers.get("x-forwarded-for")
-            client_ip = (
-                forwarded.split(",")[0].strip()
-                if forwarded
-                else (raw_request.client.host if raw_request.client else "unknown")
-            )
-
             async with AsyncSessionLocal() as db:
-                await payment_crud.record_free_use(db, client_ip)
+                consumed, used_today = await payment_crud.try_consume_free_use(
+                    db=db,
+                    ip_address=client_ip,
+                    daily_limit=FREE_DAILY_LIMIT,
+                )
+                if not consumed:
+                    logger.info("free_quota_race_lost")
+                    return _quota_exceeded_response(used_today, start_time, lang)
         except Exception as e:
-            print(f"记录免费使用异常: {e}")
+            logger.warning(f"记录免费使用异常: {e}")
 
     return result
 
@@ -744,25 +809,27 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
     """实际处理推荐请求的内部函数"""
     # 评估请求复杂度
     complexity = assess_request_complexity(request)
-    print(f"🧠 [智能路由] 复杂度评估: {complexity['complexity_score']}分, 模式: {complexity['mode_name']}")
+    logger.info(
+        f"[智能路由] 复杂度评估: {complexity['complexity_score']}分, 模式: {complexity['mode_name']}"
+    )
     if complexity['reasons']:
-        print(f"   原因: {', '.join(complexity['reasons'])}")
+        logger.info(f"[智能路由] 触发原因: {', '.join(complexity['reasons'])}")
 
     try:
-        print(f"📝 收到请求: {request.model_dump()}")
+        logger.debug(f"收到请求: {request.model_dump()}")
 
         # 检查配置
-        if config:
+        if config and getattr(config, "amap", None):
             api_key = config.amap.api_key
-            print(f"✅ 使用配置文件中的API密钥: {api_key[:10]}...")
+            logger.info("using_amap_key_source=config")
         else:
             api_key = AMAP_API_KEY
-            print(f"✅ 使用环境变量中的API密钥: {api_key[:10]}...")
+            logger.info("using_amap_key_source=env")
 
         if not api_key:
             raise HTTPException(
                 status_code=500,
-                detail="高德地图API密钥未配置，请设置AMAP_API_KEY环境变量或配置config.toml文件"
+                detail=_t("api.error.amap_not_configured", "zh")
             )
 
         # ========== 智能路由：根据复杂度选择模式 ==========
@@ -910,7 +977,7 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
             print("❌ 配置未加载")
             raise HTTPException(
                 status_code=500,
-                detail="服务配置错误：无法加载推荐模块，请确保在本地环境运行或正确配置Vercel环境变量"
+                detail=_t("api.error.config_error", "zh")
             )
 
     except Exception as e:
@@ -1075,23 +1142,6 @@ async def api_status():
         "features": "Complete" if config else "Limited",
         "timestamp": time.time()
     }
-
-# 静态文件服务（替代WhiteNoise，使用FastAPI原生StaticFiles）
-# StaticFiles自带gzip压缩和缓存控制
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-if os.path.exists("public"):
-    app.mount("/public", StaticFiles(directory="public", html=True), name="public")
-
-# 添加缓存控制头（用于静态资源，HTML 除外）
-@app.middleware("http")
-async def add_cache_headers(request: Request, call_next):
-    response = await call_next(request)
-    path = request.url.path
-    # 对静态资源添加长期缓存，HTML 文件走上层中间件的短缓存策略
-    if path.startswith(("/static/", "/public/")) and not path.endswith(".html"):
-        response.headers["Cache-Control"] = "public, max-age=31536000"  # 1年
-    return response
 
 # Vercel 处理函数
 app_instance = app

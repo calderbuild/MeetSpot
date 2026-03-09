@@ -213,9 +213,13 @@ class SEOContentGenerator:
             }
         return {}
 
-    def generate_city_content(self, city_data: Dict) -> Dict[str, str]:
+    def generate_city_content(self, city_data: Dict, lang: str = "zh") -> Dict[str, str]:
         """生成城市页面内容块, 使用丰富的城市数据."""
+        from app.i18n import get_translations
+        t = get_translations(lang)
+
         city = city_data.get("name", "")
+        city_display = city_data.get("name_en", city) if lang == "en" else city
         city_en = city_data.get("name_en", "")
         tagline = city_data.get("tagline", "")
         description = city_data.get("description", "")
@@ -254,59 +258,67 @@ class SEOContentGenerator:
                     <h4>{scenario}</h4>
                     <p>{example}</p>
                 </div>'''
+            section_title = t.get("city.use_cases_title", "").replace("{city}", city_display)
             use_cases_html = f'''
             <section class="use-cases">
-                <h2>{city}真实使用场景</h2>
+                <h2>{section_title}</h2>
                 <div class="use-cases-grid">{cases_items}</div>
             </section>'''
 
         # 生成场所类型
-        venues_html = "、".join(popular_venues[:4]) if popular_venues else "咖啡馆、餐厅"
+        joiner = ", " if lang == "en" else "、"
+        venues_html = joiner.join(popular_venues[:4]) if popular_venues else ("cafes, restaurants" if lang == "en" else "咖啡馆、餐厅")
+
+        # Helper to resolve template strings
+        def _t(key: str) -> str:
+            return t.get(key, key).replace("{city}", city_display).replace("{count}", str(metro_lines)).replace("{venues}", venues_html)
+
+        intro_title = f"{city_display} Meeting Point Finder - {city_en}" if lang == "en" else f"{city}聚会地点推荐 - {city_en}"
 
         content = {
             "intro": f'''
                 <div class="city-hero">
-                    <h1>{city}聚会地点推荐 - {city_en}</h1>
+                    <h1>{intro_title}</h1>
                     <p class="tagline">{tagline}</p>
                     <p class="lead">{description}</p>
                 </div>''',
 
             "features": f'''
                 <section class="city-features">
-                    <h2>为什么在{city}使用MeetSpot？</h2>
+                    <h2>{_t("city.features_title")}</h2>
                     <div class="features-grid">
                         <div class="feature-card">
                             <div class="feature-icon">🚇</div>
-                            <h3>{metro_lines}条地铁线路</h3>
-                            <p>{city}地铁网络发达，MeetSpot优先推荐地铁站周边的聚会场所</p>
+                            <h3>{_t("city.metro_title")}</h3>
+                            <p>{_t("city.metro_desc")}</p>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">🎯</div>
-                            <h3>智能中点计算</h3>
-                            <p>球面几何算法确保每位参与者通勤距离公平均衡</p>
+                            <h3>{_t("city.midpoint_title")}</h3>
+                            <p>{_t("city.midpoint_desc")}</p>
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon">📍</div>
-                            <h3>本地精选场所</h3>
-                            <p>覆盖{city}{venues_html}等热门类型，高评分场所优先推荐</p>
+                            <h3>{_t("city.local_title")}</h3>
+                            <p>{_t("city.local_desc")}</p>
                         </div>
                     </div>
                 </section>''',
 
             "landmarks": f'''
                 <section class="city-landmarks">
-                    <h2>{city}热门聚会区域</h2>
+                    <h2>{_t("city.landmarks_title")}</h2>
                     <div class="tags-section">
                         <div class="tags-group">
-                            <h3>地标商圈</h3>
+                            <h3>{_t("city.landmarks_group")}</h3>
                             <div class="tags">{landmarks_html}</div>
                         </div>
                         <div class="tags-group">
-                            <h3>商务中心</h3>
+                            <h3>{_t("city.districts_group")}</h3>
                             <div class="tags">{districts_html}</div>
                         </div>
                         <div class="tags-group">
-                            <h3>高校聚集区</h3>
+                            <h3>{_t("city.universities_group")}</h3>
                             <div class="tags">{universities_html}</div>
                         </div>
                     </div>
@@ -316,7 +328,7 @@ class SEOContentGenerator:
 
             "local_tips": f'''
                 <section class="local-tips">
-                    <h2>{city}聚会小贴士</h2>
+                    <h2>{_t("city.tips_title")}</h2>
                     <div class="tip-card">
                         <div class="tip-icon">💡</div>
                         <p>{local_tips}</p>
@@ -325,27 +337,27 @@ class SEOContentGenerator:
 
             "how_it_works": f'''
                 <section class="how-it-works">
-                    <h2>如何在{city}找到最佳聚会地点？</h2>
+                    <h2>{_t("city.how_title")}</h2>
                     <div class="steps">
                         <div class="step">
                             <span class="step-number">1</span>
                             <div class="step-content">
-                                <h4>输入参与者位置</h4>
-                                <p>支持输入{city}任意地址、地标或高校名称（如{university_clusters[0] if university_clusters else "当地高校"}）</p>
+                                <h4>{_t("city.how_step1_title")}</h4>
+                                <p>{_t("city.how_step1_desc")}</p>
                             </div>
                         </div>
                         <div class="step">
                             <span class="step-number">2</span>
                             <div class="step-content">
-                                <h4>选择场所类型</h4>
-                                <p>根据聚会目的选择{venues_html}等场景</p>
+                                <h4>{_t("city.how_step2_title")}</h4>
+                                <p>{_t("city.how_step2_desc")}</p>
                             </div>
                         </div>
                         <div class="step">
                             <span class="step-number">3</span>
                             <div class="step-content">
-                                <h4>获取智能推荐</h4>
-                                <p>系统自动计算地理中点，推荐{landmarks[0] if landmarks else "市中心"}等区域的高评分场所</p>
+                                <h4>{_t("city.how_step3_title")}</h4>
+                                <p>{_t("city.how_step3_desc")}</p>
                             </div>
                         </div>
                     </div>
@@ -353,9 +365,9 @@ class SEOContentGenerator:
 
             "cta": f'''
                 <section class="cta-section">
-                    <h2>开始规划{city}聚会</h2>
-                    <p>无需注册，输入地址即可获取推荐</p>
-                    <a href="/public/meetspot_finder.html" class="cta-button" data-track="cta_click" data-track-label="city_page">立即使用 MeetSpot</a>
+                    <h2>{_t("city.cta_title")}</h2>
+                    <p>{_t("city.cta_desc")}</p>
+                    <a href="/public/meetspot_finder.html" class="cta-button" data-track="cta_click" data-track-label="city_page">{_t("city.cta_btn")}</a>
                 </section>''',
         }
 

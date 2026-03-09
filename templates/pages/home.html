@@ -1045,51 +1045,51 @@
     <div class="hero-content">
         <div class="agent-badge">
             <i class='bx bx-bot'></i>
-            AI Agent
+            {{ t['home.agent_badge'] }}
         </div>
         <h1>
-            MeetSpot <span class="highlight">AI Agent</span>
-            <br>智能聚会地点推荐
+            {{ t['home.hero_title_line1'] | safe }}
+            <br>{{ t['home.hero_title_line2'] }}
         </h1>
-        <p class="hero-tagline">球面几何计算公平中点 + GPT-4o智能评分</p>
+        <p class="hero-tagline">{{ t['home.hero_tagline'] }}</p>
         <div class="hero-tech-stack">
             <span>Haversine</span>
             <span class="divider"></span>
             <span>GPT-4o</span>
             <span class="divider"></span>
-            <span>5步推理</span>
+            <span>{{ t['home.hero_tech_steps'] }}</span>
         </div>
         <a href="/public/meetspot_finder.html" class="hero-cta" data-track="cta_click" data-track-label="hero">
-            立即免费使用
+            {{ t['home.hero_cta'] }}
         </a>
 
         <div class="hero-stats">
             <div class="hero-stat">
                 <span class="hero-stat-value">350+</span>
-                <span class="hero-stat-label">覆盖城市</span>
+                <span class="hero-stat-label">{{ t['home.stat_cities'] }}</span>
             </div>
             <div class="hero-stat">
                 <span class="hero-stat-value">12</span>
-                <span class="hero-stat-label">场景主题</span>
+                <span class="hero-stat-label">{{ t['home.stat_themes'] }}</span>
             </div>
             <div class="hero-stat">
                 <span class="hero-stat-value">60+</span>
-                <span class="hero-stat-label">高校简称</span>
+                <span class="hero-stat-label">{{ t['home.stat_universities'] }}</span>
             </div>
             <div class="hero-stat">
-                <span class="hero-stat-value">2-10人</span>
-                <span class="hero-stat-label">支持人数</span>
+                <span class="hero-stat-value">2-10</span>
+                <span class="hero-stat-label">{{ t['home.stat_people'] }}</span>
             </div>
         </div>
 
         <!-- Social CTA -->
         <div class="community-section">
-            <h3>加入MeetSpot用户社区</h3>
-            <p>与用户交流使用心得，获取最新功能更新</p>
+            <h3>{{ t['home.community_title'] }}</h3>
+            <p>{{ t['home.community_desc'] }}</p>
             <div class="community-buttons">
                 <button class="community-btn" onclick="showWeChatGroupModal()">
                     <i class='bx bxl-wechat'></i>
-                    添加微信
+                    {{ t['home.community_wechat'] }}
                 </button>
                 <a href="https://github.com/calderbuild/MeetSpot" target="_blank" rel="noopener" class="community-btn">
                     <i class='bx bxl-github'></i>
@@ -1105,42 +1105,42 @@
     <div class="section-header">
         <div class="section-badge">
             <i class='bx bx-brain'></i>
-            AI 推理流程
+            {{ t['home.thinking_badge'] }}
         </div>
-        <h2 class="section-title">5步透明推理</h2>
-        <p class="section-subtitle">MeetSpot不是简单的搜索工具，而是有完整推理链条的AI Agent</p>
+        <h2 class="section-title">{{ t['home.thinking_title'] }}</h2>
+        <p class="section-subtitle">{{ t['home.thinking_subtitle'] }}</p>
     </div>
 
     <div class="thinking-timeline">
         <div class="thinking-step step-1">
             <div class="step-icon">📍</div>
             <div class="step-number">STEP 01</div>
-            <div class="step-title">解析地址</div>
-            <div class="step-desc">智能识别地址/地标/简称</div>
+            <div class="step-title">{{ t['home.step1_title'] }}</div>
+            <div class="step-desc">{{ t['home.step1_desc'] }}</div>
         </div>
         <div class="thinking-step step-2">
             <div class="step-icon">📐</div>
             <div class="step-number">STEP 02</div>
-            <div class="step-title">计算中点</div>
-            <div class="step-desc">球面几何公平中心</div>
+            <div class="step-title">{{ t['home.step2_title'] }}</div>
+            <div class="step-desc">{{ t['home.step2_desc'] }}</div>
         </div>
         <div class="thinking-step step-3">
             <div class="step-icon">🔍</div>
             <div class="step-number">STEP 03</div>
-            <div class="step-title">搜索周边</div>
-            <div class="step-desc">POI场所检索</div>
+            <div class="step-title">{{ t['home.step3_title'] }}</div>
+            <div class="step-desc">{{ t['home.step3_desc'] }}</div>
         </div>
         <div class="thinking-step step-4">
             <div class="step-icon">🤖</div>
             <div class="step-number">STEP 04</div>
-            <div class="step-title">GPT-4o评分</div>
-            <div class="step-desc">多维度智能评分</div>
+            <div class="step-title">{{ t['home.step4_title'] }}</div>
+            <div class="step-desc">{{ t['home.step4_desc'] }}</div>
         </div>
         <div class="thinking-step step-5">
             <div class="step-icon">✨</div>
             <div class="step-number">STEP 05</div>
-            <div class="step-title">生成推荐</div>
-            <div class="step-desc">输出最优结果</div>
+            <div class="step-title">{{ t['home.step5_title'] }}</div>
+            <div class="step-desc">{{ t['home.step5_desc'] }}</div>
         </div>
     </div>
 
@@ -1148,22 +1148,22 @@
         <div class="perf-item perf-single">
             <div class="perf-icon"><i class='bx bx-time-five'></i></div>
             <div class="perf-text">
-                <span class="perf-label">单场景</span>
-                <span class="perf-value">5-8秒</span>
+                <span class="perf-label">{{ t['home.perf_single'] }}</span>
+                <span class="perf-value">{{ t['home.perf_single_time'] }}</span>
             </div>
         </div>
         <div class="perf-item perf-dual">
             <div class="perf-icon"><i class='bx bx-layer'></i></div>
             <div class="perf-text">
-                <span class="perf-label">双场景</span>
-                <span class="perf-value">8-12秒</span>
+                <span class="perf-label">{{ t['home.perf_dual'] }}</span>
+                <span class="perf-value">{{ t['home.perf_dual_time'] }}</span>
             </div>
         </div>
         <div class="perf-item perf-agent">
             <div class="perf-icon"><i class='bx bx-bot'></i></div>
             <div class="perf-text">
-                <span class="perf-label">Agent模式</span>
-                <span class="perf-value">15-30秒</span>
+                <span class="perf-label">{{ t['home.perf_agent'] }}</span>
+                <span class="perf-value">{{ t['home.perf_agent_time'] }}</span>
             </div>
         </div>
     </div>
@@ -1172,27 +1172,28 @@
 <!-- Main Content Grid -->
 <section class="main-content-grid">
     <div class="content-card reveal reveal-3">
-        <p class="badge">AI Agent · 完全免费</p>
-        <h2 class="main-heading">多人聚会，一键找到最公平的中点位置</h2>
+        <p class="badge">{{ t['home.content_badge'] }}</p>
+        <h2 class="main-heading">{{ t['home.content_heading'] }}</h2>
         <p class="main-desc">
-            MeetSpot（聚点）是一个智能会面地点推荐AI Agent。无论是咖啡馆商务会谈、餐厅朋友聚餐、还是图书馆学习讨论，都能根据多人位置快速计算最佳中点，推荐附近高评分场所。
+            {{ t['home.content_desc'] }}
         </p>
         <div class="btn-group">
             <a class="btn-primary btn-primary-filled" href="/public/meetspot_finder.html" data-track="cta_click" data-track-label="main_content">
                 <i class='bx bx-rocket'></i>
-                立即免费使用
+                {{ t['home.btn_use_now'] }}
             </a>
-            <a class="btn-primary btn-primary-outline" href="/how-it-works">使用指南</a>
-            <a class="btn-primary btn-primary-outline" href="/faq">常见问题</a>
+            {% set prefix = '/en' if lang == 'en' else '' %}
+            <a class="btn-primary btn-primary-outline" href="{{ prefix }}/how-it-works">{{ t['home.btn_guide'] }}</a>
+            <a class="btn-primary btn-primary-outline" href="{{ prefix }}/faq">{{ t['home.btn_faq'] }}</a>
         </div>
         <div class="stats-grid">
             <div class="stat-item">
                 <strong>350+</strong>
-                <span>覆盖城市</span>
+                <span>{{ t['home.stat_cities'] }}</span>
             </div>
             <div class="stat-item">
-                <strong>2-10人</strong>
-                <span>支持人数</span>
+                <strong>2-10</strong>
+                <span>{{ t['home.stat_people'] }}</span>
             </div>
         </div>
     </div>
@@ -1201,17 +1202,17 @@
     <div class="city-card reveal reveal-4">
         <div class="city-card-header">
             <div>
-                <h2>热门城市</h2>
-                <p style="margin:4px 0 0 0;color:var(--text-muted);font-size:0.85rem;">选择城市获取本地化推荐</p>
+                <h2>{{ t['home.cities_title'] }}</h2>
+                <p style="margin:4px 0 0 0;color:var(--text-muted);font-size:0.85rem;">{{ t['home.cities_desc'] }}</p>
             </div>
             <a href="#all-cities" class="toggle-link" onclick="toggleAllCities(event)">
-                <span id="toggle-text">查看全部 ▼</span>
+                <span id="toggle-text">{{ t['home.cities_toggle_show'] }}</span>
             </a>
         </div>
 
         <div id="featured-cities" class="city-grid">
             {% for city in cities[:8] %}
-            <a href="/meetspot/{{ city.slug }}" class="city-link">
+            <a href="{{ prefix }}/meetspot/{{ city.slug }}" class="city-link">
                 <div class="city-name">
                     <strong>{{ city.name }}</strong>
                     <span>{{ city.name_en }}</span>
@@ -1224,7 +1225,7 @@
         <div id="all-cities" style="display:none;max-height:350px;overflow-y:auto;border-top:1px solid rgba(10, 77, 104, 0.1);padding-top:16px;margin-top:16px;">
             <div class="city-grid">
                 {% for city in cities[8:] %}
-                <a href="/meetspot/{{ city.slug }}" class="city-link">
+                <a href="{{ prefix }}/meetspot/{{ city.slug }}" class="city-link">
                     <div class="city-name">
                         <strong>{{ city.name }}</strong>
                         <span>{{ city.name_en }}</span>
@@ -1238,65 +1239,56 @@
 
 <!-- Features Section -->
 <section class="section-card reveal reveal-5">
-    <h2>核心功能</h2>
+    <h2>{{ t['home.features_title'] }}</h2>
     <div class="feature-grid">
         <article class="feature-card">
             <span class="feature-icon">🎯</span>
-            <h3>球面几何中心点</h3>
-            <p>使用Haversine公式计算地球曲面上的真实中点，比简单平均精确15-20%，数学上公平。</p>
+            <h3>{{ t['home.feat_geo_title'] }}</h3>
+            <p>{{ t['home.feat_geo_desc'] }}</p>
         </article>
         <article class="feature-card">
             <span class="feature-icon">🤖</span>
-            <h3>GPT-4o智能评分</h3>
-            <p>AI Agent使用GPT-4o对场所进行多维度评分（距离、评分、停车、环境），智能推荐而非简单排序。</p>
+            <h3>{{ t['home.feat_gpt_title'] }}</h3>
+            <p>{{ t['home.feat_gpt_desc'] }}</p>
         </article>
         <article class="feature-card">
             <span class="feature-icon">🏢</span>
-            <h3>12种场景主题</h3>
-            <p>咖啡馆、餐厅、图书馆、KTV、健身房等12种场景，支持多场景同时搜索。</p>
+            <h3>{{ t['home.feat_themes_title'] }}</h3>
+            <p>{{ t['home.feat_themes_desc'] }}</p>
         </article>
         <article class="feature-card">
             <span class="feature-icon">🧠</span>
-            <h3>5步透明推理</h3>
-            <p>完整推理链条可视化，你可以看到AI每一步是怎么"思考"的，完全透明可解释。</p>
+            <h3>{{ t['home.feat_transparent_title'] }}</h3>
+            <p>{{ t['home.feat_transparent_desc'] }}</p>
         </article>
         <article class="feature-card">
             <span class="feature-icon">🎓</span>
-            <h3>60+高校简称</h3>
-            <p>内置60+高校简称映射，"北大"自动识别为"北京市海淀区北京大学"。</p>
+            <h3>{{ t['home.feat_uni_title'] }}</h3>
+            <p>{{ t['home.feat_uni_desc'] }}</p>
         </article>
         <article class="feature-card">
             <span class="feature-icon">🌏</span>
-            <h3>350+城市覆盖</h3>
-            <p>基于高德地图数据，覆盖北京、上海、广州、深圳、杭州等350+城市。</p>
+            <h3>{{ t['home.feat_cities_title'] }}</h3>
+            <p>{{ t['home.feat_cities_desc'] }}</p>
         </article>
     </div>
 </section>
 
 <!-- Use Cases Section -->
 <section class="section-card reveal reveal-6">
-    <h2>真实用户案例</h2>
+    <h2>{{ t['home.cases_title'] }}</h2>
     <div class="cases-grid">
         <article class="case-card">
-            <h3>🌏 跨城团队聚会</h3>
-            <p>
-                远程团队成员分散在北京、上海、深圳三地，MeetSpot建议在杭州城西科创大走廊附近会面，
-                团队平均通勤时间从94分钟缩短到58分钟，节省近40%时间成本。
-            </p>
+            <h3>{{ t['home.case1_title'] }}</h3>
+            <p>{{ t['home.case1_desc'] }}</p>
         </article>
         <article class="case-card">
-            <h3>👥 社区活动组织</h3>
-            <p>
-                产品社区组织50人线下Workshop，选择"共享空间+投影设备"场景后，
-                推荐列表自动显示预算区间、交通换乘和无障碍设施信息。
-            </p>
+            <h3>{{ t['home.case2_title'] }}</h3>
+            <p>{{ t['home.case2_desc'] }}</p>
         </article>
         <article class="case-card">
-            <h3>💼 商务客户会议</h3>
-            <p>
-                与多地合作伙伴举行会议时，MeetSpot生成专业的地点推荐报告，
-                清晰展示选址依据，让"公平便捷"有数据支撑。
-            </p>
+            <h3>{{ t['home.case3_title'] }}</h3>
+            <p>{{ t['home.case3_desc'] }}</p>
         </article>
     </div>
 </section>
@@ -1304,14 +1296,11 @@
 <!-- CTA Section -->
 <section class="cta-section reveal">
     <div class="cta-content">
-        <h2>开始规划你的下一次聚会</h2>
-        <p>
-            MeetSpot 完全免费、无需注册，直接开始使用。
-            有问题或建议？欢迎通过 <a href="https://github.com/calderbuild/MeetSpot/issues">GitHub Issues</a> 反馈。
-        </p>
+        <h2>{{ t['home.cta_title'] }}</h2>
+        <p>{{ t['home.cta_desc'] | safe }}</p>
         <div class="cta-buttons">
-            <a href="/public/meetspot_finder.html" class="cta-btn cta-btn-primary" data-track="cta_click" data-track-label="bottom">立即创建聚会计划</a>
-            <a href="/about" class="cta-btn cta-btn-secondary">了解更多</a>
+            <a href="/public/meetspot_finder.html" class="cta-btn cta-btn-primary" data-track="cta_click" data-track-label="bottom">{{ t['home.cta_btn_primary'] }}</a>
+            <a href="{{ prefix }}/about" class="cta-btn cta-btn-secondary">{{ t['home.cta_btn_secondary'] }}</a>
         </div>
     </div>
 </section>
@@ -1324,10 +1313,10 @@ function toggleAllCities(e) {
 
     if (allCities.style.display === 'none') {
         allCities.style.display = 'block';
-        toggleText.textContent = '收起 ▲';
+        toggleText.textContent = '{{ t['home.cities_toggle_hide'] }}';
     } else {
         allCities.style.display = 'none';
-        toggleText.textContent = '查看全部 ▼';
+        toggleText.textContent = '{{ t['home.cities_toggle_show'] }}';
     }
 }
 

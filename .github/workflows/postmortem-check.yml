@@ -16,6 +16,11 @@ on:
       - 'tools/**'
       - 'public/**'
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   postmortem-check:
     runs-on: ubuntu-latest
@@ -60,57 +65,64 @@ jobs:
 
           # Save output for PR comment
           echo "has_matches=false" >> $GITHUB_OUTPUT
+          echo "has_blocking=false" >> $GITHUB_OUTPUT
           if grep -q "\[BLOCK\]\|\[WARN\]" postmortem_output.txt; then
             echo "has_matches=true" >> $GITHUB_OUTPUT
+          fi
+          if grep -q "\[BLOCK\]" postmortem_output.txt; then
+            echo "has_blocking=true" >> $GITHUB_OUTPUT
           fi
         continue-on-error: true
 
       - name: Comment on PR
-        if: github.event_name == 'pull_request' && steps.check.outputs.has_matches == 'true'
+        if: github.event_name == 'pull_request' && steps.check.outputs.has_blocking == 'true'
         uses: actions/github-script@v8
+        continue-on-error: true
         with:
           script: |
             const fs = require('fs');
             const output = fs.readFileSync('postmortem_output.txt', 'utf8');
-
             const body = `## Postmortem Alert
 
-            This PR may touch code related to past incidents. Please review:
+This PR may touch code related to past incidents. Please review:
 
-            \`\`\`
-            ${output.substring(0, 3000)}
-            \`\`\`
+\`\`\`
+${output.substring(0, 3000)}
+\`\`\`
 
-            Run locally with:
-            \`\`\`bash
-            python tools/postmortem_check.py --base ${{ github.event.pull_request.base.sha }}
-            \`\`\`
-            `;
+Run locally with:
+\`\`\`bash
+python tools/postmortem_check.py --base ${{ github.event.pull_request.base.sha }}
+\`\`\`
+`;
 
-            // Check if we already commented
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existingComment = comments.find(c =>
-              c.user.login === 'github-actions[bot]' &&
-              c.body.includes('Postmortem Alert')
-            );
-
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: body
               });
+
+              const existingComment = comments.find(c =>
+                c.user.login === 'github-actions[bot]' &&
+                c.body.includes('Postmortem Alert')
+              );
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+                });
+              }
+            } catch (error) {
+              console.log(`Skipping PR comment: ${error.message}`);
             }
