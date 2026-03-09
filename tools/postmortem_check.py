@@ -13,6 +13,7 @@ Postmortem 匹配检查脚本
 """
 import argparse
 import fnmatch
+import json
 import re
 import subprocess
 import sys
@@ -23,6 +24,20 @@ from typing import Dict, List, Optional
 import yaml
 
 POSTMORTEM_DIR = Path(__file__).parent.parent / "postmortem"
+GENERIC_KEYWORDS = {
+    "cache",
+    "cache-control",
+    "ci",
+    "db",
+    "faq",
+    "finder",
+    "fix",
+    "general",
+    "html",
+    "label",
+    "map",
+    "payment",
+}
 
 
 @dataclass
@@ -33,6 +48,7 @@ class MatchResult:
     kind: str
     reason: str
     confidence: float
+    is_specific: bool = False
 
 
 @dataclass
@@ -41,24 +57,31 @@ class AggregatedMatch:
 
     pm_id: str
     reasons: List[str] = field(default_factory=list)
-    max_confidence: float = 0.0
     match_count: int = 0
     final_confidence: float = 0.0
+    exact_file_matches: int = 0
+    pattern_file_matches: int = 0
+    function_match_count: int = 0
+    specific_pattern_count: int = 0
+    generic_pattern_count: int = 0
+    specific_keyword_count: int = 0
+    generic_keyword_count: int = 0
     has_file_match: bool = False
-    has_function_match: bool = False
-    has_pattern_match: bool = False
-    keyword_match_count: int = 0
+    has_specific_pattern_match: bool = False
+    has_specific_keyword_match: bool = False
 
 
 class PostmortemMatcher:
     """Postmortem 匹配器"""
 
     # 匹配权重
-    WEIGHT_FILE_EXACT = 0.45
-    WEIGHT_FILE_PATTERN = 0.35
-    WEIGHT_FUNCTION = 0.65
-    WEIGHT_PATTERN = 0.6
-    WEIGHT_KEYWORD = 0.25
+    WEIGHT_FILE_EXACT = 0.20
+    WEIGHT_FILE_PATTERN = 0.15
+    WEIGHT_FUNCTION = 0.20
+    WEIGHT_PATTERN_STRONG = 0.40
+    WEIGHT_PATTERN_GENERIC = 0.12
+    WEIGHT_KEYWORD_STRONG = 0.12
+    WEIGHT_KEYWORD_GENERIC = 0.05
 
     def __init__(self):
         self.postmortems = self._load_all_postmortems()
@@ -103,6 +126,7 @@ class PostmortemMatcher:
                                 kind="file",
                                 reason=f"File: {changed} ~ {pattern}",
                                 confidence=confidence,
+                                is_specific=is_exact,
                             )
                         )
 
@@ -138,6 +162,7 @@ class PostmortemMatcher:
                                 kind="function",
                                 reason=f"Function: {func}",
                                 confidence=self.WEIGHT_FUNCTION,
+                                is_specific=False,
                             )
                         )
                 except re.error:
@@ -149,12 +174,18 @@ class PostmortemMatcher:
                     continue
                 try:
                     if re.search(pattern, diff, re.IGNORECASE):
+                        is_specific = self._is_specific_pattern(pattern)
                         matches.append(
                             MatchResult(
                                 pm_id=pm_id,
                                 kind="pattern",
                                 reason=f"Pattern: {pattern}",
-                                confidence=self.WEIGHT_PATTERN,
+                                confidence=(
+                                    self.WEIGHT_PATTERN_STRONG
+                                    if is_specific
+                                    else self.WEIGHT_PATTERN_GENERIC
+                                ),
+                                is_specific=is_specific,
                             )
                         )
                 except re.error:
@@ -165,12 +196,18 @@ class PostmortemMatcher:
                 if not keyword:
                     continue
                 if keyword.lower() in diff.lower():
+                    is_specific = self._is_specific_keyword(keyword)
                     matches.append(
                         MatchResult(
                             pm_id=pm_id,
                             kind="keyword",
                             reason=f"Keyword: {keyword}",
-                            confidence=self.WEIGHT_KEYWORD,
+                            confidence=(
+                                self.WEIGHT_KEYWORD_STRONG
+                                if is_specific
+                                else self.WEIGHT_KEYWORD_GENERIC
+                            ),
+                            is_specific=is_specific,
                         )
                     )
 
@@ -189,6 +226,35 @@ class PostmortemMatcher:
             return pattern in filepath
         return False
 
+    def _is_specific_pattern(self, pattern: str) -> bool:
+        """区分精确风险模式和泛化关键词式模式。"""
+        stripped = pattern.strip()
+        if not stripped:
+            return False
+
+        wildcard_like = stripped.replace(r"\.", ".").replace(r"\-", "-")
+        if re.fullmatch(r"\.\*[A-Za-z0-9_./:\-\s]+(?:\\\.[A-Za-z0-9_./:\-\s]+)*\.\*", stripped):
+            return False
+        if re.fullmatch(r"[A-Za-z0-9_./:\-\s]+", wildcard_like):
+            return len(wildcard_like) >= 20 or "@" in wildcard_like or "(" in stripped
+        if stripped.count(".*") >= 1 and not any(
+            token in stripped for token in ["^", "$", "\\(", "\\)", "[", "]", "{", "}", '="', "methods="]
+        ):
+            return False
+        return True
+
+    def _is_specific_keyword(self, keyword: str) -> bool:
+        normalized = keyword.strip().lower()
+        if not normalized:
+            return False
+        if normalized in GENERIC_KEYWORDS:
+            return False
+        if len(normalized) <= 4:
+            return False
+        if " " not in normalized and normalized.isalpha() and len(normalized) <= 8:
+            return False
+        return True
+
     def aggregate_matches(
         self, file_matches: List[MatchResult], content_matches: List[MatchResult]
     ) -> Dict[str, AggregatedMatch]:
@@ -202,33 +268,58 @@ class PostmortemMatcher:
 
             agg = result[match.pm_id]
             agg.reasons.append(match.reason)
-            agg.max_confidence = max(agg.max_confidence, match.confidence)
             agg.match_count += 1
 
             if match.kind == "file":
                 agg.has_file_match = True
+                if match.is_specific:
+                    agg.exact_file_matches += 1
+                else:
+                    agg.pattern_file_matches += 1
             if match.kind == "function":
-                agg.has_function_match = True
+                agg.function_match_count += 1
             if match.kind == "pattern":
-                agg.has_pattern_match = True
+                if match.is_specific:
+                    agg.specific_pattern_count += 1
+                    agg.has_specific_pattern_match = True
+                else:
+                    agg.generic_pattern_count += 1
             if match.kind == "keyword":
-                agg.keyword_match_count += 1
+                if match.is_specific:
+                    agg.specific_keyword_count += 1
+                    agg.has_specific_keyword_match = True
+                else:
+                    agg.generic_keyword_count += 1
 
         # 计算综合置信度
         for pm_id, agg in result.items():
-            base = agg.max_confidence
-            strong_signal_count = sum(
-                [agg.has_file_match, agg.has_function_match, agg.has_pattern_match]
+            file_score = min(
+                0.25,
+                agg.exact_file_matches * self.WEIGHT_FILE_EXACT
+                + agg.pattern_file_matches * self.WEIGHT_FILE_PATTERN,
             )
-            count_bonus = min(0.2, 0.1 * max(0, strong_signal_count - 1))
-            cross_bonus = 0.1 if (
-                agg.has_file_match and (agg.has_function_match or agg.has_pattern_match)
-            ) else 0
-            keyword_bonus = 0.05 if (
-                agg.keyword_match_count and (agg.has_function_match or agg.has_pattern_match)
-            ) else 0
+            function_score = min(0.25, agg.function_match_count * self.WEIGHT_FUNCTION)
+            pattern_score = min(
+                0.50,
+                agg.specific_pattern_count * self.WEIGHT_PATTERN_STRONG
+                + agg.generic_pattern_count * self.WEIGHT_PATTERN_GENERIC,
+            )
+            keyword_score = min(
+                0.18,
+                agg.specific_keyword_count * self.WEIGHT_KEYWORD_STRONG
+                + agg.generic_keyword_count * self.WEIGHT_KEYWORD_GENERIC,
+            )
+
+            cross_bonus = 0.0
+            if agg.has_file_match and agg.has_specific_pattern_match:
+                cross_bonus += 0.10
+            if agg.function_match_count and agg.has_specific_pattern_match:
+                cross_bonus += 0.05
+            if agg.function_match_count and agg.specific_keyword_count >= 2:
+                cross_bonus += 0.05
+
             agg.final_confidence = min(
-                1.0, base + count_bonus + cross_bonus + keyword_bonus
+                1.0, file_score + function_score + pattern_score + keyword_score + cross_bonus
             )
 
         return result
@@ -314,6 +405,13 @@ def extract_changed_lines_by_file(diff: str) -> Dict[str, str]:
     }
 
 
+def classify_match_level(agg: AggregatedMatch, threshold: float) -> str:
+    """只有命中高特异性模式时，才允许升级为 BLOCK。"""
+    if agg.final_confidence >= threshold and agg.has_specific_pattern_match:
+        return "BLOCK"
+    return "WARN"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Postmortem Check")
     parser.add_argument("--base", default="main", help="Base branch/commit")
@@ -355,7 +453,10 @@ def main():
         print("No changes detected.")
         sys.exit(0)
 
-    print(f"Checking {len(changed_files)} changed files against {len(matcher.postmortems)} postmortems...")
+    if args.output == "text":
+        print(
+            f"Checking {len(changed_files)} changed files against {len(matcher.postmortems)} postmortems..."
+        )
 
     # 执行匹配
     file_matches = matcher.match_files(changed_files)
@@ -371,6 +472,7 @@ def main():
     # 输出结果
     blocking = []
     warnings = []
+    output_items = []
 
     sorted_results = sorted(
         results.items(), key=lambda x: x[1].final_confidence, reverse=True
@@ -378,25 +480,38 @@ def main():
 
     for pm_id, agg in sorted_results:
         confidence = agg.final_confidence
-        is_blocking = confidence >= args.threshold
-        level = "BLOCK" if is_blocking else "WARN"
+        level = classify_match_level(agg, args.threshold)
+        is_blocking = level == "BLOCK"
 
         # 获取 postmortem 详情
         pm = matcher.get_postmortem_details(pm_id)
         if not pm:
             pm = {"title": "Unknown", "severity": "unknown"}
 
-        print(f"\n[{level}] {pm_id} ({confidence:.0%} confidence)")
-        print(f"  Title: {pm.get('title', 'N/A')}")
-        print(f"  Severity: {pm.get('severity', 'N/A')}")
-        print(f"  Reasons:")
-        for reason in agg.reasons[:5]:  # 最多显示5个原因
-            print(f"    - {reason}")
+        if args.output == "text":
+            print(f"\n[{level}] {pm_id} ({confidence:.0%} confidence)")
+            print(f"  Title: {pm.get('title', 'N/A')}")
+            print(f"  Severity: {pm.get('severity', 'N/A')}")
+            print(f"  Reasons:")
+            for reason in agg.reasons[:5]:  # 最多显示5个原因
+                print(f"    - {reason}")
 
-        if pm.get("verification"):
-            print(f"  Verification checklist:")
-            for check in pm["verification"]:
-                print(f"    [ ] {check}")
+            if pm.get("verification"):
+                print(f"  Verification checklist:")
+                for check in pm["verification"]:
+                    print(f"    [ ] {check}")
+
+        output_items.append(
+            {
+                "id": pm_id,
+                "level": level,
+                "confidence": round(confidence, 4),
+                "title": pm.get("title", "N/A"),
+                "severity": pm.get("severity", "N/A"),
+                "reasons": agg.reasons,
+                "verification": pm.get("verification", []),
+            }
+        )
 
         if is_blocking:
             blocking.append(pm_id)
@@ -404,8 +519,22 @@ def main():
             warnings.append(pm_id)
 
     # 总结
-    print(f"\n{'=' * 50}")
-    print(f"Summary: {len(blocking)} blocking, {len(warnings)} warnings")
+    if args.output == "json":
+        print(
+            json.dumps(
+                {
+                    "summary": {
+                        "blocking": len(blocking),
+                        "warnings": len(warnings),
+                    },
+                    "results": output_items,
+                },
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print(f"\n{'=' * 50}")
+        print(f"Summary: {len(blocking)} blocking, {len(warnings)} warnings")
 
     # 决定退出码
     if blocking and args.mode == "block":
