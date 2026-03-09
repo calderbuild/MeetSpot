@@ -1,0 +1,31 @@
+id: PM-2026-013
+created_at: '2026-03-09T06:39:43.998943+00:00'
+source_commit: 025d416
+severity: medium
+title: reduce false positive block alerts
+description: 'fix(postmortem): reduce false positive block alerts'
+root_cause: See commit body for details
+triggers:
+  files:
+  - tests/test_postmortem_check.py
+  - tools/postmortem_check.py
+  functions:
+  - test_pattern_specificity_distinguishes_broad_regex_from_precise_route
+  - test_generic_pattern_and_keywords_do_not_block_hot_function_changes
+  - build_match
+  - test_workflow_triggers_on_self_edits_and_manual_dispatch
+  - test_file_and_pattern_match_stays_blocking
+  patterns: []
+  keywords: &id001
+  - postmortem
+fix_pattern:
+  approach: reduce false positive block alerts
+  key_changes:
+  - reduce false positive block alerts
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - tests/test_postmortem_check.py
+  - tools/postmortem_check.py
+tags: *id001
