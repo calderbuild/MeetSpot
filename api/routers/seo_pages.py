@@ -403,6 +403,59 @@ async def faq_page_en(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Compare
+# ---------------------------------------------------------------------------
+
+
+def _render_compare(request: Request, lang: str):
+    t = get_translations(lang)
+    prefix = _lang_prefix(lang)
+    meta_tags = {
+        "title": t.get("seo.compare.title", "Compare - MeetSpot"),
+        "description": t.get("compare.seo_desc", ""),
+        "keywords": "MeetSpot comparison,meeting point methods,聚会地点对比",
+    }
+    breadcrumb_items = [
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {
+            "name": t.get("seo.breadcrumb.compare", "Compare"),
+            "url": f"{prefix}/compare",
+        },
+    ]
+    schema_list = _build_schema_list(
+        seo_generator.generate_schema_org("website", {}),
+        seo_generator.generate_schema_org("organization", {}),
+        seo_generator.generate_schema_org("breadcrumb", {"items": breadcrumb_items}),
+    )
+    path = "/compare"
+    return templates.TemplateResponse(
+        "pages/compare.html",
+        {
+            **_common_context(request, lang),
+            "meta_title": meta_tags["title"][:60],
+            "meta_description": meta_tags["description"][:155],
+            "meta_keywords": meta_tags["keywords"],
+            "canonical_url": f"{BASE_URL}{prefix}{path}",
+            "schema_jsonld": schema_list,
+            "breadcrumbs": breadcrumb_items,
+            "hreflang": _hreflang_links(path),
+        },
+    )
+
+
+@router.get("/compare", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def compare_page(request: Request):
+    return _render_compare(request, "zh")
+
+
+@router.get("/en/compare", response_class=HTMLResponse)
+@limiter.limit("30/minute")
+async def compare_page_en(request: Request):
+    return _render_compare(request, "en")
+
+
+# ---------------------------------------------------------------------------
 # Sitemap & Robots
 # ---------------------------------------------------------------------------
 
@@ -420,6 +473,7 @@ async def sitemap():
         {"loc": "/about", "priority": "0.8", "changefreq": "monthly"},
         {"loc": "/faq", "priority": "0.8", "changefreq": "weekly"},
         {"loc": "/how-it-works", "priority": "0.7", "changefreq": "monthly"},
+        {"loc": "/compare", "priority": "0.8", "changefreq": "monthly"},
     ]
     city_pages = [
         {"loc": f"/meetspot/{city['slug']}", "priority": "0.9", "changefreq": "weekly"}

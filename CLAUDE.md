@@ -211,17 +211,22 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 | Amap API quota exceeded | Free tier: 5000 calls/day. Check usage at https://console.amap.com/dev/flow/manage |
 | Frontend map not loading | Verify `AMAP_SECURITY_JS_CODE` is set for JS API security verification |
 | asyncpg + pgbouncer errors | `app/db/database.py` disables prepared statement cache and uses dynamic statement names. If adding raw SQL, avoid named prepared statements |
+| Render API PUT /env-vars 覆盖所有变量 | PUT 是全量替换，不是追加。必须先 GET 现有变量，合并后再 PUT。操作生产环境变量前必须确认 API 语义 |
+| HEAD 请求返回 405 | FastAPI 自定义路由不自动处理 HEAD。已通过 `head_method_support` 中间件修复（`api/index.py`）。注意用 `request.scope` 不是 `request._scope` |
 
 **Logging**: Uses loguru via `app/logger.py`. `/health` endpoint shows config status.
 
 ## Deployment
 
 Hosted on Render free tier (512MB RAM, cold starts after 15min idle).
+Service ID: `srv-d2di8295pdvs73eu3re0`. Render CLI installed (`brew install render`), workspace set.
 
 **Redeploy**: Push to `main` branch triggers auto-deploy. For manual restart without code changes:
 ```bash
 git commit --allow-empty -m "chore: trigger redeploy" && git push origin main
 ```
+
+**Render CLI**: `render deploys list srv-d2di8295pdvs73eu3re0 --confirm -o json` to check deploy status. Environment variables managed via API (`PUT /v1/services/{id}/env-vars` -- WARNING: PUT is full replacement, always GET first and merge).
 
 **Generated artifacts**: HTML files in `workspace/js_src/` are runtime-generated and should not be committed.
 

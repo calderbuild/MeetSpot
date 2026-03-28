@@ -1,0 +1,280 @@
+{% extends "base.html" %} {% block content %}
+<style>
+  .compare-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .compare-hero {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .compare-hero h1 {
+    font-family: "Outfit", sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .compare-hero p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+  }
+
+  .compare-table-wrap {
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 40px;
+  }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .compare-table thead th {
+    padding: 20px 16px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .compare-table thead th:first-child {
+    text-align: left;
+    width: 15%;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .compare-table thead th:nth-child(2),
+  .compare-table thead th:nth-child(3) {
+    color: var(--text-secondary);
+    background: #f8fafc;
+  }
+
+  .compare-table thead th:nth-child(4) {
+    color: var(--nav-accent);
+    background: rgba(255, 107, 53, 0.06);
+    position: relative;
+  }
+
+  .compare-table thead th:nth-child(4)::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--nav-accent);
+  }
+
+  .compare-table tbody td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .compare-table tbody td:first-child {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+  }
+
+  .compare-table tbody td:nth-child(2),
+  .compare-table tbody td:nth-child(3) {
+    color: var(--text-secondary);
+    background: #fafbfc;
+  }
+
+  .compare-table tbody td:nth-child(4) {
+    color: var(--text-primary);
+    background: rgba(255, 107, 53, 0.03);
+    font-weight: 500;
+  }
+
+  .compare-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .compare-summary {
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 40px;
+  }
+
+  .compare-summary h2 {
+    font-family: "Outfit", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+  }
+
+  .compare-summary p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 12px;
+    font-size: 1rem;
+  }
+
+  .compare-summary p:first-of-type {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--nav-primary);
+  }
+
+  .compare-cta {
+    text-align: center;
+    padding: 48px 24px;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .compare-cta h2 {
+    font-family: "Outfit", sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .compare-cta p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+
+  .compare-cta a {
+    display: inline-block;
+    background: var(--nav-accent);
+    color: white;
+    padding: 14px 40px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    transition: all 0.25s ease;
+  }
+
+  .compare-cta a:hover {
+    background: #e55a2b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .compare-hero h1 {
+      font-size: 1.6rem;
+    }
+
+    .compare-table {
+      font-size: 0.85rem;
+    }
+
+    .compare-table thead th,
+    .compare-table tbody td {
+      padding: 12px 10px;
+    }
+
+    .compare-summary {
+      padding: 24px;
+    }
+  }
+</style>
+
+<div class="compare-page">
+  <div class="compare-hero">
+    <h1>{{ t['compare.hero_title'] }}</h1>
+    <p>{{ t['compare.hero_desc'] }}</p>
+  </div>
+
+  <div class="compare-table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>{{ t['compare.col_group_chat'] }}</th>
+          <th>{{ t['compare.col_one_pick'] }}</th>
+          <th>{{ t['compare.col_meetspot'] }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ t['compare.row_fairness'] }}</td>
+          <td>{{ t['compare.row_fairness_chat'] }}</td>
+          <td>{{ t['compare.row_fairness_pick'] }}</td>
+          <td>{{ t['compare.row_fairness_ms'] }}</td>
+        </tr>
+        <tr>
+          <td>{{ t['compare.row_time'] }}</td>
+          <td>{{ t['compare.row_time_chat'] }}</td>
+          <td>{{ t['compare.row_time_pick'] }}</td>
+          <td>{{ t['compare.row_time_ms'] }}</td>
+        </tr>
+        <tr>
+          <td>{{ t['compare.row_quality'] }}</td>
+          <td>{{ t['compare.row_quality_chat'] }}</td>
+          <td>{{ t['compare.row_quality_pick'] }}</td>
+          <td>{{ t['compare.row_quality_ms'] }}</td>
+        </tr>
+        <tr>
+          <td>{{ t['compare.row_satisfaction'] }}</td>
+          <td>{{ t['compare.row_satisfaction_chat'] }}</td>
+          <td>{{ t['compare.row_satisfaction_pick'] }}</td>
+          <td>{{ t['compare.row_satisfaction_ms'] }}</td>
+        </tr>
+        <tr>
+          <td>{{ t['compare.row_shareable'] }}</td>
+          <td>{{ t['compare.row_shareable_chat'] }}</td>
+          <td>{{ t['compare.row_shareable_pick'] }}</td>
+          <td>{{ t['compare.row_shareable_ms'] }}</td>
+        </tr>
+        <tr>
+          <td>{{ t['compare.row_coverage'] }}</td>
+          <td>{{ t['compare.row_coverage_chat'] }}</td>
+          <td>{{ t['compare.row_coverage_pick'] }}</td>
+          <td>{{ t['compare.row_coverage_ms'] }}</td>
+        </tr>
+        <tr>
+          <td>{{ t['compare.row_cost'] }}</td>
+          <td>{{ t['compare.row_cost_all_free'] }}</td>
+          <td>{{ t['compare.row_cost_all_free'] }}</td>
+          <td>{{ t['compare.row_cost_ms'] }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="compare-summary">
+    <h2>{{ t['compare.summary_title'] }}</h2>
+    <p>{{ t['compare.summary_p1'] }}</p>
+    <p>{{ t['compare.summary_p2'] }}</p>
+    <p>{{ t['compare.summary_p3'] }}</p>
+  </div>
+
+  <div class="compare-cta">
+    <h2>{{ t['compare.cta'] }}</h2>
+    <p>{{ t['compare.cta_desc'] }}</p>
+    <a
+      href="/public/meetspot_finder.html?lang={{ lang }}"
+      data-track="cta_click"
+      data-track-label="compare"
+      >{{ t['compare.cta'] }}</a
+    >
+  </div>
+</div>
+{% endblock %}
