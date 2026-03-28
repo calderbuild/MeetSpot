@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
@@ -25,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+
 # WhiteNoise将通过StaticFiles中间件集成，不需要ASGI↔WSGI转换
 from api.routers import auth, payment, seo_pages
 from app.i18n import detect_language, t as _t
@@ -35,6 +37,7 @@ try:
     from app.tool.meetspot_recommender import CafeRecommender
     from app.logger import logger
     from app.db.database import init_db
+
     print("✅ 成功导入所有必要模块")
     config_available = True
 except ImportError as e:
@@ -43,12 +46,14 @@ except ImportError as e:
     config_available = False
     # 创建 fallback logger（当 app.logger 导入失败时）
     import logging
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("meetspot")
 
     # Fallback for init_db
     async def init_db():
         logger.warning("Database module not available, skipping init")
+
 
 # 导入 Agent 模块（高内存消耗，暂时禁用以保证稳定性）
 agent_available = False  # 禁用 Agent 模式，节省内存
@@ -65,12 +70,14 @@ def create_meetspot_agent():
     """Stub function - Agent模式已禁用，此函数不应被调用"""
     raise RuntimeError("Agent模式已禁用，请使用规则模式")
 
+
 # 导入 LLM 模块
 llm_available = False
 llm_instance = None
 try:
     from app.llm import LLM
     from app.schema import Message
+
     llm_available = True
     print("✅ 成功导入 LLM 模块")
 except ImportError as e:
@@ -114,7 +121,9 @@ if not config_available and os.getenv("AMAP_API_KEY"):
                 self.api_key = os.getenv("AMAP_API_KEY")
                 self.base_url = "https://restapi.amap.com/v3"
 
-            async def execute(self, locations, keywords="咖啡馆", place_type="", user_requirements=""):
+            async def execute(
+                self, locations, keywords="咖啡馆", place_type="", user_requirements=""
+            ):
                 """执行推荐"""
                 try:
                     # 简化的推荐逻辑
@@ -130,7 +139,7 @@ if not config_available and os.getenv("AMAP_API_KEY"):
                     os.makedirs("workspace/js_src", exist_ok=True)
 
                     # 写入HTML文件
-                    with open(html_path, 'w', encoding='utf-8') as f:
+                    with open(html_path, "w", encoding="utf-8") as f:
                         f.write(result_html)
 
                     # 返回结果对象
@@ -138,12 +147,16 @@ if not config_available and os.getenv("AMAP_API_KEY"):
                         def __init__(self, output):
                             self.output = output
 
-                    return Result(f"生成的推荐页面：{html_path}\nHTML页面: {html_filename}")
+                    return Result(
+                        f"生成的推荐页面：{html_path}\nHTML页面: {html_filename}"
+                    )
 
                 except Exception as e:
                     return Result(f"推荐失败: {str(e)}")
 
-            async def _generate_recommendations(self, locations, keywords, user_requirements):
+            async def _generate_recommendations(
+                self, locations, keywords, user_requirements
+            ):
                 """生成推荐HTML"""
                 # 简化的HTML模板
                 html_content = f"""
@@ -168,9 +181,9 @@ if not config_available and os.getenv("AMAP_API_KEY"):
 
     <div class="locations">
         <h3>📍 您的位置信息</h3>
-        <p><strong>位置:</strong> {', '.join(locations)}</p>
+        <p><strong>位置:</strong> {", ".join(locations)}</p>
         <p><strong>需求:</strong> {keywords}</p>
-        {f'<p><strong>特殊要求:</strong> {user_requirements}</p>' if user_requirements else ''}
+        {f"<p><strong>特殊要求:</strong> {user_requirements}</p>" if user_requirements else ""}
     </div>
 
     <div class="result">
@@ -199,19 +212,22 @@ if not config_available and os.getenv("AMAP_API_KEY"):
         print(f"❌ 创建最小化推荐器失败: {e}")
         CafeRecommender = None
 
+
 # 请求模型定义
 class LocationRequest(BaseModel):
     locations: List[str]
     venue_types: Optional[List[str]] = ["咖啡馆"]
     user_requirements: Optional[str] = ""
 
+
 class LocationCoord(BaseModel):
     """预解析的地址坐标信息（来自前端 Autocomplete 选择）"""
-    name: str                              # 用户选择的地点名称
-    address: str                           # 完整地址
-    lng: float                             # 经度
-    lat: float                             # 纬度
-    city: Optional[str] = ""               # 城市名
+
+    name: str  # 用户选择的地点名称
+    address: str  # 完整地址
+    lng: float  # 经度
+    lat: float  # 纬度
+    city: Optional[str] = ""  # 城市名
 
 
 class MeetSpotRequest(BaseModel):
@@ -220,16 +236,19 @@ class MeetSpotRequest(BaseModel):
     place_type: Optional[str] = ""
     user_requirements: Optional[str] = ""
     # 筛选条件
-    min_rating: Optional[float] = 0.0      # 最低评分 (0-5)
-    max_distance: Optional[int] = 100000   # 最大距离 (米)
-    price_range: Optional[str] = ""        # 价格区间: economy/mid/high
+    min_rating: Optional[float] = 0.0  # 最低评分 (0-5)
+    max_distance: Optional[int] = 100000  # 最大距离 (米)
+    price_range: Optional[str] = ""  # 价格区间: economy/mid/high
     # 预解析坐标（可选，由前端 Autocomplete 提供）
     location_coords: Optional[List[LocationCoord]] = None
+    language: Optional[str] = ""
+
 
 class AIChatRequest(BaseModel):
     message: str
     conversation_history: Optional[List[dict]] = []
     lang: Optional[str] = ""
+
 
 # MeetSpot AI客服系统提示词
 MEETSPOT_SYSTEM_PROMPT = """你是MeetSpot（聚点）的AI Agent智能助手。MeetSpot是一款多人会面地点推荐的AI Agent，核心解决"在哪见面最公平"的问题。
@@ -328,7 +347,11 @@ PRESET_QUESTIONS_EN = [
     {"id": 2, "question": "How does the AI Agent work?", "category": "Technology"},
     {"id": 3, "question": "What venue types are supported?", "category": "Features"},
     {"id": 4, "question": "How fast are recommendations?", "category": "Performance"},
-    {"id": 5, "question": "How is it different from map apps?", "category": "Comparison"},
+    {
+        "id": 5,
+        "question": "How is it different from map apps?",
+        "category": "Comparison",
+    },
     {"id": 6, "question": "Is it free to use?", "category": "Other"},
 ]
 
@@ -354,7 +377,9 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _quota_exceeded_response(used_today: int, start_time: float, lang: str = "zh") -> dict:
+def _quota_exceeded_response(
+    used_today: int, start_time: float, lang: str = "zh"
+) -> dict:
     return {
         "success": False,
         "need_payment": True,
@@ -364,11 +389,10 @@ def _quota_exceeded_response(used_today: int, start_time: float, lang: str = "zh
         "processing_time": time.time() - start_time,
     }
 
+
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="MeetSpot",
-    description="MeetSpot会面点推荐服务 - 完整功能版",
-    version="1.0.0"
+    title="MeetSpot", description="MeetSpot会面点推荐服务 - 完整功能版", version="1.0.0"
 )
 
 
@@ -419,20 +443,32 @@ async def add_cache_headers(request: Request, call_next):
     path = request.url.path
 
     # 静态资源长期缓存 (1 year for immutable assets)
-    if any(path.endswith(ext) for ext in ['.css', '.js', '.woff2', '.woff', '.ttf']):
+    if any(path.endswith(ext) for ext in [".css", ".js", ".woff2", ".woff", ".ttf"]):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     # 图片缓存 (30 days)
-    elif any(path.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico']):
+    elif any(
+        path.endswith(ext)
+        for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"]
+    ):
         response.headers["Cache-Control"] = "public, max-age=2592000"
     # HTML 页面短期缓存 (10 minutes, revalidate)
-    elif path.endswith('.html') or path == '/' or path in ['/about', '/faq', '/how-it-works']:
-        response.headers["Cache-Control"] = "public, max-age=600, stale-while-revalidate=86400"
+    elif (
+        path.endswith(".html")
+        or path == "/"
+        or path in ["/about", "/faq", "/how-it-works"]
+    ):
+        response.headers["Cache-Control"] = (
+            "public, max-age=600, stale-while-revalidate=86400"
+        )
     # sitemap/robots - long cache with stale-while-revalidate for Render cold starts
     # This ensures CDN can serve cached content when origin is cold (fixes GSC "Couldn't fetch")
-    elif path in ['/sitemap.xml', '/robots.txt']:
-        response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=604800"
+    elif path in ["/sitemap.xml", "/robots.txt"]:
+        response.headers["Cache-Control"] = (
+            "public, max-age=86400, stale-while-revalidate=604800"
+        )
 
     return response
+
 
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
     """Global rate limit handler."""
@@ -442,9 +478,29 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": _t("api.error.rate_limit", lang)},
     )
 
+
 app.state.limiter = seo_pages.limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+
+# HEAD 请求兼容中间件 - Googlebot 等爬虫使用 HEAD 检查页面状态
+@app.middleware("http")
+async def head_method_support(request: Request, call_next):
+    """Convert HEAD requests to GET internally, then strip the body."""
+    if request.method == "HEAD":
+        request.scope["method"] = "GET"
+        response = await call_next(request)
+        # Return headers only, no body (per HTTP spec for HEAD)
+        from starlette.responses import Response as StarletteResponse
+
+        return StarletteResponse(
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+    return await call_next(request)
+
 
 # 挂载静态文件（如果目录存在）
 try:
@@ -480,6 +536,7 @@ app.include_router(auth.router)
 app.include_router(payment.router)
 app.include_router(seo_pages.router)
 
+
 @app.get("/health")
 async def health_check():
     """健康检查和配置状态"""
@@ -487,11 +544,14 @@ async def health_check():
         "status": "healthy",
         "timestamp": time.time(),
         "config": {
-            "amap_configured": bool(AMAP_API_KEY or (config and hasattr(config, 'amap') and config.amap)),
+            "amap_configured": bool(
+                AMAP_API_KEY or (config and hasattr(config, "amap") and config.amap)
+            ),
             "full_features": config_available,
-            "minimal_mode": not config_available and bool(AMAP_API_KEY)
-        }
+            "minimal_mode": not config_available and bool(AMAP_API_KEY),
+        },
     }
+
 
 @app.api_route("/google48ac1a797739b7b0.html", methods=["GET", "HEAD"])
 async def google_verification():
@@ -504,12 +564,13 @@ async def google_verification():
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
                 "Pragma": "no-cache",
-                "Expires": "0"
-            }
+                "Expires": "0",
+            },
         )
         return response
     # 如果文件不存在，返回404
     raise HTTPException(status_code=404, detail="Google verification file not found")
+
 
 @app.api_route("/BingSiteAuth.xml", methods=["GET", "HEAD"])
 async def bing_verification():
@@ -522,14 +583,16 @@ async def bing_verification():
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
                 "Pragma": "no-cache",
-                "Expires": "0"
-            }
+                "Expires": "0",
+            },
         )
         return response
     # 如果文件不存在，返回404
     raise HTTPException(status_code=404, detail="Bing verification file not found")
 
+
 # sitemap.xml 和 robots.txt 由 seo_pages.router 动态生成（含城市页）
+
 
 @app.api_route("/favicon.ico", methods=["GET", "HEAD"])
 async def favicon_ico():
@@ -542,10 +605,11 @@ async def favicon_ico():
             media_type="image/svg+xml",
             headers={
                 "Cache-Control": "public, max-age=31536000, immutable",
-                "Content-Type": "image/svg+xml"
-            }
+                "Content-Type": "image/svg+xml",
+            },
         )
     raise HTTPException(status_code=404, detail="Favicon not found")
+
 
 @app.api_route("/favicon.svg", methods=["GET", "HEAD"])
 async def favicon_svg():
@@ -557,10 +621,11 @@ async def favicon_svg():
             media_type="image/svg+xml",
             headers={
                 "Cache-Control": "public, max-age=31536000, immutable",
-                "Content-Type": "image/svg+xml"
-            }
+                "Content-Type": "image/svg+xml",
+            },
         )
     raise HTTPException(status_code=404, detail="Favicon not found")
+
 
 @app.get("/config")
 async def get_config():
@@ -575,20 +640,20 @@ async def get_config():
         "amap_api_key_configured": bool(amap_key),
         "amap_api_key_length": len(amap_key) if amap_key else 0,
         "config_loaded": bool(config),
-        "full_features_available": bool(config)
+        "full_features_available": bool(config),
     }
 
+
 # ==================== AI 客服接口 ====================
+
 
 @app.get("/api/ai_chat/preset_questions")
 async def get_preset_questions(raw_request: Request):
     """Get preset question list, language-aware."""
     lang = detect_language(raw_request)
     questions = PRESET_QUESTIONS_EN if lang == "en" else PRESET_QUESTIONS
-    return {
-        "success": True,
-        "questions": questions
-    }
+    return {"success": True, "questions": questions}
+
 
 @app.post("/api/ai_chat")
 async def ai_chat(request: AIChatRequest, raw_request: Request = None):
@@ -605,7 +670,7 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
                 "success": True,
                 "response": _t("api.chat.fallback", lang),
                 "processing_time": time.time() - start_time,
-                "mode": "fallback"
+                "mode": "fallback",
             }
 
         # 获取LLM API配置
@@ -619,20 +684,17 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
                 "success": True,
                 "response": _t("api.chat.configuring", lang),
                 "processing_time": time.time() - start_time,
-                "mode": "fallback"
+                "mode": "fallback",
             }
 
         from openai import AsyncOpenAI
 
-        client = AsyncOpenAI(
-            api_key=llm_api_key,
-            base_url=llm_api_base
-        )
+        client = AsyncOpenAI(api_key=llm_api_key, base_url=llm_api_base)
 
-        system_prompt = MEETSPOT_SYSTEM_PROMPT_EN if lang == "en" else MEETSPOT_SYSTEM_PROMPT
-        messages = [
-            {"role": "system", "content": system_prompt}
-        ]
+        system_prompt = (
+            MEETSPOT_SYSTEM_PROMPT_EN if lang == "en" else MEETSPOT_SYSTEM_PROMPT
+        )
+        messages = [{"role": "system", "content": system_prompt}]
 
         if request.conversation_history:
             recent_history = request.conversation_history[-10:]
@@ -643,10 +705,7 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
         print(f"[AI Chat] calling LLM ({llm_model}), messages: {len(messages)}")
 
         response = await client.chat.completions.create(
-            model=llm_model,
-            messages=messages,
-            max_tokens=500,
-            temperature=0.7
+            model=llm_model, messages=messages, max_tokens=500, temperature=0.7
         )
 
         ai_response = response.choices[0].message.content
@@ -658,7 +717,7 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
             "success": True,
             "response": ai_response,
             "processing_time": processing_time,
-            "mode": "llm"
+            "mode": "llm",
         }
 
     except Exception as e:
@@ -668,10 +727,12 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
             "response": _t("api.chat.error", lang),
             "error": str(e),
             "processing_time": time.time() - start_time,
-            "mode": "error"
+            "mode": "error",
         }
 
+
 # ==================== 智能路由逻辑 ====================
+
 
 def assess_request_complexity(request: MeetSpotRequest) -> dict:
     """评估请求复杂度，决定使用哪种模式
@@ -709,7 +770,16 @@ def assess_request_complexity(request: MeetSpotRequest) -> dict:
     # 3. 特殊需求复杂度 (权重: 25分)
     requirements = request.user_requirements or ""
     if requirements:
-        req_keywords = ["商务", "安静", "停车", "Wi-Fi", "包间", "儿童", "24小时", "久坐"]
+        req_keywords = [
+            "商务",
+            "安静",
+            "停车",
+            "Wi-Fi",
+            "包间",
+            "儿童",
+            "24小时",
+            "久坐",
+        ]
         matched_reqs = sum(1 for kw in req_keywords if kw in requirements)
         if matched_reqs >= 3:
             score += 25
@@ -748,11 +818,12 @@ def assess_request_complexity(request: MeetSpotRequest) -> dict:
         "use_agent": use_agent,
         "complexity_score": min(score, 100),
         "reasons": reasons,
-        "mode_name": mode_name
+        "mode_name": mode_name,
     }
 
 
 # ==================== 会面点推荐接口 ====================
+
 
 @app.post("/api/find_meetspot")
 async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
@@ -764,7 +835,11 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
     """
     start_time = time.time()
     client_ip = _get_client_ip(raw_request) if raw_request else None
-    lang = detect_language(raw_request) if raw_request else "zh"
+    lang = (
+        request.language
+        if request.language in ("zh", "en")
+        else (detect_language(raw_request) if raw_request else "zh")
+    )
 
     # 免费次数限制检查
     if client_ip and FREE_DAILY_LIMIT > 0:
@@ -782,10 +857,15 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
 
     # 并发控制：排队处理，保证每个请求都能完成
     async with _request_semaphore:
-        result = await _process_meetspot_request(request, start_time)
+        result = await _process_meetspot_request(request, start_time, lang)
 
     # 请求成功后记录免费使用
-    if client_ip and FREE_DAILY_LIMIT > 0 and isinstance(result, dict) and result.get("success"):
+    if (
+        client_ip
+        and FREE_DAILY_LIMIT > 0
+        and isinstance(result, dict)
+        and result.get("success")
+    ):
         try:
             from app.db.database import AsyncSessionLocal
             from app.db import payment_crud
@@ -805,14 +885,18 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
     return result
 
 
-async def _process_meetspot_request(request: MeetSpotRequest, start_time: float):
+async def _process_meetspot_request(
+    request: MeetSpotRequest,
+    start_time: float,
+    lang: str = "zh",
+):
     """实际处理推荐请求的内部函数"""
     # 评估请求复杂度
     complexity = assess_request_complexity(request)
     logger.info(
         f"[智能路由] 复杂度评估: {complexity['complexity_score']}分, 模式: {complexity['mode_name']}"
     )
-    if complexity['reasons']:
+    if complexity["reasons"]:
         logger.info(f"[智能路由] 触发原因: {', '.join(complexity['reasons'])}")
 
     try:
@@ -828,12 +912,11 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
 
         if not api_key:
             raise HTTPException(
-                status_code=500,
-                detail=_t("api.error.amap_not_configured", "zh")
+                status_code=500, detail=_t("api.error.amap_not_configured", lang)
             )
 
         # ========== 智能路由：根据复杂度选择模式 ==========
-        if complexity['use_agent']:
+        if complexity["use_agent"]:
             print(f"🤖 [Agent模式] 复杂请求，启用Agent智能分析...")
             try:
                 agent = create_meetspot_agent()
@@ -843,9 +926,9 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
                     agent.recommend(
                         locations=request.locations,
                         keywords=request.keywords or "咖啡馆",
-                        requirements=request.user_requirements or ""
+                        requirements=request.user_requirements or "",
                     ),
-                    timeout=AGENT_TIMEOUT
+                    timeout=AGENT_TIMEOUT,
                 )
 
                 processing_time = time.time() - start_time
@@ -860,14 +943,14 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
                     "message": "Agent智能推荐完成",
                     "output": agent_result.get("recommendation", ""),
                     "mode": "agent",
-                    "complexity_score": complexity['complexity_score'],
-                    "complexity_reasons": complexity['reasons'],
+                    "complexity_score": complexity["complexity_score"],
+                    "complexity_reasons": complexity["reasons"],
                     "agent_data": {
                         "geocode_results": agent_result.get("geocode_results", []),
                         "center_point": agent_result.get("center_point"),
                         "search_results": agent_result.get("search_results", []),
-                        "steps_executed": agent_result.get("steps_executed", 0)
-                    }
+                        "steps_executed": agent_result.get("steps_executed", 0),
+                    },
                 }
             except asyncio.TimeoutError:
                 print(f"⚠️ [Agent] 执行超时({AGENT_TIMEOUT}秒)，降级到规则模式")
@@ -890,7 +973,7 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
                         "address": coord.address,
                         "lng": coord.lng,
                         "lat": coord.lat,
-                        "city": coord.city or ""
+                        "city": coord.city or "",
                     }
                     for coord in request.location_coords
                 ]
@@ -905,7 +988,8 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
                 min_rating=request.min_rating or 0.0,
                 max_distance=request.max_distance or 100000,
                 price_range=request.price_range or "",
-                pre_resolved_coords=pre_resolved_coords
+                pre_resolved_coords=pre_resolved_coords,
+                language=lang,
             )
 
             processing_time = time.time() - start_time
@@ -918,7 +1002,7 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
             print(f"📄 工具输出预览: {output_text[:200]}...")
 
             # 从输出中提取HTML文件路径 - 修复的正则表达式
-            html_match = re.search(r'HTML页面:\s*([^\s\n]+\.html)', output_text)
+            html_match = re.search(r"HTML页面:\s*([^\s\n]+\.html)", output_text)
             if html_match:
                 html_filename = html_match.group(1)
                 print(f"🔍 找到HTML文件名: {html_filename}")
@@ -927,17 +1011,21 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
             else:
                 print("❌ 未找到'HTML页面:'模式，尝试其他模式...")
                 # 尝试匹配生成的推荐页面格式
-                html_match2 = re.search(r'生成的推荐页面：\s*([^\s\n]+\.html)', output_text)
+                html_match2 = re.search(
+                    r"生成的推荐页面：\s*([^\s\n]+\.html)", output_text
+                )
                 if html_match2:
                     html_path = html_match2.group(1)
-                    if html_path.startswith('workspace/'):
+                    if html_path.startswith("workspace/"):
                         html_url = f"/{html_path}"
                     else:
                         html_url = f"/workspace/{html_path}"
                     print(f"🔍 备用匹配1找到: {html_url}")
                 else:
                     # 尝试匹配任何place_recommendation格式的文件名
-                    html_match3 = re.search(r'(place_recommendation_\d{14}_[a-f0-9]+\.html)', output_text)
+                    html_match3 = re.search(
+                        r"(place_recommendation_\d{14}_[a-f0-9]+\.html)", output_text
+                    )
                     if html_match3:
                         html_filename = html_match3.group(1)
                         html_url = f"/workspace/js_src/{html_filename}"
@@ -952,14 +1040,18 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
                 "html_url": html_url,
                 "locations_count": len(request.locations),
                 "processing_time": processing_time,
-                "message": "推荐生成成功",
+                "message": "Recommendation generated successfully"
+                if lang == "en"
+                else "推荐生成成功",
                 "output": output_text,
                 "mode": "rule_llm",  # 规则+LLM增强模式
-                "complexity_score": complexity['complexity_score'],
-                "complexity_reasons": complexity['reasons']
+                "complexity_score": complexity["complexity_score"],
+                "complexity_reasons": complexity["reasons"],
             }
 
-            print(f"📤 返回响应: success={response_data['success']}, html_url={response_data['html_url']}")
+            print(
+                f"📤 返回响应: success={response_data['success']}, html_url={response_data['html_url']}"
+            )
             logger.info(
                 "recommendation_completed",
                 location_count=len(request.locations),
@@ -976,14 +1068,14 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
             # Fallback：如果无法加载完整模块，返回错误
             print("❌ 配置未加载")
             raise HTTPException(
-                status_code=500,
-                detail=_t("api.error.config_error", "zh")
+                status_code=500, detail=_t("api.error.config_error", lang)
             )
 
     except Exception as e:
         print(f"💥 异常发生: {str(e)}")
         print(f"异常类型: {type(e)}")
         import traceback
+
         traceback.print_exc()
 
         processing_time = time.time() - start_time
@@ -996,7 +1088,9 @@ async def _process_meetspot_request(request: MeetSpotRequest, start_time: float)
             "success": False,
             "error": str(e),
             "processing_time": processing_time,
-            "message": f"推荐失败: {str(e)}"
+            "message": f"Recommendation failed: {str(e)}"
+            if lang == "en"
+            else f"推荐失败: {str(e)}",
         }
 
         print(f"📤 返回错误响应: {error_response['message']}")
@@ -1025,10 +1119,7 @@ async def find_meetspot_agent(request: MeetSpotRequest):
         # 检查配置
         if not config or not config.amap or not config.amap.api_key:
             print("❌ API 密钥未配置")
-            raise HTTPException(
-                status_code=500,
-                detail="高德地图API密钥未配置"
-            )
+            raise HTTPException(status_code=500, detail="高德地图API密钥未配置")
 
         print("🔧 [Agent] 初始化 MeetSpotAgent...")
         agent = create_meetspot_agent()
@@ -1037,7 +1128,7 @@ async def find_meetspot_agent(request: MeetSpotRequest):
         result = await agent.recommend(
             locations=request.locations,
             keywords=request.keywords or "咖啡馆",
-            requirements=request.user_requirements or ""
+            requirements=request.user_requirements or "",
         )
 
         processing_time = time.time() - start_time
@@ -1054,7 +1145,7 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             "steps_executed": result.get("steps_executed", 0),
             "locations_count": len(request.locations),
             "processing_time": processing_time,
-            "message": "Agent 推荐生成成功" if result.get("success") else "推荐失败"
+            "message": "Agent 推荐生成成功" if result.get("success") else "推荐失败",
         }
 
         print(f"📤 [Agent] 返回响应: success={response_data['success']}")
@@ -1063,6 +1154,7 @@ async def find_meetspot_agent(request: MeetSpotRequest):
     except Exception as e:
         print(f"💥 [Agent] 异常发生: {str(e)}")
         import traceback
+
         traceback.print_exc()
 
         processing_time = time.time() - start_time
@@ -1080,7 +1172,7 @@ async def find_meetspot_agent(request: MeetSpotRequest):
                 "mode": "agent",
                 "error": str(e),
                 "processing_time": processing_time,
-                "message": f"Agent 推荐失败: {str(e)}"
+                "message": f"Agent 推荐失败: {str(e)}",
             }
 
 
@@ -1091,7 +1183,7 @@ async def get_recommendations(request: LocationRequest):
     meetspot_request = MeetSpotRequest(
         locations=request.locations,
         keywords=request.venue_types[0] if request.venue_types else "咖啡馆",
-        user_requirements=request.user_requirements
+        user_requirements=request.user_requirements,
     )
 
     # 直接调用主端点并返回相同格式
@@ -1111,7 +1203,9 @@ async def get_amap_config():
     # 从 config.toml 获取（如果存在）
     if config and hasattr(config, "amap") and config.amap:
         if not js_api_key:
-            js_api_key = getattr(config.amap, "js_api_key", "") or getattr(config.amap, "api_key", "")
+            js_api_key = getattr(config.amap, "js_api_key", "") or getattr(
+                config.amap, "api_key", ""
+            )
         if not security_js_code:
             security_js_code = getattr(config.amap, "security_js_code", "")
 
@@ -1119,16 +1213,16 @@ async def get_amap_config():
     if not js_api_key:
         js_api_key = AMAP_API_KEY
 
-    return {
-        "api_key": js_api_key,
-        "security_js_code": security_js_code
-    }
+    return {"api_key": js_api_key, "security_js_code": security_js_code}
 
 
 @app.get("/api/config/analytics")
 async def get_analytics_config():
-    """返回分析追踪配置（百度统计 ID）"""
-    return {"baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", "")}
+    """返回分析追踪配置（百度统计 + GA4）"""
+    return {
+        "baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", ""),
+        "ga4_measurement_id": os.getenv("GA4_MEASUREMENT_ID", ""),
+    }
 
 
 @app.get("/api/status")
@@ -1140,8 +1234,9 @@ async def api_status():
         "version": "1.0.0",
         "platform": "Multi-platform",
         "features": "Complete" if config else "Limited",
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
+
 
 # Vercel 处理函数
 app_instance = app
@@ -1149,5 +1244,6 @@ app_instance = app
 # 如果直接运行此文件（本地测试）
 if __name__ == "__main__":
     import uvicorn
+
     print("🚀 启动 MeetSpot 完整功能服务器...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

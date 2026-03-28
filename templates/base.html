@@ -1,887 +1,1082 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="{{ 'en' if lang == 'en' else 'zh-CN' }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
     <title>{{ meta_title }}</title>
-    <meta name="description" content="{{ meta_description }}">
-    <meta name="keywords" content="{{ meta_keywords }}">
-    <link rel="canonical" href="{{ canonical_url }}">
+    <meta name="description" content="{{ meta_description }}" />
+    <meta name="keywords" content="{{ meta_keywords }}" />
+    <link rel="canonical" href="{{ canonical_url }}" />
 
-    {% if hreflang %}
-    {% for hl in hreflang %}
-    <link rel="alternate" hreflang="{{ hl.lang }}" href="{{ hl.href }}">
-    {% endfor %}
-    {% endif %}
+    {% if hreflang %} {% for hl in hreflang %}
+    <link rel="alternate" hreflang="{{ hl.lang }}" href="{{ hl.href }}" />
+    {% endfor %} {% endif %}
 
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ meta_title }}">
-    <meta property="og:description" content="{{ meta_description }}">
-    <meta property="og:url" content="{{ canonical_url }}">
-    <meta property="og:site_name" content="MeetSpot">
-    <meta property="og:image" content="https://meetspot-irq2.onrender.com/static/images/og-image.png">
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ meta_title }}" />
+    <meta property="og:description" content="{{ meta_description }}" />
+    <meta property="og:url" content="{{ canonical_url }}" />
+    <meta property="og:site_name" content="MeetSpot" />
+    <meta
+      property="og:image"
+      content="https://meetspot-irq2.onrender.com/static/images/og-image.jpg"
+    />
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ meta_title }}">
-    <meta name="twitter:description" content="{{ meta_description }}">
-    <meta name="twitter:image" content="https://meetspot-irq2.onrender.com/static/images/og-image.png">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ meta_title }}" />
+    <meta name="twitter:description" content="{{ meta_description }}" />
+    <meta
+      name="twitter:image"
+      content="https://meetspot-irq2.onrender.com/static/images/og-image.jpg"
+    />
 
-    {% if schema_jsonld %}
-        {% if schema_jsonld is sequence %}
-            {% for schema in schema_jsonld %}
-            <script type="application/ld+json">{{ schema | tojson | safe }}</script>
-            {% endfor %}
-        {% else %}
-            <script type="application/ld+json">{{ schema_jsonld | tojson | safe }}</script>
-        {% endif %}
-    {% endif %}
+    {% if schema_jsonld %} {% if schema_jsonld is sequence %} {% for schema in
+    schema_jsonld %}
+    <script type="application/ld+json">
+      {{ schema | tojson | safe }}
+    </script>
+    {% endfor %} {% else %}
+    <script type="application/ld+json">
+      {{ schema_jsonld | tojson | safe }}
+    </script>
+    {% endif %} {% endif %}
 
-    <link rel="preconnect" href="https://restapi.amap.com">
-    <link rel="dns-prefetch" href="https://restapi.amap.com">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://restapi.amap.com" />
+    <link rel="dns-prefetch" href="https://restapi.amap.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Google Fonts - deferred loading for performance -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"></noscript>
-    <link rel="preconnect" href="https://unpkg.com">
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+      as="style"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
+    />
+    <noscript
+      ><link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet"
+    /></noscript>
+    <link rel="preconnect" href="https://unpkg.com" />
     <!-- Boxicons - deferred loading for performance -->
-    <link rel="preload" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet"></noscript>
+    <link
+      rel="preload"
+      href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
+      as="style"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
+    />
+    <noscript
+      ><link
+        href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
+        rel="stylesheet"
+    /></noscript>
 
     <style>
-        /* Navigation Theme - Design System */
-        :root {
-            /* Navigation Color Palette */
-            --nav-primary: #0A4D68;
-            --nav-accent: #FF6B35;
-            --nav-secondary: #06D6A0;
-            --nav-dark: #001524;
-            --nav-light: #F0F7F4;
-            --nav-fog: #E8F3F1;
+      /* Navigation Theme - Design System */
+      :root {
+        /* Navigation Color Palette */
+        --nav-primary: #0a4d68;
+        --nav-accent: #ff6b35;
+        --nav-secondary: #06d6a0;
+        --nav-dark: #001524;
+        --nav-light: #f0f7f4;
+        --nav-fog: #e8f3f1;
 
-            /* Semantic Colors */
-            --text-primary: #001524;
-            --text-secondary: #2C5F77;
-            --text-muted: #6B8E9F;
-            --bg-primary: #FFFFFF;
-            --bg-secondary: #F0F7F4;
-            --bg-tertiary: #E8F3F1;
+        /* Semantic Colors */
+        --text-primary: #001524;
+        --text-secondary: #2c5f77;
+        --text-muted: #6b8e9f;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f7f4;
+        --bg-tertiary: #e8f3f1;
 
-            /* Status Colors */
-            --success: #06D6A0;
-            --warning: #FFB84D;
-            --error: #FF6B6B;
-            --info: #4A90E2;
+        /* Status Colors */
+        --success: #06d6a0;
+        --warning: #ffb84d;
+        --error: #ff6b6b;
+        --info: #4a90e2;
 
-            /* Shadows */
-            --shadow-sm: 0 2px 8px rgba(10, 77, 104, 0.08);
-            --shadow-md: 0 4px 16px rgba(10, 77, 104, 0.12);
-            --shadow-lg: 0 8px 32px rgba(10, 77, 104, 0.16);
-            --shadow-xl: 0 16px 48px rgba(10, 77, 104, 0.2);
+        /* Shadows */
+        --shadow-sm: 0 2px 8px rgba(10, 77, 104, 0.08);
+        --shadow-md: 0 4px 16px rgba(10, 77, 104, 0.12);
+        --shadow-lg: 0 8px 32px rgba(10, 77, 104, 0.16);
+        --shadow-xl: 0 16px 48px rgba(10, 77, 104, 0.2);
 
-            /* Backward Compatibility */
-            --primary: var(--nav-primary);
-            --primary-dark: var(--nav-dark);
-            --gradient-primary: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-dark) 100%);
+        /* Backward Compatibility */
+        --primary: var(--nav-primary);
+        --primary-dark: var(--nav-dark);
+        --gradient-primary: linear-gradient(
+          135deg,
+          var(--nav-primary) 0%,
+          var(--nav-dark) 100%
+        );
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text-primary);
+        background: linear-gradient(
+          155deg,
+          var(--nav-primary) 0%,
+          var(--nav-dark) 60%,
+          var(--nav-primary) 100%
+        );
+        background-attachment: fixed;
+        line-height: 1.7;
+        position: relative;
+        min-height: 100vh;
+      }
+
+      /* Topographic Background Pattern - static for performance */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image:
+          repeating-radial-gradient(
+            circle at 30% 40%,
+            transparent 0,
+            transparent 40px,
+            rgba(10, 77, 104, 0.08) 40px,
+            rgba(10, 77, 104, 0.08) 42px
+          ),
+          repeating-radial-gradient(
+            circle at 70% 60%,
+            transparent 0,
+            transparent 60px,
+            rgba(6, 214, 160, 0.06) 60px,
+            rgba(6, 214, 160, 0.06) 62px
+          ),
+          repeating-radial-gradient(
+            circle at 50% 80%,
+            transparent 0,
+            transparent 80px,
+            rgba(255, 107, 53, 0.04) 80px,
+            rgba(255, 107, 53, 0.04) 82px
+          ),
+          linear-gradient(
+            135deg,
+            transparent 48%,
+            rgba(6, 214, 160, 0.02) 50%,
+            transparent 52%
+          ),
+          linear-gradient(
+            45deg,
+            transparent 48%,
+            rgba(255, 107, 53, 0.02) 50%,
+            transparent 52%
+          );
+        background-size:
+          200px 200px,
+          300px 300px,
+          400px 400px,
+          100px 100px,
+          100px 100px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      a {
+        color: var(--nav-accent);
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      a:hover {
+        color: var(--nav-primary);
+        transform: translateY(-1px);
+      }
+
+      /* Header - Navigation Theme */
+      .site-header {
+        background: rgba(0, 21, 36, 0.95);
+        backdrop-filter: blur(20px) saturate(180%);
+        color: white;
+        box-shadow:
+          0 4px 24px rgba(0, 0, 0, 0.2),
+          0 0 0 1px rgba(255, 107, 53, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        border-bottom: 2px solid rgba(255, 107, 53, 0.2);
+      }
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 32px;
+        max-width: 1400px;
+        margin: 0 auto;
+        gap: 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        text-decoration: none;
+        color: white;
+        font-weight: 900;
+        font-size: 1.4rem;
+        font-family: "Outfit", sans-serif;
+        letter-spacing: -0.02em;
+        transition: all 0.3s ease;
+      }
+
+      .brand:hover {
+        transform: translateY(0) scale(1.05);
+        color: var(--nav-accent);
+      }
+
+      .logo-icon {
+        font-size: 1.8rem;
+        filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.6));
+      }
+
+      .logo-text {
+        background: linear-gradient(
+          135deg,
+          #ffffff 0%,
+          var(--nav-secondary) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .tagline {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        font-weight: 500;
+        margin-left: 8px;
+        font-family: "Space Mono", monospace;
+        color: var(--nav-secondary);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .main-nav {
+        display: flex;
+        gap: 32px;
+        font-weight: 600;
+        font-family: "Outfit", sans-serif;
+      }
+
+      .main-nav a {
+        color: rgba(255, 255, 255, 0.85);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 8px 12px;
+        border-radius: 8px;
+        position: relative;
+      }
+
+      .main-nav a::after {
+        content: "";
+        position: absolute;
+        bottom: 4px;
+        left: 12px;
+        right: 12px;
+        height: 2px;
+        background: var(--nav-accent);
+        transform: scaleX(0);
+        transform-origin: center;
+        transition: transform 0.3s ease;
+      }
+
+      .main-nav a:hover {
+        color: white;
+        background: rgba(255, 107, 53, 0.15);
+        transform: translateY(0);
+      }
+
+      .main-nav a:hover::after {
+        transform: scaleX(1);
+      }
+
+      .github-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: linear-gradient(
+          135deg,
+          rgba(6, 214, 160, 0.2) 0%,
+          rgba(255, 107, 53, 0.2) 100%
+        );
+        border: 1px solid rgba(255, 107, 53, 0.4);
+        border-radius: 999px;
+        color: white;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(10px);
+        font-weight: 600;
+        font-family: "Outfit", sans-serif;
+      }
+
+      .github-badge:hover {
+        background: linear-gradient(
+          135deg,
+          rgba(6, 214, 160, 0.3) 0%,
+          rgba(255, 107, 53, 0.3) 100%
+        );
+        border-color: rgba(255, 107, 53, 0.6);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+      }
+
+      .github-badge i {
+        font-size: 1.3rem;
+      }
+
+      /* Main Content Container */
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 32px;
+        position: relative;
+        z-index: 1;
+      }
+
+      main {
+        min-height: 60vh;
+        padding: 48px 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        margin: 32px auto;
+        box-shadow: var(--shadow-xl);
+      }
+
+      .breadcrumbs {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        padding: 20px 0;
+        font-family: "Space Mono", monospace;
+      }
+
+      .breadcrumbs a {
+        color: var(--text-secondary);
+        transition: color 0.2s;
+      }
+      .breadcrumbs a:hover {
+        color: var(--nav-accent);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      /* Footer - Navigation Theme */
+      .enhanced-footer {
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 21, 36, 0.95),
+          rgba(0, 21, 36, 0.98)
+        );
+        backdrop-filter: blur(20px);
+        padding: 64px 0 32px;
+        margin-top: 80px;
+        border-top: 2px solid rgba(255, 107, 53, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+        position: relative;
+        z-index: 1;
+      }
+
+      .footer-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 32px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 48px;
+        margin-bottom: 48px;
+      }
+
+      .footer-container h3 {
+        margin: 0 0 20px 0;
+        color: white;
+        font-size: 1.2rem;
+        font-family: "Outfit", sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .footer-container p {
+        color: rgba(255, 255, 255, 0.75);
+        line-height: 1.7;
+      }
+
+      .author-info {
+        margin-top: 16px;
+        font-size: 0.9rem;
+      }
+
+      .author-info p {
+        margin: 6px 0;
+      }
+
+      .author-info a {
+        color: var(--nav-secondary);
+        font-weight: 600;
+      }
+
+      .project-stat {
+        color: var(--nav-secondary);
+        font-weight: 600;
+      }
+
+      .social-links,
+      .footer-links {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .social-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 107, 53, 0.3);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        font-weight: 600;
+        font-family: "Outfit", sans-serif;
+        justify-content: center;
+      }
+
+      .social-btn:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
+        border-color: rgba(255, 107, 53, 0.6);
+        background: rgba(255, 107, 53, 0.15);
+        color: white;
+      }
+
+      .social-btn i {
+        font-size: 1.3rem;
+      }
+
+      .wechat-btn:hover {
+        background: rgba(6, 214, 160, 0.15);
+        border-color: var(--nav-secondary);
+      }
+      .github-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .blog-btn:hover {
+        background: rgba(255, 184, 77, 0.15);
+        border-color: var(--warning);
+      }
+
+      .footer-links a {
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        padding: 6px 0;
+      }
+
+      .footer-links a:hover {
+        color: var(--nav-accent);
+        transform: translateX(4px);
+      }
+
+      .support-text {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 12px;
+        font-style: italic;
+      }
+
+      .support-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 28px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--nav-accent) 0%, #d84315 100%);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 700;
+        font-family: "Outfit", sans-serif;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 100%;
+        box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+      }
+
+      .support-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 32px rgba(255, 107, 53, 0.6);
+      }
+
+      .footer-bottom {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 32px 32px 0;
+        text-align: center;
+        border-top: 1px solid rgba(255, 107, 53, 0.2);
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.875rem;
+        font-family: "Space Mono", monospace;
+      }
+
+      .footer-bottom a {
+        color: var(--nav-secondary);
+        font-weight: 600;
+      }
+
+      /* Modal Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 21, 36, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 24px;
+        padding: 40px;
+        max-width: 520px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+        position: relative;
+        animation: modalSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid rgba(255, 107, 53, 0.2);
+      }
+
+      @keyframes modalSlideUp {
+        from {
+          opacity: 0;
+          transform: translateY(40px) scale(0.95);
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
         }
+      }
 
-        body {
-            font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
-            color: var(--text-primary);
-            background: linear-gradient(155deg, var(--nav-primary) 0%, var(--nav-dark) 60%, var(--nav-primary) 100%);
-            background-attachment: fixed;
-            line-height: 1.7;
-            position: relative;
-            min-height: 100vh;
-        }
+      .modal-content h3 {
+        margin: 0 0 16px 0;
+        color: var(--nav-primary);
+        font-size: 1.75rem;
+        font-family: "Outfit", sans-serif;
+        font-weight: 900;
+      }
 
-        /* Topographic Background Pattern - static for performance */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                repeating-radial-gradient(circle at 30% 40%, transparent 0, transparent 40px, rgba(10, 77, 104, 0.08) 40px, rgba(10, 77, 104, 0.08) 42px),
-                repeating-radial-gradient(circle at 70% 60%, transparent 0, transparent 60px, rgba(6, 214, 160, 0.06) 60px, rgba(6, 214, 160, 0.06) 62px),
-                repeating-radial-gradient(circle at 50% 80%, transparent 0, transparent 80px, rgba(255, 107, 53, 0.04) 80px, rgba(255, 107, 53, 0.04) 82px),
-                linear-gradient(135deg, transparent 48%, rgba(6, 214, 160, 0.02) 50%, transparent 52%),
-                linear-gradient(45deg, transparent 48%, rgba(255, 107, 53, 0.02) 50%, transparent 52%);
-            background-size: 200px 200px, 300px 300px, 400px 400px, 100px 100px, 100px 100px;
-            pointer-events: none;
-            z-index: 0;
-        }
+      .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 107, 53, 0.1);
+        border: none;
+        font-size: 1.75rem;
+        cursor: pointer;
+        color: var(--nav-accent);
+        line-height: 1;
+        padding: 8px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-        a {
-            color: var(--nav-accent);
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        a:hover {
-            color: var(--nav-primary);
-            transform: translateY(-1px);
-        }
+      .modal-close:hover {
+        background: rgba(255, 107, 53, 0.2);
+        transform: rotate(90deg) scale(1.1);
+      }
 
-        /* Header - Navigation Theme */
-        .site-header {
-            background: rgba(0, 21, 36, 0.95);
-            backdrop-filter: blur(20px) saturate(180%);
-            color: white;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 107, 53, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            border-bottom: 2px solid rgba(255, 107, 53, 0.2);
-        }
+      .qr-container {
+        text-align: center;
+        margin-top: 24px;
+      }
 
+      .qr-container img {
+        max-width: 300px;
+        width: 100%;
+        border-radius: 16px;
+        box-shadow: var(--shadow-lg);
+        border: 3px solid rgba(10, 77, 104, 0.1);
+      }
+
+      .qr-notice {
+        margin-top: 20px;
+        padding: 16px;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 184, 77, 0.1) 0%,
+          rgba(255, 107, 53, 0.1) 100%
+        );
+        border-left: 4px solid var(--warning);
+        color: #92400e;
+        font-weight: 600;
+        border-radius: 12px;
+        text-align: left;
+      }
+
+      .qr-fallback {
+        margin-top: 20px;
+        padding: 16px;
+        background: var(--bg-tertiary);
+        border-radius: 12px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-align: left;
+        border: 1px solid rgba(10, 77, 104, 0.2);
+      }
+
+      .qr-fallback a {
+        color: var(--nav-accent);
+        font-weight: 600;
+      }
+
+      .support-message {
+        margin: 24px 0;
+        color: var(--text-secondary);
+        font-size: 1rem;
+      }
+
+      .other-support {
+        margin-top: 28px;
+        padding: 24px;
+        background: linear-gradient(
+          135deg,
+          rgba(10, 77, 104, 0.05) 0%,
+          rgba(6, 214, 160, 0.05) 100%
+        );
+        border-radius: 16px;
+        border: 1px solid rgba(10, 77, 104, 0.15);
+      }
+
+      .other-support p {
+        margin: 0 0 16px 0;
+        font-weight: 700;
+        color: var(--nav-primary);
+        font-family: "Outfit", sans-serif;
+      }
+
+      .other-support ul {
+        margin: 0;
+        padding-left: 24px;
+      }
+
+      .other-support li {
+        margin: 10px 0;
+        color: var(--text-secondary);
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
         .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 18px 32px;
-            max-width: 1400px;
-            margin: 0 auto;
-            gap: 24px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            text-decoration: none;
-            color: white;
-            font-weight: 900;
-            font-size: 1.4rem;
-            font-family: "Outfit", sans-serif;
-            letter-spacing: -0.02em;
-            transition: all 0.3s ease;
-        }
-
-        .brand:hover {
-            transform: translateY(0) scale(1.05);
-            color: var(--nav-accent);
-        }
-
-        .logo-icon {
-            font-size: 1.8rem;
-            filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.6));
-        }
-
-        .logo-text {
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--nav-secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .tagline {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            font-weight: 500;
-            margin-left: 8px;
-            font-family: "Space Mono", monospace;
-            color: var(--nav-secondary);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+          flex-wrap: wrap;
+          padding: 16px 20px;
         }
 
         .main-nav {
-            display: flex;
-            gap: 32px;
-            font-weight: 600;
-            font-family: "Outfit", sans-serif;
-        }
-
-        .main-nav a {
-            color: rgba(255, 255, 255, 0.85);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 8px 12px;
-            border-radius: 8px;
-            position: relative;
-        }
-
-        .main-nav a::after {
-            content: '';
-            position: absolute;
-            bottom: 4px;
-            left: 12px;
-            right: 12px;
-            height: 2px;
-            background: var(--nav-accent);
-            transform: scaleX(0);
-            transform-origin: center;
-            transition: transform 0.3s ease;
-        }
-
-        .main-nav a:hover {
-            color: white;
-            background: rgba(255, 107, 53, 0.15);
-            transform: translateY(0);
-        }
-
-        .main-nav a:hover::after {
-            transform: scaleX(1);
+          order: 3;
+          width: 100%;
+          justify-content: center;
+          gap: 20px;
         }
 
         .github-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: linear-gradient(135deg, rgba(6, 214, 160, 0.2) 0%, rgba(255, 107, 53, 0.2) 100%);
-            border: 1px solid rgba(255, 107, 53, 0.4);
-            border-radius: 999px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(10px);
-            font-weight: 600;
-            font-family: "Outfit", sans-serif;
+          font-size: 0.875rem;
+          padding: 8px 14px;
         }
 
-        .github-badge:hover {
-            background: linear-gradient(135deg, rgba(6, 214, 160, 0.3) 0%, rgba(255, 107, 53, 0.3) 100%);
-            border-color: rgba(255, 107, 53, 0.6);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
-        }
-
-        .github-badge i {
-            font-size: 1.3rem;
-        }
-
-        /* Main Content Container */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 32px;
-            position: relative;
-            z-index: 1;
-        }
-
-        main {
-            min-height: 60vh;
-            padding: 48px 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            margin: 32px auto;
-            box-shadow: var(--shadow-xl);
-        }
-
-        .breadcrumbs {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            padding: 20px 0;
-            font-family: "Space Mono", monospace;
-        }
-
-        .breadcrumbs a {
-            color: var(--text-secondary);
-            transition: color 0.2s;
-        }
-        .breadcrumbs a:hover {
-            color: var(--nav-accent);
-        }
-
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0,0,0,0);
-            border: 0;
-        }
-
-        /* Footer - Navigation Theme */
-        .enhanced-footer {
-            background: linear-gradient(to bottom, rgba(0, 21, 36, 0.95), rgba(0, 21, 36, 0.98));
-            backdrop-filter: blur(20px);
-            padding: 64px 0 32px;
-            margin-top: 80px;
-            border-top: 2px solid rgba(255, 107, 53, 0.2);
-            color: rgba(255, 255, 255, 0.9);
-            position: relative;
-            z-index: 1;
+        .github-badge span {
+          display: none;
         }
 
         .footer-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 32px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 48px;
-            margin-bottom: 48px;
+          grid-template-columns: 1fr;
+          gap: 40px;
         }
-
-        .footer-container h3 {
-            margin: 0 0 20px 0;
-            color: white;
-            font-size: 1.2rem;
-            font-family: "Outfit", sans-serif;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-        }
-
-        .footer-container p {
-            color: rgba(255, 255, 255, 0.75);
-            line-height: 1.7;
-        }
-
-        .author-info {
-            margin-top: 16px;
-            font-size: 0.9rem;
-        }
-
-        .author-info p {
-            margin: 6px 0;
-        }
-
-        .author-info a {
-            color: var(--nav-secondary);
-            font-weight: 600;
-        }
-
-        .project-stat {
-            color: var(--nav-secondary);
-            font-weight: 600;
-        }
-
-        .social-links, .footer-links {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .social-btn {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 107, 53, 0.3);
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-decoration: none;
-            font-weight: 600;
-            font-family: "Outfit", sans-serif;
-            justify-content: center;
-        }
-
-        .social-btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
-            border-color: rgba(255, 107, 53, 0.6);
-            background: rgba(255, 107, 53, 0.15);
-            color: white;
-        }
-
-        .social-btn i {
-            font-size: 1.3rem;
-        }
-
-        .wechat-btn:hover {
-            background: rgba(6, 214, 160, 0.15);
-            border-color: var(--nav-secondary);
-        }
-        .github-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .blog-btn:hover {
-            background: rgba(255, 184, 77, 0.15);
-            border-color: var(--warning);
-        }
-
-        .footer-links a {
-            color: rgba(255, 255, 255, 0.75);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            padding: 6px 0;
-        }
-
-        .footer-links a:hover {
-            color: var(--nav-accent);
-            transform: translateX(4px);
-        }
-
-        .support-text {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 12px;
-            font-style: italic;
-        }
-
-        .support-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 14px 28px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--nav-accent) 0%, #D84315 100%);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-            font-family: "Outfit", sans-serif;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 100%;
-            box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
-        }
-
-        .support-btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 32px rgba(255, 107, 53, 0.6);
-        }
-
-        .footer-bottom {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 32px 32px 0;
-            text-align: center;
-            border-top: 1px solid rgba(255, 107, 53, 0.2);
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.875rem;
-            font-family: "Space Mono", monospace;
-        }
-
-        .footer-bottom a {
-            color: var(--nav-secondary);
-            font-weight: 600;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 21, 36, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active { display: flex; }
 
         .modal-content {
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 520px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
-            position: relative;
-            animation: modalSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid rgba(255, 107, 53, 0.2);
+          padding: 28px;
         }
 
-        @keyframes modalSlideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        .tagline {
+          display: none;
         }
 
-        .modal-content h3 {
-            margin: 0 0 16px 0;
-            color: var(--nav-primary);
-            font-size: 1.75rem;
-            font-family: "Outfit", sans-serif;
-            font-weight: 900;
+        .container {
+          padding: 0 20px;
         }
 
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 107, 53, 0.1);
-            border: none;
-            font-size: 1.75rem;
-            cursor: pointer;
-            color: var(--nav-accent);
-            line-height: 1;
-            padding: 8px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        main {
+          margin: 20px 16px;
+          border-radius: 16px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .brand {
+          font-size: 1.1rem;
         }
 
-        .modal-close:hover {
-            background: rgba(255, 107, 53, 0.2);
-            transform: rotate(90deg) scale(1.1);
+        .main-nav {
+          gap: 12px;
+          font-size: 0.9rem;
         }
 
-        .qr-container {
-            text-align: center;
-            margin-top: 24px;
+        .footer-container {
+          padding: 0 20px;
         }
+      }
 
-        .qr-container img {
-            max-width: 300px;
-            width: 100%;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-            border: 3px solid rgba(10, 77, 104, 0.1);
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
         }
-
-        .qr-notice {
-            margin-top: 20px;
-            padding: 16px;
-            background: linear-gradient(135deg, rgba(255, 184, 77, 0.1) 0%, rgba(255, 107, 53, 0.1) 100%);
-            border-left: 4px solid var(--warning);
-            color: #92400E;
-            font-weight: 600;
-            border-radius: 12px;
-            text-align: left;
-        }
-
-        .qr-fallback {
-            margin-top: 20px;
-            padding: 16px;
-            background: var(--bg-tertiary);
-            border-radius: 12px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            text-align: left;
-            border: 1px solid rgba(10, 77, 104, 0.2);
-        }
-
-        .qr-fallback a {
-            color: var(--nav-accent);
-            font-weight: 600;
-        }
-
-        .support-message {
-            margin: 24px 0;
-            color: var(--text-secondary);
-            font-size: 1rem;
-        }
-
-        .other-support {
-            margin-top: 28px;
-            padding: 24px;
-            background: linear-gradient(135deg, rgba(10, 77, 104, 0.05) 0%, rgba(6, 214, 160, 0.05) 100%);
-            border-radius: 16px;
-            border: 1px solid rgba(10, 77, 104, 0.15);
-        }
-
-        .other-support p {
-            margin: 0 0 16px 0;
-            font-weight: 700;
-            color: var(--nav-primary);
-            font-family: "Outfit", sans-serif;
-        }
-
-        .other-support ul {
-            margin: 0;
-            padding-left: 24px;
-        }
-
-        .other-support li {
-            margin: 10px 0;
-            color: var(--text-secondary);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .header-content {
-                flex-wrap: wrap;
-                padding: 16px 20px;
-            }
-
-            .main-nav {
-                order: 3;
-                width: 100%;
-                justify-content: center;
-                gap: 20px;
-            }
-
-            .github-badge {
-                font-size: 0.875rem;
-                padding: 8px 14px;
-            }
-
-            .github-badge span {
-                display: none;
-            }
-
-            .footer-container {
-                grid-template-columns: 1fr;
-                gap: 40px;
-            }
-
-            .modal-content {
-                padding: 28px;
-            }
-
-            .tagline {
-                display: none;
-            }
-
-            .container {
-                padding: 0 20px;
-            }
-
-            main {
-                margin: 20px 16px;
-                border-radius: 16px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .brand {
-                font-size: 1.1rem;
-            }
-
-            .main-nav {
-                gap: 12px;
-                font-size: 0.9rem;
-            }
-
-            .footer-container {
-                padding: 0 20px;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
+      }
     </style>
 
-    {% block extra_head %}{% endblock %}
-
-    {% if baidu_tongji_id %}
+    {% block extra_head %}{% endblock %} {% if baidu_tongji_id %}
     <script>
-    var _hmt = _hmt || [];
-    (function() {
+      var _hmt = _hmt || [];
+      (function () {
         var hm = document.createElement("script");
         hm.src = "https://hm.baidu.com/hm.js?" + "{{ baidu_tongji_id }}";
         var s = document.getElementsByTagName("script")[0];
         s.parentNode.insertBefore(hm, s);
-    })();
+      })();
+    </script>
+    {% endif %} {% if ga4_measurement_id %}
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id={{ ga4_measurement_id }}"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "{{ ga4_measurement_id }}");
     </script>
     {% endif %}
-</head>
-<body>
+    <script>
+      /* Unified tracking: fires to both Baidu Tongji and GA4 */
+      function trackEvent(eventName, params) {
+        params = params || {};
+        if (typeof gtag !== "undefined") {
+          gtag("event", eventName, params);
+        }
+        if (typeof _hmt !== "undefined") {
+          _hmt.push([
+            "_trackEvent",
+            "meetspot",
+            eventName,
+            params.label || params.keyword || "",
+            params.value || 0,
+          ]);
+        }
+      }
+    </script>
+  </head>
+  <body>
     <a href="#main" class="sr-only">{{ t['nav.skip_to_main'] }}</a>
 
     <!-- Header - Navigation Theme -->
     <header class="site-header">
-        <div class="header-content">
-            <a href="{{ '/en/' if lang == 'en' else '/' }}" class="brand">
-                <span class="logo-icon">📍</span>
-                <span class="logo-text">MeetSpot</span>
-                <span class="tagline">{{ t['nav.brand_tagline'] }}</span>
-            </a>
-            <nav class="main-nav">
-                {% set prefix = '/en' if lang == 'en' else '' %}
-                <a href="{{ prefix }}/">{{ t['nav.home'] }}</a>
-                <a href="{{ prefix }}/about">{{ t['nav.about'] }}</a>
-                <a href="{{ prefix }}/how-it-works">{{ t['nav.how_it_works'] }}</a>
-                <a href="{{ prefix }}/faq">{{ t['nav.faq'] }}</a>
-                {% if lang == 'en' %}
-                <a href="{{ request.url.path.replace('/en/', '/').replace('/en', '/') }}" class="lang-switch" onclick="document.cookie='lang=zh;path=/;max-age=31536000;SameSite=Lax'">中文</a>
-                {% else %}
-                <a href="/en{{ request.url.path }}" class="lang-switch" onclick="document.cookie='lang=en;path=/;max-age=31536000;SameSite=Lax'">EN</a>
-                {% endif %}
-            </nav>
-            <a href="https://github.com/calderbuild/MeetSpot" class="github-badge" target="_blank" rel="noopener">
-                <i class='bx bxl-github'></i>
-                <span>{{ t['nav.star_github'] }}</span>
-            </a>
-        </div>
+      <div class="header-content">
+        <a href="{{ '/en/' if lang == 'en' else '/' }}" class="brand">
+          <span class="logo-icon">📍</span>
+          <span class="logo-text">MeetSpot</span>
+          <span class="tagline">{{ t['nav.brand_tagline'] }}</span>
+        </a>
+        <nav class="main-nav">
+          {% set prefix = '/en' if lang == 'en' else '' %}
+          <a href="{{ prefix }}/">{{ t['nav.home'] }}</a>
+          <a href="{{ prefix }}/about">{{ t['nav.about'] }}</a>
+          <a href="{{ prefix }}/how-it-works">{{ t['nav.how_it_works'] }}</a>
+          <a href="{{ prefix }}/faq">{{ t['nav.faq'] }}</a>
+          {% if lang == 'en' %}
+          <a
+            href="{{ request.url.path.replace('/en/', '/').replace('/en', '/') }}"
+            class="lang-switch"
+            onclick="
+              document.cookie = 'lang=zh;path=/;max-age=31536000;SameSite=Lax'
+            "
+            >中文</a
+          >
+          {% else %}
+          <a
+            href="/en{{ request.url.path }}"
+            class="lang-switch"
+            onclick="
+              document.cookie = 'lang=en;path=/;max-age=31536000;SameSite=Lax'
+            "
+            >EN</a
+          >
+          {% endif %}
+        </nav>
+        <a
+          href="https://github.com/calderbuild/MeetSpot"
+          class="github-badge"
+          target="_blank"
+          rel="noopener"
+        >
+          <i class="bx bxl-github"></i>
+          <span>{{ t['nav.star_github'] }}</span>
+        </a>
+      </div>
     </header>
 
     <!-- Breadcrumbs -->
     {% if breadcrumbs %}
     <div class="container breadcrumbs">
-        {% for crumb in breadcrumbs %}
-            {% if not loop.last %}
-                <a href="{{ crumb.url }}">{{ crumb.name }}</a> /
-            {% else %}
-                <span>{{ crumb.name }}</span>
-            {% endif %}
-        {% endfor %}
+      {% for crumb in breadcrumbs %} {% if not loop.last %}
+      <a href="{{ crumb.url }}">{{ crumb.name }}</a> / {% else %}
+      <span>{{ crumb.name }}</span>
+      {% endif %} {% endfor %}
     </div>
     {% endif %}
 
     <!-- Main Content -->
-    <main id="main" class="container">
-        {% block content %}{% endblock %}
-    </main>
+    <main id="main" class="container">{% block content %}{% endblock %}</main>
 
     <!-- Footer - Navigation Theme -->
     <footer class="enhanced-footer">
-        <div class="footer-container">
-            <div class="footer-about">
-                <h3>{{ t['footer.brand'] }}</h3>
-                <p>{{ t['footer.brand_desc'] }}</p>
-                <div class="author-info">
-                    <p>{{ t['footer.author_label'] }}<a href="https://jasonrobert.me/" target="_blank" rel="noopener">Jason Robert</a></p>
-                    <p class="project-stat">{{ t['footer.project_stat'] }}</p>
-                </div>
-            </div>
-
-            <div class="footer-community">
-                <h3>{{ t['footer.community'] }}</h3>
-                <div class="social-links">
-                    <button class="social-btn wechat-btn" onclick="showWeChatGroupModal()">
-                        <i class='bx bxl-wechat'></i>
-                        <span>{{ t['footer.wechat'] }}</span>
-                    </button>
-                    <a href="https://github.com/calderbuild/MeetSpot" class="social-btn github-btn" target="_blank" rel="noopener">
-                        <i class='bx bxl-github'></i>
-                        <span>{{ t['footer.github_repo'] }}</span>
-                    </a>
-                    <a href="https://jasonrobert.me/" class="social-btn blog-btn" target="_blank" rel="noopener">
-                        <i class='bx bx-link-external'></i>
-                        <span>{{ t['footer.author_blog'] }}</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="footer-links">
-                <h3>{{ t['footer.quick_links'] }}</h3>
-                {% set prefix = '/en' if lang == 'en' else '' %}
-                <a href="{{ prefix }}/how-it-works">{{ t['footer.guide'] }}</a>
-                <a href="{{ prefix }}/faq">{{ t['footer.faq'] }}</a>
-                <a href="{{ prefix }}/about">{{ t['footer.about_project'] }}</a>
-                <a href="/sitemap.xml">{{ t['footer.sitemap'] }}</a>
-            </div>
-
-            <div class="footer-support">
-                <h3>{{ t['footer.support'] }}</h3>
-                <p>{{ t['footer.support_desc'] }}</p>
-                <button class="support-btn" onclick="showSupportModal()">
-                    {{ t['footer.buy_coffee'] }}
-                </button>
-                <p class="support-text">{{ t['footer.support_note'] }}</p>
-            </div>
+      <div class="footer-container">
+        <div class="footer-about">
+          <h3>{{ t['footer.brand'] }}</h3>
+          <p>{{ t['footer.brand_desc'] }}</p>
+          <div class="author-info">
+            <p>
+              {{ t['footer.author_label'] }}<a
+                href="https://jasonrobert.me/"
+                target="_blank"
+                rel="noopener"
+                >Jason Robert</a
+              >
+            </p>
+            <p class="project-stat">{{ t['footer.project_stat'] }}</p>
+          </div>
         </div>
 
-        <div class="footer-bottom">
-            <p>{{ t['footer.copyright'] }} <a href="https://jasonrobert.me/" target="_blank">Jason Robert</a></p>
+        <div class="footer-community">
+          <h3>{{ t['footer.community'] }}</h3>
+          <div class="social-links">
+            <button
+              class="social-btn wechat-btn"
+              onclick="showWeChatGroupModal()"
+            >
+              <i class="bx bxl-wechat"></i>
+              <span>{{ t['footer.wechat'] }}</span>
+            </button>
+            <a
+              href="https://github.com/calderbuild/MeetSpot"
+              class="social-btn github-btn"
+              target="_blank"
+              rel="noopener"
+            >
+              <i class="bx bxl-github"></i>
+              <span>{{ t['footer.github_repo'] }}</span>
+            </a>
+            <a
+              href="https://jasonrobert.me/"
+              class="social-btn blog-btn"
+              target="_blank"
+              rel="noopener"
+            >
+              <i class="bx bx-link-external"></i>
+              <span>{{ t['footer.author_blog'] }}</span>
+            </a>
+          </div>
         </div>
+
+        <div class="footer-links">
+          <h3>{{ t['footer.quick_links'] }}</h3>
+          {% set prefix = '/en' if lang == 'en' else '' %}
+          <a href="{{ prefix }}/how-it-works">{{ t['footer.guide'] }}</a>
+          <a href="{{ prefix }}/faq">{{ t['footer.faq'] }}</a>
+          <a href="{{ prefix }}/about">{{ t['footer.about_project'] }}</a>
+          <a href="/sitemap.xml">{{ t['footer.sitemap'] }}</a>
+        </div>
+
+        <div class="footer-support">
+          <h3>{{ t['footer.support'] }}</h3>
+          <p>{{ t['footer.support_desc'] }}</p>
+          <button class="support-btn" onclick="showSupportModal()">
+            {{ t['footer.buy_coffee'] }}
+          </button>
+          <p class="support-text">{{ t['footer.support_note'] }}</p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>
+          {{ t['footer.copyright'] }}
+          <a href="https://jasonrobert.me/" target="_blank">Jason Robert</a>
+        </p>
+      </div>
     </footer>
 
     <!-- 个人微信 Modal -->
-    <div id="wechat-modal" class="modal" onclick="closeModal(event, 'wechat-modal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal(event, 'wechat-modal')" aria-label="{{ t['modal.close'] }}">&times;</button>
-            <h3>{{ t['modal.wechat_title'] }}</h3>
-            <p>{{ t['modal.wechat_desc'] }}</p>
-            <div class="qr-container">
-                <img src="/public/docs/vx_chat.png" alt="{{ t['modal.wechat_qr_alt'] }}" title="{{ t['modal.wechat_qr_title'] }}" loading="lazy">
-            </div>
+    <div
+      id="wechat-modal"
+      class="modal"
+      onclick="closeModal(event, 'wechat-modal')"
+    >
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <button
+          class="modal-close"
+          onclick="closeModal(event, 'wechat-modal')"
+          aria-label="{{ t['modal.close'] }}"
+        >
+          &times;
+        </button>
+        <h3>{{ t['modal.wechat_title'] }}</h3>
+        <p>{{ t['modal.wechat_desc'] }}</p>
+        <div class="qr-container">
+          <img
+            src="/public/docs/vx_chat.png"
+            alt="{{ t['modal.wechat_qr_alt'] }}"
+            title="{{ t['modal.wechat_qr_title'] }}"
+            loading="lazy"
+          />
         </div>
+      </div>
     </div>
 
     <!-- 打赏 Modal -->
-    <div id="support-modal" class="modal" onclick="closeModal(event, 'support-modal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeModal(event, 'support-modal')" aria-label="{{ t['modal.close'] }}">&times;</button>
-            <h3>{{ t['modal.support_title'] }}</h3>
-            <p>{{ t['modal.support_desc'] }}</p>
-            <div class="qr-container">
-                <img src="/public/docs/vx_payment.png" alt="{{ t['modal.support_qr_alt'] }}" title="{{ t['modal.support_qr_title'] }}" loading="lazy">
-                <p class="support-message">{{ t['modal.support_message'] }}</p>
-            </div>
-            <div class="other-support">
-                <p>{{ t['modal.other_support'] }}</p>
-                <ul>
-                    <li>{{ t['modal.star_github'] }}</li>
-                    <li>{{ t['modal.share_friends'] }}</li>
-                    <li>{{ t['modal.submit_issue'] }}</li>
-                    <li>{{ t['modal.contribute_code'] }}</li>
-                </ul>
-            </div>
+    <div
+      id="support-modal"
+      class="modal"
+      onclick="closeModal(event, 'support-modal')"
+    >
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <button
+          class="modal-close"
+          onclick="closeModal(event, 'support-modal')"
+          aria-label="{{ t['modal.close'] }}"
+        >
+          &times;
+        </button>
+        <h3>{{ t['modal.support_title'] }}</h3>
+        <p>{{ t['modal.support_desc'] }}</p>
+        <div class="qr-container">
+          <img
+            src="/public/docs/vx_payment.png"
+            alt="{{ t['modal.support_qr_alt'] }}"
+            title="{{ t['modal.support_qr_title'] }}"
+            loading="lazy"
+          />
+          <p class="support-message">{{ t['modal.support_message'] }}</p>
         </div>
+        <div class="other-support">
+          <p>{{ t['modal.other_support'] }}</p>
+          <ul>
+            <li>{{ t['modal.star_github'] }}</li>
+            <li>{{ t['modal.share_friends'] }}</li>
+            <li>{{ t['modal.submit_issue'] }}</li>
+            <li>{{ t['modal.contribute_code'] }}</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <script>
-        // Modal控制函数
-        function showWeChatGroupModal() {
-            document.getElementById('wechat-modal').classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
+      // Modal控制函数
+      function showWeChatGroupModal() {
+        document.getElementById("wechat-modal").classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
 
-        function showSupportModal() {
-            document.getElementById('support-modal').classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
+      function showSupportModal() {
+        document.getElementById("support-modal").classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
 
-        function closeModal(event, modalId) {
-            event.stopPropagation();
-            document.getElementById(modalId).classList.remove('active');
-            document.body.style.overflow = '';
-        }
+      function closeModal(event, modalId) {
+        event.stopPropagation();
+        document.getElementById(modalId).classList.remove("active");
+        document.body.style.overflow = "";
+      }
 
-        // ESC键关闭Modal
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.modal').forEach(modal => {
-                    modal.classList.remove('active');
-                });
-                document.body.style.overflow = '';
-            }
+      // ESC键关闭Modal
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          document.querySelectorAll(".modal").forEach((modal) => {
+            modal.classList.remove("active");
+          });
+          document.body.style.overflow = "";
+        }
+      });
+
+      // 阻止Modal内容点击冒泡
+      document.querySelectorAll(".modal-content").forEach((content) => {
+        content.addEventListener("click", (e) => {
+          e.stopPropagation();
         });
-
-        // 阻止Modal内容点击冒泡
-        document.querySelectorAll('.modal-content').forEach(content => {
-            content.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        });
+      });
     </script>
 
     {% block scripts %}{% endblock %}
 
     <!-- AI Chat Widget -->
     {% include 'components/ai_chat.html' %}
-
-    {% if baidu_tongji_id %}
     <script>
-    document.addEventListener("click", function(e) {
+      document.addEventListener("click", function (e) {
         var el = e.target.closest("[data-track]");
-        if (el && typeof _hmt !== "undefined") {
-            _hmt.push(["_trackEvent", "meetspot", el.dataset.track,
-                        el.dataset.trackLabel || ""]);
+        if (el) {
+          trackEvent(el.dataset.track, {
+            label: el.dataset.trackLabel || "",
+            page_path: location.pathname,
+          });
         }
-    });
+      });
     </script>
-    {% endif %}
-</body>
+  </body>
 </html>

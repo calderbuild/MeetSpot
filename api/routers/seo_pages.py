@@ -1,4 +1,5 @@
 """SEO页面路由 - 负责SSR页面与爬虫友好输出."""
+
 from __future__ import annotations
 
 import json
@@ -29,6 +30,7 @@ def _common_context(request: Request, lang: str = "zh") -> dict:
     return {
         "request": request,
         "baidu_tongji_id": os.getenv("BAIDU_TONGJI_ID", ""),
+        "ga4_measurement_id": os.getenv("GA4_MEASUREMENT_ID", ""),
         "t": t,
         "lang": lang,
     }
@@ -92,6 +94,7 @@ def _hreflang_links(path: str) -> List[Dict[str, str]]:
 # Homepage
 # ---------------------------------------------------------------------------
 
+
 def _render_homepage(request: Request, lang: str):
     t = get_translations(lang)
     prefix = _lang_prefix(lang)
@@ -147,6 +150,7 @@ async def homepage_en(request: Request):
 # City page
 # ---------------------------------------------------------------------------
 
+
 def _render_city_page(request: Request, city_slug: str, lang: str):
     city = _get_city_by_slug(city_slug)
     if not city:
@@ -154,7 +158,9 @@ def _render_city_page(request: Request, city_slug: str, lang: str):
 
     t = get_translations(lang)
     prefix = _lang_prefix(lang)
-    city_name = city.get("name_en", city.get("name")) if lang == "en" else city.get("name")
+    city_name = (
+        city.get("name_en", city.get("name")) if lang == "en" else city.get("name")
+    )
     meta_tags = seo_generator.generate_meta_tags(
         "city_page",
         {
@@ -208,6 +214,7 @@ async def city_page_en(request: Request, city_slug: str):
 # About
 # ---------------------------------------------------------------------------
 
+
 def _render_about(request: Request, lang: str):
     t = get_translations(lang)
     prefix = _lang_prefix(lang)
@@ -256,6 +263,7 @@ async def about_page_en(request: Request):
 # How it works
 # ---------------------------------------------------------------------------
 
+
 def _render_how_it_works(request: Request, lang: str):
     t = get_translations(lang)
     prefix = _lang_prefix(lang)
@@ -271,11 +279,26 @@ def _render_how_it_works(request: Request, lang: str):
             "description": t.get("how.hero_desc", ""),
             "total_time": "PT1M",
             "steps": [
-                {"name": t.get("how.step1_title", ""), "text": t.get("how.step1_desc", "")},
-                {"name": t.get("how.step2_title", ""), "text": t.get("how.step2_desc", "")},
-                {"name": t.get("how.step3_title", ""), "text": t.get("how.step3_desc", "")},
-                {"name": t.get("how.step4_title", ""), "text": t.get("how.step4_desc", "")},
-                {"name": t.get("how.step5_title", ""), "text": t.get("how.step5_desc", "")},
+                {
+                    "name": t.get("how.step1_title", ""),
+                    "text": t.get("how.step1_desc", ""),
+                },
+                {
+                    "name": t.get("how.step2_title", ""),
+                    "text": t.get("how.step2_desc", ""),
+                },
+                {
+                    "name": t.get("how.step3_title", ""),
+                    "text": t.get("how.step3_desc", ""),
+                },
+                {
+                    "name": t.get("how.step4_title", ""),
+                    "text": t.get("how.step4_desc", ""),
+                },
+                {
+                    "name": t.get("how.step5_title", ""),
+                    "text": t.get("how.step5_desc", ""),
+                },
             ],
             "tools": ["MeetSpot AI Agent", "AMap API", "GPT-4o"],
             "supplies": [
@@ -287,7 +310,10 @@ def _render_how_it_works(request: Request, lang: str):
     )
     breadcrumb_items = [
         {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
-        {"name": t.get("seo.breadcrumb.guide", "Guide"), "url": f"{prefix}/how-it-works"},
+        {
+            "name": t.get("seo.breadcrumb.guide", "Guide"),
+            "url": f"{prefix}/how-it-works",
+        },
     ]
     schema_list = _build_schema_list(
         seo_generator.generate_schema_org("website", {}),
@@ -326,6 +352,7 @@ async def how_it_works_en(request: Request):
 # ---------------------------------------------------------------------------
 # FAQ
 # ---------------------------------------------------------------------------
+
 
 def _render_faq(request: Request, lang: str):
     t = get_translations(lang)
@@ -379,11 +406,17 @@ async def faq_page_en(request: Request):
 # Sitemap & Robots
 # ---------------------------------------------------------------------------
 
+
 @router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
 async def sitemap():
     today = datetime.now().strftime("%Y-%m-%d")
     pages = [
         {"loc": "/", "priority": "1.0", "changefreq": "daily"},
+        {
+            "loc": "/public/meetspot_finder.html",
+            "priority": "0.9",
+            "changefreq": "weekly",
+        },
         {"loc": "/about", "priority": "0.8", "changefreq": "monthly"},
         {"loc": "/faq", "priority": "0.8", "changefreq": "weekly"},
         {"loc": "/how-it-works", "priority": "0.7", "changefreq": "monthly"},
@@ -399,8 +432,12 @@ async def sitemap():
         zh_url = f"{BASE_URL}{item['loc']}"
         en_loc = f"/en{item['loc']}" if item["loc"] != "/" else "/en/"
         en_url = f"{BASE_URL}{en_loc}"
-        hreflang_zh = f'        <xhtml:link rel="alternate" hreflang="zh" href="{zh_url}"/>'
-        hreflang_en = f'        <xhtml:link rel="alternate" hreflang="en" href="{en_url}"/>'
+        hreflang_zh = (
+            f'        <xhtml:link rel="alternate" hreflang="zh" href="{zh_url}"/>'
+        )
+        hreflang_en = (
+            f'        <xhtml:link rel="alternate" hreflang="en" href="{en_url}"/>'
+        )
         hreflang_default = f'        <xhtml:link rel="alternate" hreflang="x-default" href="{zh_url}"/>'
         # Chinese URL entry
         entries.append(
@@ -443,7 +480,7 @@ async def sitemap():
 @router.api_route("/robots.txt", methods=["GET", "HEAD"])
 async def robots_txt():
     today = datetime.now().strftime("%Y-%m-%d")
-    robots = f"""# MeetSpot Robots.txt\n# Generated: {today}\n\nUser-agent: *\nAllow: /\nCrawl-delay: 1\n\nDisallow: /admin/\nDisallow: /api/internal/\nDisallow: /*.json$\n\nSitemap: {BASE_URL}/sitemap.xml\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Baiduspider\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: CCBot\nDisallow: /\n"""
+    robots = f"""# MeetSpot Robots.txt\n# Generated: {today}\n\nUser-agent: *\nAllow: /\nCrawl-delay: 1\n\nDisallow: /admin/\nDisallow: /api/internal/\nDisallow: /*.json$\n\nSitemap: {BASE_URL}/sitemap.xml\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Baiduspider\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: ChatGPT-User\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n\nUser-agent: CCBot\nDisallow: /\n"""
     return Response(
         content=robots,
         media_type="text/plain",

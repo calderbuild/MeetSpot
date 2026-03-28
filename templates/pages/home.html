@@ -1,1345 +1,1528 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <style>
-    /* ============================================
+  /* ============================================
        MeetSpot AI Agent - Neural Precision Design
        Aesthetic: Tech-forward, intelligent, warm
        ============================================ */
 
-    /* Animation Keyframes */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+  /* Animation Keyframes */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
     }
-
-    @keyframes pulseGlow {
-        0%, 100% {
-            opacity: 0.85;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 1;
-            transform: scale(1.02);
-        }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
+  }
 
-    @keyframes neuralPulse {
-        0%, 100% {
-            opacity: 0.3;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.8;
-            transform: scale(1.05);
-        }
+  @keyframes pulseGlow {
+    0%,
+    100% {
+      opacity: 0.85;
+      transform: scale(1);
     }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
+    50% {
+      opacity: 1;
+      transform: scale(1.02);
     }
+  }
 
-    /* Staggered Reveal Classes */
-    .reveal { animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; opacity: 0; }
-    .reveal-1 { animation-delay: 0.1s; }
-    .reveal-2 { animation-delay: 0.2s; }
-    .reveal-3 { animation-delay: 0.3s; }
-    .reveal-4 { animation-delay: 0.4s; }
-    .reveal-5 { animation-delay: 0.5s; }
-    .reveal-6 { animation-delay: 0.6s; }
+  @keyframes neuralPulse {
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
 
-    /* ============================================
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Staggered Reveal Classes */
+  .reveal {
+    animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+  }
+  .reveal-1 {
+    animation-delay: 0.1s;
+  }
+  .reveal-2 {
+    animation-delay: 0.2s;
+  }
+  .reveal-3 {
+    animation-delay: 0.3s;
+  }
+  .reveal-4 {
+    animation-delay: 0.4s;
+  }
+  .reveal-5 {
+    animation-delay: 0.5s;
+  }
+  .reveal-6 {
+    animation-delay: 0.6s;
+  }
+
+  /* ============================================
        Hero Section - AI Agent Branding
        ============================================ */
-    .hero-section {
-        background: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-dark) 100%);
-        color: white;
-        padding: 64px 48px;
-        border-radius: 28px;
-        text-align: center;
-        margin-bottom: 48px;
-        box-shadow: 0 24px 80px rgba(10, 77, 104, 0.35);
-        position: relative;
-        overflow: hidden;
-        border: 2px solid rgba(6, 214, 160, 0.3);
-    }
+  .hero-section {
+    background: linear-gradient(
+      135deg,
+      var(--nav-primary) 0%,
+      var(--nav-dark) 100%
+    );
+    color: white;
+    padding: 64px 48px;
+    border-radius: 28px;
+    text-align: center;
+    margin-bottom: 48px;
+    box-shadow: 0 24px 80px rgba(10, 77, 104, 0.35);
+    position: relative;
+    overflow: hidden;
+    border: 2px solid rgba(6, 214, 160, 0.3);
+  }
 
-    /* Neural Network Background Pattern */
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: -150px;
-        left: -150px;
-        right: -150px;
-        bottom: -150px;
-        background-image:
-            radial-gradient(circle at 20% 30%, rgba(6, 214, 160, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 70%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
-            repeating-linear-gradient(45deg, transparent 0, transparent 10px, rgba(6, 214, 160, 0.02) 10px, rgba(6, 214, 160, 0.02) 11px),
-            repeating-linear-gradient(-45deg, transparent 0, transparent 10px, rgba(255, 107, 53, 0.02) 10px, rgba(255, 107, 53, 0.02) 11px);
-        animation: neuralPulse 8s ease-in-out infinite;
-        pointer-events: none;
-    }
+  /* Neural Network Background Pattern */
+  .hero-section::before {
+    content: "";
+    position: absolute;
+    top: -150px;
+    left: -150px;
+    right: -150px;
+    bottom: -150px;
+    background-image:
+      radial-gradient(
+        circle at 20% 30%,
+        rgba(6, 214, 160, 0.15) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 70%,
+        rgba(255, 107, 53, 0.1) 0%,
+        transparent 50%
+      ),
+      repeating-linear-gradient(
+        45deg,
+        transparent 0,
+        transparent 10px,
+        rgba(6, 214, 160, 0.02) 10px,
+        rgba(6, 214, 160, 0.02) 11px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent 0,
+        transparent 10px,
+        rgba(255, 107, 53, 0.02) 10px,
+        rgba(255, 107, 53, 0.02) 11px
+      );
+    animation: neuralPulse 8s ease-in-out infinite;
+    pointer-events: none;
+  }
 
-    .hero-content {
-        position: relative;
-        z-index: 1;
-    }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+  }
 
-    /* AI Agent Badge */
-    .agent-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 20px;
-        background: rgba(6, 214, 160, 0.2);
-        border: 1px solid rgba(6, 214, 160, 0.5);
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: var(--nav-secondary);
-        margin-bottom: 20px;
-        font-family: "Space Mono", monospace;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        animation: pulseGlow 3s ease-in-out infinite;
-    }
+  /* AI Agent Badge */
+  .agent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: rgba(6, 214, 160, 0.2);
+    border: 1px solid rgba(6, 214, 160, 0.5);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--nav-secondary);
+    margin-bottom: 20px;
+    font-family: "Space Mono", monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    animation: pulseGlow 3s ease-in-out infinite;
+  }
 
-    .agent-badge i {
-        font-size: 1rem;
-    }
+  .agent-badge i {
+    font-size: 1rem;
+  }
 
-    .hero-section h1 {
-        font-size: 3rem;
-        margin-bottom: 16px;
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        letter-spacing: -0.03em;
-        line-height: 1.1;
-        text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-    }
+  .hero-section h1 {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  }
 
-    .hero-section h1 .highlight {
-        background: linear-gradient(135deg, var(--nav-secondary) 0%, #00E5A0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+  .hero-section h1 .highlight {
+    background: linear-gradient(135deg, var(--nav-secondary) 0%, #00e5a0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
-    .hero-tagline {
-        font-size: 1.3rem;
-        opacity: 0.95;
-        margin-bottom: 12px;
-        font-family: "DM Sans", sans-serif;
-        font-weight: 500;
-        max-width: 700px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+  .hero-tagline {
+    font-size: 1.3rem;
+    opacity: 0.95;
+    margin-bottom: 12px;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 500;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-    .hero-tech-stack {
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 24px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 999px;
-        font-size: 0.95rem;
-        font-family: "Space Mono", monospace;
-        margin-bottom: 32px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-    }
+  .hero-tech-stack {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-family: "Space Mono", monospace;
+    margin-bottom: 32px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
 
-    .hero-tech-stack .divider {
-        width: 4px;
-        height: 4px;
-        background: var(--nav-secondary);
-        border-radius: 50%;
-    }
+  .hero-tech-stack .divider {
+    width: 4px;
+    height: 4px;
+    background: var(--nav-secondary);
+    border-radius: 50%;
+  }
 
-    .hero-cta {
-        display: inline-block;
-        background: linear-gradient(135deg, var(--nav-accent) 0%, #E53E00 100%);
-        color: white;
-        padding: 20px 56px;
-        border-radius: 14px;
-        text-decoration: none;
-        font-size: 1.3rem;
-        font-weight: 800;
-        font-family: "Outfit", sans-serif;
-        box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        position: relative;
-        overflow: hidden;
-    }
+  .hero-cta {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--nav-accent) 0%, #e53e00 100%);
+    color: white;
+    padding: 20px 56px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-size: 1.3rem;
+    font-weight: 800;
+    font-family: "Outfit", sans-serif;
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+  }
 
-    .hero-cta::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.5s ease;
-    }
+  .hero-cta::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
 
-    .hero-cta:hover::before {
-        left: 100%;
-    }
+  .hero-cta:hover::before {
+    left: 100%;
+  }
 
-    .hero-cta:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 20px 60px rgba(255, 107, 53, 0.7);
-        color: white;
-    }
+  .hero-cta:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(255, 107, 53, 0.7);
+    color: white;
+  }
 
-    /* Stats Row */
-    .hero-stats {
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-        margin-top: 32px;
-        padding-top: 28px;
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-    }
+  /* Stats Row */
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 32px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
 
-    .hero-stat {
-        text-align: center;
-    }
+  .hero-stat {
+    text-align: center;
+  }
 
-    .hero-stat-value {
-        font-size: 2rem;
-        font-weight: 900;
-        font-family: "Outfit", sans-serif;
-        color: var(--nav-secondary);
-        display: block;
-    }
+  .hero-stat-value {
+    font-size: 2rem;
+    font-weight: 900;
+    font-family: "Outfit", sans-serif;
+    color: var(--nav-secondary);
+    display: block;
+  }
 
-    .hero-stat-label {
-        font-size: 0.85rem;
-        opacity: 0.85;
-        font-family: "Space Mono", monospace;
-        letter-spacing: 0.03em;
-    }
+  .hero-stat-label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    font-family: "Space Mono", monospace;
+    letter-spacing: 0.03em;
+  }
 
-    /* ============================================
+  /* ============================================
        5-Step AI Thinking Process - Timeline
        ============================================ */
-    .thinking-section {
-        background: linear-gradient(135deg, #FFFFFF 0%, var(--nav-fog) 100%);
-        border-radius: 28px;
-        padding: 48px;
-        margin-bottom: 40px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-        border: 1px solid rgba(10, 77, 104, 0.1);
-        position: relative;
-        overflow: hidden;
-    }
+  .thinking-section {
+    background: linear-gradient(135deg, #ffffff 0%, var(--nav-fog) 100%);
+    border-radius: 28px;
+    padding: 48px;
+    margin-bottom: 40px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(10, 77, 104, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
 
-    .thinking-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(6, 214, 160, 0.1) 0%, transparent 70%);
-        pointer-events: none;
-    }
+  .thinking-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(
+      circle,
+      rgba(6, 214, 160, 0.1) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
 
-    .section-header {
-        text-align: center;
-        margin-bottom: 40px;
-        position: relative;
-        z-index: 1;
-    }
+  .section-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 1;
+  }
 
-    .section-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 16px;
-        background: linear-gradient(135deg, rgba(10, 77, 104, 0.1) 0%, rgba(6, 214, 160, 0.1) 100%);
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--nav-primary);
-        margin-bottom: 16px;
-        font-family: "Space Mono", monospace;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
+  .section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: linear-gradient(
+      135deg,
+      rgba(10, 77, 104, 0.1) 0%,
+      rgba(6, 214, 160, 0.1) 100%
+    );
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--nav-primary);
+    margin-bottom: 16px;
+    font-family: "Space Mono", monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 
-    .section-title {
-        font-size: 2.4rem;
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        color: var(--nav-dark);
-        margin-bottom: 12px;
-        letter-spacing: -0.02em;
-    }
+  .section-title {
+    font-size: 2.4rem;
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    color: var(--nav-dark);
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
 
-    .section-subtitle {
-        font-size: 1.1rem;
-        color: var(--text-secondary);
-        max-width: 600px;
-        margin: 0 auto;
-    }
+  .section-subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+  }
 
-    /* Timeline Container */
+  /* Timeline Container */
+  .thinking-timeline {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    position: relative;
+    padding: 20px 0;
+  }
+
+  /* Connection Line */
+  .thinking-timeline::before {
+    content: "";
+    position: absolute;
+    top: 52px;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      var(--nav-primary) 0%,
+      var(--nav-secondary) 25%,
+      var(--nav-accent) 50%,
+      var(--nav-secondary) 75%,
+      var(--nav-primary) 100%
+    );
+    border-radius: 2px;
+    z-index: 0;
+  }
+
+  .thinking-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    padding: 0 8px;
+  }
+
+  .step-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin-bottom: 16px;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(10, 77, 104, 0.2);
+  }
+
+  .step-icon::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px dashed rgba(6, 214, 160, 0.4);
+    animation: spin 20s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .thinking-step:hover .step-icon {
+    transform: scale(1.15) translateY(-4px);
+    box-shadow: 0 16px 40px rgba(10, 77, 104, 0.3);
+  }
+
+  .step-1 .step-icon {
+    background: linear-gradient(135deg, #0a4d68 0%, #0d6a8f 100%);
+    color: white;
+  }
+  .step-2 .step-icon {
+    background: linear-gradient(135deg, #06d6a0 0%, #00e5a0 100%);
+    color: #001524;
+  }
+  .step-3 .step-icon {
+    background: linear-gradient(135deg, #4a90e2 0%, #5ba3f5 100%);
+    color: white;
+  }
+  .step-4 .step-icon {
+    background: linear-gradient(135deg, #ff6b35 0%, #ff8a5b 100%);
+    color: white;
+  }
+  .step-5 .step-icon {
+    background: linear-gradient(135deg, #9b59b6 0%, #b76ecd 100%);
+    color: white;
+  }
+
+  .step-number {
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: "Space Mono", monospace;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.1em;
+  }
+
+  .step-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    color: var(--nav-dark);
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.5;
+    max-width: 140px;
+  }
+
+  /* Performance Metrics Bar */
+  .performance-bar {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 36px;
+    padding: 20px 32px;
+    background: linear-gradient(
+      135deg,
+      rgba(10, 77, 104, 0.05) 0%,
+      rgba(6, 214, 160, 0.05) 100%
+    );
+    border-radius: 16px;
+    border: 1px solid rgba(10, 77, 104, 0.1);
+  }
+
+  .perf-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .perf-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  .perf-single .perf-icon {
+    background: rgba(6, 214, 160, 0.15);
+    color: var(--nav-secondary);
+  }
+  .perf-dual .perf-icon {
+    background: rgba(74, 144, 226, 0.15);
+    color: var(--info);
+  }
+  .perf-agent .perf-icon {
+    background: rgba(255, 107, 53, 0.15);
+    color: var(--nav-accent);
+  }
+
+  .perf-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .perf-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: "Space Mono", monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .perf-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-family: "Outfit", sans-serif;
+    color: var(--nav-dark);
+  }
+
+  /* ============================================
+       Main Content Grid
+       ============================================ */
+  .main-content-grid {
+    padding: 48px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  .content-card {
+    background: white;
+    border-radius: 24px;
+    padding: 36px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(10, 77, 104, 0.1);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: linear-gradient(
+      135deg,
+      rgba(10, 77, 104, 0.1) 0%,
+      rgba(6, 214, 160, 0.1) 100%
+    );
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--nav-primary);
+    margin-bottom: 16px;
+    font-family: "Space Mono", monospace;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .main-heading {
+    font-size: 2.6rem;
+    margin-bottom: 20px;
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    color: var(--nav-dark);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .main-desc {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-primary-filled {
+    background: linear-gradient(135deg, var(--nav-accent) 0%, #d84315 100%);
+    color: white;
+    box-shadow: 0 6px 24px rgba(255, 107, 53, 0.4);
+  }
+
+  .btn-primary-filled:hover {
+    box-shadow: 0 12px 36px rgba(255, 107, 53, 0.6);
+    color: white;
+  }
+
+  .btn-primary-outline {
+    background: white;
+    color: var(--nav-primary);
+    border-color: rgba(10, 77, 104, 0.25);
+  }
+
+  .btn-primary-outline:hover {
+    background: rgba(10, 77, 104, 0.05);
+    border-color: var(--nav-primary);
+    color: var(--nav-primary);
+  }
+
+  .stats-grid {
+    display: flex;
+    gap: 32px;
+  }
+
+  .stat-item {
+    padding: 16px 20px;
+    background: linear-gradient(
+      135deg,
+      rgba(10, 77, 104, 0.04) 0%,
+      rgba(6, 214, 160, 0.04) 100%
+    );
+    border-radius: 12px;
+    border: 1px solid rgba(10, 77, 104, 0.08);
+  }
+
+  .stat-item strong {
+    font-size: 2.2rem;
+    display: block;
+    color: var(--nav-accent);
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-item span {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-family: "Space Mono", monospace;
+  }
+
+  /* City Card */
+  .city-card {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(10, 77, 104, 0.1);
+  }
+
+  .city-card h2 {
+    margin: 0 0 8px 0;
+    font-family: "Outfit", sans-serif;
+    font-weight: 800;
+    color: var(--nav-dark);
+    font-size: 1.4rem;
+  }
+
+  .city-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .city-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .city-link {
+    display: block;
+    padding: 14px 16px;
+    border: 1px solid rgba(10, 77, 104, 0.12);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(
+      135deg,
+      rgba(240, 247, 244, 0.5) 0%,
+      white 100%
+    );
+  }
+
+  .city-link:hover {
+    border-color: var(--nav-accent);
+    background: white;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
+  }
+
+  .city-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .city-name strong {
+    font-size: 1rem;
+    color: var(--nav-primary);
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+  }
+
+  .city-name span {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: "Space Mono", monospace;
+  }
+
+  .toggle-link {
+    color: var(--nav-accent);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .toggle-link:hover {
+    color: var(--nav-primary);
+  }
+
+  /* ============================================
+       Features Section
+       ============================================ */
+  .section-card {
+    background: white;
+    border-radius: 28px;
+    padding: 48px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+    margin-top: 40px;
+    border: 1px solid rgba(10, 77, 104, 0.08);
+  }
+
+  .section-card h2 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    color: var(--nav-dark);
+    margin-bottom: 32px;
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .feature-card {
+    padding: 28px;
+    border-radius: 20px;
+    border: 1px solid rgba(10, 77, 104, 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(
+      135deg,
+      white 0%,
+      rgba(240, 247, 244, 0.5) 100%
+    );
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      var(--nav-primary),
+      var(--nav-secondary)
+    );
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .feature-card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .feature-card:hover {
+    border-color: var(--nav-secondary);
+    box-shadow: 0 16px 40px rgba(6, 214, 160, 0.15);
+    transform: translateY(-4px);
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .feature-card h3 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    color: var(--nav-primary);
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+  }
+
+  .feature-card p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ============================================
+       Use Cases Section
+       ============================================ */
+  .cases-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .case-card {
+    padding: 28px;
+    border-radius: 20px;
+    border: 1px solid rgba(10, 77, 104, 0.1);
+    transition: all 0.4s ease;
+    background: white;
+  }
+
+  .case-card:hover {
+    box-shadow: 0 12px 32px rgba(10, 77, 104, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .case-card h3 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    color: var(--nav-primary);
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+  }
+
+  .case-card p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* ============================================
+       CTA Section
+       ============================================ */
+  .cta-section {
+    margin-top: 48px;
+    background: linear-gradient(
+      135deg,
+      var(--nav-primary) 0%,
+      var(--nav-dark) 100%
+    );
+    border-radius: 28px;
+    padding: 56px;
+    color: white;
+    box-shadow: 0 24px 80px rgba(10, 77, 104, 0.35);
+    position: relative;
+    overflow: hidden;
+    border: 2px solid rgba(6, 214, 160, 0.3);
+    text-align: center;
+  }
+
+  .cta-section::before {
+    content: "";
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    right: -100px;
+    bottom: -100px;
+    background-image:
+      radial-gradient(
+        circle at 20% 80%,
+        rgba(6, 214, 160, 0.15) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 20%,
+        rgba(255, 107, 53, 0.1) 0%,
+        transparent 50%
+      );
+    pointer-events: none;
+  }
+
+  .cta-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cta-section h2 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    margin-bottom: 16px;
+    font-size: 2.4rem;
+  }
+
+  .cta-section p {
+    font-size: 1.15rem;
+    opacity: 0.95;
+    max-width: 600px;
+    margin: 0 auto 32px;
+  }
+
+  .cta-section a {
+    color: var(--nav-secondary);
+    text-decoration: underline;
+  }
+
+  .cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+  }
+
+  .cta-btn {
+    min-width: 220px;
+    text-align: center;
+    padding: 18px 36px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .cta-btn-primary {
+    background: linear-gradient(135deg, var(--nav-accent) 0%, #e53e00 100%);
+    color: white;
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
+    border: none;
+  }
+
+  .cta-btn-primary:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(255, 107, 53, 0.7);
+    color: white;
+  }
+
+  .cta-btn-secondary {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .cta-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: white;
+    transform: translateY(-2px);
+    color: white;
+  }
+
+  /* ============================================
+       Community Section (in Hero)
+       ============================================ */
+  .community-section {
+    margin-top: 40px;
+    padding: 28px 32px;
+    background: rgba(6, 214, 160, 0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(6, 214, 160, 0.3);
+  }
+
+  .community-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.3rem;
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+  }
+
+  .community-section p {
+    margin: 0 0 20px 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+  }
+
+  .community-buttons {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .community-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: white;
+    color: var(--nav-primary);
+    border: none;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+  }
+
+  .community-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    color: var(--nav-primary);
+  }
+
+  .community-btn i {
+    font-size: 1.3rem;
+  }
+
+  /* ============================================
+       Responsive Design
+       ============================================ */
+  @media (max-width: 1024px) {
     .thinking-timeline {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0;
-        position: relative;
-        padding: 20px 0;
-    }
-
-    /* Connection Line */
-    .thinking-timeline::before {
-        content: '';
-        position: absolute;
-        top: 52px;
-        left: 10%;
-        right: 10%;
-        height: 3px;
-        background: linear-gradient(90deg,
-            var(--nav-primary) 0%,
-            var(--nav-secondary) 25%,
-            var(--nav-accent) 50%,
-            var(--nav-secondary) 75%,
-            var(--nav-primary) 100%);
-        border-radius: 2px;
-        z-index: 0;
-    }
-
-    .thinking-step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: relative;
-        z-index: 1;
-        padding: 0 8px;
-    }
-
-    .step-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.6rem;
-        margin-bottom: 16px;
-        position: relative;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 8px 24px rgba(10, 77, 104, 0.2);
-    }
-
-    .step-icon::before {
-        content: '';
-        position: absolute;
-        inset: -4px;
-        border-radius: 50%;
-        border: 2px dashed rgba(6, 214, 160, 0.4);
-        animation: spin 20s linear infinite;
-    }
-
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-
-    .thinking-step:hover .step-icon {
-        transform: scale(1.15) translateY(-4px);
-        box-shadow: 0 16px 40px rgba(10, 77, 104, 0.3);
-    }
-
-    .step-1 .step-icon { background: linear-gradient(135deg, #0A4D68 0%, #0D6A8F 100%); color: white; }
-    .step-2 .step-icon { background: linear-gradient(135deg, #06D6A0 0%, #00E5A0 100%); color: #001524; }
-    .step-3 .step-icon { background: linear-gradient(135deg, #4A90E2 0%, #5BA3F5 100%); color: white; }
-    .step-4 .step-icon { background: linear-gradient(135deg, #FF6B35 0%, #FF8A5B 100%); color: white; }
-    .step-5 .step-icon { background: linear-gradient(135deg, #9B59B6 0%, #B76ECD 100%); color: white; }
-
-    .step-number {
-        font-size: 0.7rem;
-        font-weight: 700;
-        font-family: "Space Mono", monospace;
-        color: var(--text-muted);
-        margin-bottom: 6px;
-        letter-spacing: 0.1em;
-    }
-
-    .step-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        font-family: "Outfit", sans-serif;
-        color: var(--nav-dark);
-        text-align: center;
-        margin-bottom: 6px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
     }
 
     .step-desc {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        text-align: center;
-        line-height: 1.5;
-        max-width: 140px;
+      display: none;
     }
 
-    /* Performance Metrics Bar */
+    .feature-grid,
+    .cases-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-section {
+      padding: 40px 24px;
+    }
+
+    .hero-section h1 {
+      font-size: 2rem;
+    }
+
+    .hero-stats {
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .thinking-section {
+      padding: 32px 20px;
+    }
+
+    .thinking-timeline {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .thinking-timeline::before {
+      display: none;
+    }
+
+    .thinking-step {
+      flex-direction: row;
+      gap: 16px;
+      text-align: left;
+    }
+
+    .step-icon {
+      flex-shrink: 0;
+    }
+
+    .step-desc {
+      display: block;
+      max-width: none;
+      text-align: left;
+    }
+
     .performance-bar {
-        display: flex;
-        justify-content: center;
-        gap: 32px;
-        margin-top: 36px;
-        padding: 20px 32px;
-        background: linear-gradient(135deg, rgba(10, 77, 104, 0.05) 0%, rgba(6, 214, 160, 0.05) 100%);
-        border-radius: 16px;
-        border: 1px solid rgba(10, 77, 104, 0.1);
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .perf-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .perf-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-    }
-
-    .perf-single .perf-icon { background: rgba(6, 214, 160, 0.15); color: var(--nav-secondary); }
-    .perf-dual .perf-icon { background: rgba(74, 144, 226, 0.15); color: var(--info); }
-    .perf-agent .perf-icon { background: rgba(255, 107, 53, 0.15); color: var(--nav-accent); }
-
-    .perf-text {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .perf-label {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        font-family: "Space Mono", monospace;
-        letter-spacing: 0.05em;
-    }
-
-    .perf-value {
-        font-size: 1.1rem;
-        font-weight: 800;
-        font-family: "Outfit", sans-serif;
-        color: var(--nav-dark);
-    }
-
-    /* ============================================
-       Main Content Grid
-       ============================================ */
     .main-content-grid {
-        padding: 48px 0;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 40px;
-        align-items: start;
-    }
-
-    .content-card {
-        background: white;
-        border-radius: 24px;
-        padding: 36px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-        border: 1px solid rgba(10, 77, 104, 0.1);
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 16px;
-        background: linear-gradient(135deg, rgba(10, 77, 104, 0.1) 0%, rgba(6, 214, 160, 0.1) 100%);
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: var(--nav-primary);
-        margin-bottom: 16px;
-        font-family: "Space Mono", monospace;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
+      grid-template-columns: 1fr;
     }
 
     .main-heading {
-        font-size: 2.6rem;
-        margin-bottom: 20px;
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        color: var(--nav-dark);
-        line-height: 1.15;
-        letter-spacing: -0.02em;
+      font-size: 2rem;
     }
 
-    .main-desc {
-        font-size: 1.1rem;
-        color: var(--text-secondary);
-        line-height: 1.8;
-        margin-bottom: 28px;
-    }
-
-    .btn-group {
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-        margin-bottom: 32px;
-    }
-
-    .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 14px 28px;
-        border-radius: 12px;
-        font-size: 1rem;
-        font-weight: 700;
-        font-family: "Outfit", sans-serif;
-        text-decoration: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 2px solid transparent;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-    }
-
-    .btn-primary-filled {
-        background: linear-gradient(135deg, var(--nav-accent) 0%, #D84315 100%);
-        color: white;
-        box-shadow: 0 6px 24px rgba(255, 107, 53, 0.4);
-    }
-
-    .btn-primary-filled:hover {
-        box-shadow: 0 12px 36px rgba(255, 107, 53, 0.6);
-        color: white;
-    }
-
-    .btn-primary-outline {
-        background: white;
-        color: var(--nav-primary);
-        border-color: rgba(10, 77, 104, 0.25);
-    }
-
-    .btn-primary-outline:hover {
-        background: rgba(10, 77, 104, 0.05);
-        border-color: var(--nav-primary);
-        color: var(--nav-primary);
-    }
-
-    .stats-grid {
-        display: flex;
-        gap: 32px;
-    }
-
-    .stat-item {
-        padding: 16px 20px;
-        background: linear-gradient(135deg, rgba(10, 77, 104, 0.04) 0%, rgba(6, 214, 160, 0.04) 100%);
-        border-radius: 12px;
-        border: 1px solid rgba(10, 77, 104, 0.08);
-    }
-
-    .stat-item strong {
-        font-size: 2.2rem;
-        display: block;
-        color: var(--nav-accent);
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        line-height: 1;
-        margin-bottom: 4px;
-    }
-
-    .stat-item span {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        font-family: "Space Mono", monospace;
-    }
-
-    /* City Card */
-    .city-card {
-        background: white;
-        border-radius: 24px;
-        padding: 32px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-        border: 1px solid rgba(10, 77, 104, 0.1);
-    }
-
-    .city-card h2 {
-        margin: 0 0 8px 0;
-        font-family: "Outfit", sans-serif;
-        font-weight: 800;
-        color: var(--nav-dark);
-        font-size: 1.4rem;
-    }
-
-    .city-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
+    .feature-grid,
+    .cases-grid {
+      grid-template-columns: 1fr;
     }
 
     .city-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+      grid-template-columns: 1fr;
     }
 
-    .city-link {
-        display: block;
-        padding: 14px 16px;
-        border: 1px solid rgba(10, 77, 104, 0.12);
-        border-radius: 12px;
-        text-decoration: none;
-        color: inherit;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background: linear-gradient(135deg, rgba(240, 247, 244, 0.5) 0%, white 100%);
-    }
-
-    .city-link:hover {
-        border-color: var(--nav-accent);
-        background: white;
-        transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.15);
-    }
-
-    .city-name {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
-    }
-
-    .city-name strong {
-        font-size: 1rem;
-        color: var(--nav-primary);
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-    }
-
-    .city-name span {
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        font-family: "Space Mono", monospace;
-    }
-
-    .toggle-link {
-        color: var(--nav-accent);
-        text-decoration: none;
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .toggle-link:hover {
-        color: var(--nav-primary);
-    }
-
-    /* ============================================
-       Features Section
-       ============================================ */
-    .section-card {
-        background: white;
-        border-radius: 28px;
-        padding: 48px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
-        margin-top: 40px;
-        border: 1px solid rgba(10, 77, 104, 0.08);
-    }
-
-    .section-card h2 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        color: var(--nav-dark);
-        margin-bottom: 32px;
-        font-size: 2rem;
-        text-align: center;
-    }
-
-    .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px;
-    }
-
-    .feature-card {
-        padding: 28px;
-        border-radius: 20px;
-        border: 1px solid rgba(10, 77, 104, 0.1);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        background: linear-gradient(135deg, white 0%, rgba(240, 247, 244, 0.5) 100%);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .feature-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--nav-primary), var(--nav-secondary));
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.4s ease;
-    }
-
-    .feature-card:hover::before {
-        transform: scaleX(1);
-    }
-
-    .feature-card:hover {
-        border-color: var(--nav-secondary);
-        box-shadow: 0 16px 40px rgba(6, 214, 160, 0.15);
-        transform: translateY(-4px);
-    }
-
-    .feature-icon {
-        font-size: 2rem;
-        margin-bottom: 16px;
-        display: block;
-    }
-
-    .feature-card h3 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-        color: var(--nav-primary);
-        margin-bottom: 10px;
-        font-size: 1.1rem;
-    }
-
-    .feature-card p {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin: 0;
-    }
-
-    /* ============================================
-       Use Cases Section
-       ============================================ */
-    .cases-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px;
-    }
-
-    .case-card {
-        padding: 28px;
-        border-radius: 20px;
-        border: 1px solid rgba(10, 77, 104, 0.1);
-        transition: all 0.4s ease;
-        background: white;
-    }
-
-    .case-card:hover {
-        box-shadow: 0 12px 32px rgba(10, 77, 104, 0.1);
-        transform: translateY(-2px);
-    }
-
-    .case-card h3 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-        color: var(--nav-primary);
-        margin-bottom: 12px;
-        font-size: 1.1rem;
-    }
-
-    .case-card p {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        line-height: 1.7;
-        margin: 0;
-    }
-
-    /* ============================================
-       CTA Section
-       ============================================ */
-    .cta-section {
-        margin-top: 48px;
-        background: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-dark) 100%);
-        border-radius: 28px;
-        padding: 56px;
-        color: white;
-        box-shadow: 0 24px 80px rgba(10, 77, 104, 0.35);
-        position: relative;
-        overflow: hidden;
-        border: 2px solid rgba(6, 214, 160, 0.3);
-        text-align: center;
-    }
-
-    .cta-section::before {
-        content: '';
-        position: absolute;
-        top: -100px;
-        left: -100px;
-        right: -100px;
-        bottom: -100px;
-        background-image:
-            radial-gradient(circle at 20% 80%, rgba(6, 214, 160, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 107, 53, 0.1) 0%, transparent 50%);
-        pointer-events: none;
-    }
-
-    .cta-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .cta-section h2 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        margin-bottom: 16px;
-        font-size: 2.4rem;
-    }
-
-    .cta-section p {
-        font-size: 1.15rem;
-        opacity: 0.95;
-        max-width: 600px;
-        margin: 0 auto 32px;
-    }
-
-    .cta-section a {
-        color: var(--nav-secondary);
-        text-decoration: underline;
+    .stats-grid {
+      flex-direction: column;
+      gap: 12px;
     }
 
     .cta-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: center;
+      flex-direction: column;
     }
 
     .cta-btn {
-        min-width: 220px;
-        text-align: center;
-        padding: 18px 36px;
-        border-radius: 14px;
-        font-weight: 700;
-        font-family: "Outfit", sans-serif;
-        font-size: 1.1rem;
-        text-decoration: none;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: auto;
+      width: 100%;
     }
+  }
 
-    .cta-btn-primary {
-        background: linear-gradient(135deg, var(--nav-accent) 0%, #E53E00 100%);
-        color: white;
-        box-shadow: 0 12px 40px rgba(255, 107, 53, 0.5);
-        border: none;
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
-
-    .cta-btn-primary:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 20px 60px rgba(255, 107, 53, 0.7);
-        color: white;
-    }
-
-    .cta-btn-secondary {
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        color: white;
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .cta-btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: white;
-        transform: translateY(-2px);
-        color: white;
-    }
-
-    /* ============================================
-       Community Section (in Hero)
-       ============================================ */
-    .community-section {
-        margin-top: 40px;
-        padding: 28px 32px;
-        background: rgba(6, 214, 160, 0.1);
-        border-radius: 20px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(6, 214, 160, 0.3);
-    }
-
-    .community-section h3 {
-        margin: 0 0 12px 0;
-        font-size: 1.3rem;
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-    }
-
-    .community-section p {
-        margin: 0 0 20px 0;
-        opacity: 0.9;
-        font-size: 0.95rem;
-    }
-
-    .community-buttons {
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .community-btn {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 24px;
-        background: white;
-        color: var(--nav-primary);
-        border: none;
-        border-radius: 999px;
-        font-size: 0.95rem;
-        font-weight: 700;
-        font-family: "Outfit", sans-serif;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        text-decoration: none;
-    }
-
-    .community-btn:hover {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        color: var(--nav-primary);
-    }
-
-    .community-btn i {
-        font-size: 1.3rem;
-    }
-
-    /* ============================================
-       Responsive Design
-       ============================================ */
-    @media (max-width: 1024px) {
-        .thinking-timeline {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-        }
-
-        .step-desc {
-            display: none;
-        }
-
-        .feature-grid,
-        .cases-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .hero-section {
-            padding: 40px 24px;
-        }
-
-        .hero-section h1 {
-            font-size: 2rem;
-        }
-
-        .hero-stats {
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .thinking-section {
-            padding: 32px 20px;
-        }
-
-        .thinking-timeline {
-            grid-template-columns: 1fr;
-            gap: 24px;
-        }
-
-        .thinking-timeline::before {
-            display: none;
-        }
-
-        .thinking-step {
-            flex-direction: row;
-            gap: 16px;
-            text-align: left;
-        }
-
-        .step-icon {
-            flex-shrink: 0;
-        }
-
-        .step-desc {
-            display: block;
-            max-width: none;
-            text-align: left;
-        }
-
-        .performance-bar {
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .main-content-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .main-heading {
-            font-size: 2rem;
-        }
-
-        .feature-grid,
-        .cases-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .city-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .stats-grid {
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .cta-buttons {
-            flex-direction: column;
-        }
-
-        .cta-btn {
-            min-width: auto;
-            width: 100%;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-        }
-    }
+  }
 </style>
 
 <!-- Hero Section - AI Agent Branding -->
 <div class="hero-section reveal reveal-1">
-    <div class="hero-content">
-        <div class="agent-badge">
-            <i class='bx bx-bot'></i>
-            {{ t['home.agent_badge'] }}
-        </div>
-        <h1>
-            {{ t['home.hero_title_line1'] | safe }}
-            <br>{{ t['home.hero_title_line2'] }}
-        </h1>
-        <p class="hero-tagline">{{ t['home.hero_tagline'] }}</p>
-        <div class="hero-tech-stack">
-            <span>Haversine</span>
-            <span class="divider"></span>
-            <span>GPT-4o</span>
-            <span class="divider"></span>
-            <span>{{ t['home.hero_tech_steps'] }}</span>
-        </div>
-        <a href="/public/meetspot_finder.html" class="hero-cta" data-track="cta_click" data-track-label="hero">
-            {{ t['home.hero_cta'] }}
-        </a>
-
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <span class="hero-stat-value">350+</span>
-                <span class="hero-stat-label">{{ t['home.stat_cities'] }}</span>
-            </div>
-            <div class="hero-stat">
-                <span class="hero-stat-value">12</span>
-                <span class="hero-stat-label">{{ t['home.stat_themes'] }}</span>
-            </div>
-            <div class="hero-stat">
-                <span class="hero-stat-value">60+</span>
-                <span class="hero-stat-label">{{ t['home.stat_universities'] }}</span>
-            </div>
-            <div class="hero-stat">
-                <span class="hero-stat-value">2-10</span>
-                <span class="hero-stat-label">{{ t['home.stat_people'] }}</span>
-            </div>
-        </div>
-
-        <!-- Social CTA -->
-        <div class="community-section">
-            <h3>{{ t['home.community_title'] }}</h3>
-            <p>{{ t['home.community_desc'] }}</p>
-            <div class="community-buttons">
-                <button class="community-btn" onclick="showWeChatGroupModal()">
-                    <i class='bx bxl-wechat'></i>
-                    {{ t['home.community_wechat'] }}
-                </button>
-                <a href="https://github.com/calderbuild/MeetSpot" target="_blank" rel="noopener" class="community-btn">
-                    <i class='bx bxl-github'></i>
-                    GitHub Stars
-                </a>
-            </div>
-        </div>
+  <div class="hero-content">
+    <div class="agent-badge">
+      <i class="bx bx-bot"></i>
+      {{ t['home.agent_badge'] }}
     </div>
+    <h1>
+      {{ t['home.hero_title_line1'] | safe }}
+      <br />{{ t['home.hero_title_line2'] }}
+    </h1>
+    <p class="hero-tagline">{{ t['home.hero_tagline'] }}</p>
+    <div class="hero-tech-stack">
+      <span>Haversine</span>
+      <span class="divider"></span>
+      <span>GPT-4o</span>
+      <span class="divider"></span>
+      <span>{{ t['home.hero_tech_steps'] }}</span>
+    </div>
+    <a
+      href="/public/meetspot_finder.html?lang={{ lang }}"
+      class="hero-cta"
+      data-track="cta_click"
+      data-track-label="hero"
+    >
+      {{ t['home.hero_cta'] }}
+    </a>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-value">350+</span>
+        <span class="hero-stat-label">{{ t['home.stat_cities'] }}</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">12</span>
+        <span class="hero-stat-label">{{ t['home.stat_themes'] }}</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">60+</span>
+        <span class="hero-stat-label">{{ t['home.stat_universities'] }}</span>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">2-10</span>
+        <span class="hero-stat-label">{{ t['home.stat_people'] }}</span>
+      </div>
+    </div>
+
+    <!-- Social CTA -->
+    <div class="community-section">
+      <h3>{{ t['home.community_title'] }}</h3>
+      <p>{{ t['home.community_desc'] }}</p>
+      <div class="community-buttons">
+        <button class="community-btn" onclick="showWeChatGroupModal()">
+          <i class="bx bxl-wechat"></i>
+          {{ t['home.community_wechat'] }}
+        </button>
+        <a
+          href="https://github.com/calderbuild/MeetSpot"
+          target="_blank"
+          rel="noopener"
+          class="community-btn"
+        >
+          <i class="bx bxl-github"></i>
+          GitHub Stars
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 5-Step AI Thinking Process -->
 <section class="thinking-section reveal reveal-2">
-    <div class="section-header">
-        <div class="section-badge">
-            <i class='bx bx-brain'></i>
-            {{ t['home.thinking_badge'] }}
-        </div>
-        <h2 class="section-title">{{ t['home.thinking_title'] }}</h2>
-        <p class="section-subtitle">{{ t['home.thinking_subtitle'] }}</p>
+  <div class="section-header">
+    <div class="section-badge">
+      <i class="bx bx-brain"></i>
+      {{ t['home.thinking_badge'] }}
     </div>
+    <h2 class="section-title">{{ t['home.thinking_title'] }}</h2>
+    <p class="section-subtitle">{{ t['home.thinking_subtitle'] }}</p>
+  </div>
 
-    <div class="thinking-timeline">
-        <div class="thinking-step step-1">
-            <div class="step-icon">📍</div>
-            <div class="step-number">STEP 01</div>
-            <div class="step-title">{{ t['home.step1_title'] }}</div>
-            <div class="step-desc">{{ t['home.step1_desc'] }}</div>
-        </div>
-        <div class="thinking-step step-2">
-            <div class="step-icon">📐</div>
-            <div class="step-number">STEP 02</div>
-            <div class="step-title">{{ t['home.step2_title'] }}</div>
-            <div class="step-desc">{{ t['home.step2_desc'] }}</div>
-        </div>
-        <div class="thinking-step step-3">
-            <div class="step-icon">🔍</div>
-            <div class="step-number">STEP 03</div>
-            <div class="step-title">{{ t['home.step3_title'] }}</div>
-            <div class="step-desc">{{ t['home.step3_desc'] }}</div>
-        </div>
-        <div class="thinking-step step-4">
-            <div class="step-icon">🤖</div>
-            <div class="step-number">STEP 04</div>
-            <div class="step-title">{{ t['home.step4_title'] }}</div>
-            <div class="step-desc">{{ t['home.step4_desc'] }}</div>
-        </div>
-        <div class="thinking-step step-5">
-            <div class="step-icon">✨</div>
-            <div class="step-number">STEP 05</div>
-            <div class="step-title">{{ t['home.step5_title'] }}</div>
-            <div class="step-desc">{{ t['home.step5_desc'] }}</div>
-        </div>
+  <div class="thinking-timeline">
+    <div class="thinking-step step-1">
+      <div class="step-icon">📍</div>
+      <div class="step-number">STEP 01</div>
+      <div class="step-title">{{ t['home.step1_title'] }}</div>
+      <div class="step-desc">{{ t['home.step1_desc'] }}</div>
     </div>
+    <div class="thinking-step step-2">
+      <div class="step-icon">📐</div>
+      <div class="step-number">STEP 02</div>
+      <div class="step-title">{{ t['home.step2_title'] }}</div>
+      <div class="step-desc">{{ t['home.step2_desc'] }}</div>
+    </div>
+    <div class="thinking-step step-3">
+      <div class="step-icon">🔍</div>
+      <div class="step-number">STEP 03</div>
+      <div class="step-title">{{ t['home.step3_title'] }}</div>
+      <div class="step-desc">{{ t['home.step3_desc'] }}</div>
+    </div>
+    <div class="thinking-step step-4">
+      <div class="step-icon">🤖</div>
+      <div class="step-number">STEP 04</div>
+      <div class="step-title">{{ t['home.step4_title'] }}</div>
+      <div class="step-desc">{{ t['home.step4_desc'] }}</div>
+    </div>
+    <div class="thinking-step step-5">
+      <div class="step-icon">✨</div>
+      <div class="step-number">STEP 05</div>
+      <div class="step-title">{{ t['home.step5_title'] }}</div>
+      <div class="step-desc">{{ t['home.step5_desc'] }}</div>
+    </div>
+  </div>
 
-    <div class="performance-bar">
-        <div class="perf-item perf-single">
-            <div class="perf-icon"><i class='bx bx-time-five'></i></div>
-            <div class="perf-text">
-                <span class="perf-label">{{ t['home.perf_single'] }}</span>
-                <span class="perf-value">{{ t['home.perf_single_time'] }}</span>
-            </div>
-        </div>
-        <div class="perf-item perf-dual">
-            <div class="perf-icon"><i class='bx bx-layer'></i></div>
-            <div class="perf-text">
-                <span class="perf-label">{{ t['home.perf_dual'] }}</span>
-                <span class="perf-value">{{ t['home.perf_dual_time'] }}</span>
-            </div>
-        </div>
-        <div class="perf-item perf-agent">
-            <div class="perf-icon"><i class='bx bx-bot'></i></div>
-            <div class="perf-text">
-                <span class="perf-label">{{ t['home.perf_agent'] }}</span>
-                <span class="perf-value">{{ t['home.perf_agent_time'] }}</span>
-            </div>
-        </div>
+  <div class="performance-bar">
+    <div class="perf-item perf-single">
+      <div class="perf-icon"><i class="bx bx-time-five"></i></div>
+      <div class="perf-text">
+        <span class="perf-label">{{ t['home.perf_single'] }}</span>
+        <span class="perf-value">{{ t['home.perf_single_time'] }}</span>
+      </div>
     </div>
+    <div class="perf-item perf-dual">
+      <div class="perf-icon"><i class="bx bx-layer"></i></div>
+      <div class="perf-text">
+        <span class="perf-label">{{ t['home.perf_dual'] }}</span>
+        <span class="perf-value">{{ t['home.perf_dual_time'] }}</span>
+      </div>
+    </div>
+    <div class="perf-item perf-agent">
+      <div class="perf-icon"><i class="bx bx-bot"></i></div>
+      <div class="perf-text">
+        <span class="perf-label">{{ t['home.perf_agent'] }}</span>
+        <span class="perf-value">{{ t['home.perf_agent_time'] }}</span>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Main Content Grid -->
 <section class="main-content-grid">
-    <div class="content-card reveal reveal-3">
-        <p class="badge">{{ t['home.content_badge'] }}</p>
-        <h2 class="main-heading">{{ t['home.content_heading'] }}</h2>
-        <p class="main-desc">
-            {{ t['home.content_desc'] }}
+  <div class="content-card reveal reveal-3">
+    <p class="badge">{{ t['home.content_badge'] }}</p>
+    <h2 class="main-heading">{{ t['home.content_heading'] }}</h2>
+    <p class="main-desc">{{ t['home.content_desc'] }}</p>
+    <div class="btn-group">
+      <a
+        class="btn-primary btn-primary-filled"
+        href="/public/meetspot_finder.html?lang={{ lang }}"
+        data-track="cta_click"
+        data-track-label="main_content"
+      >
+        <i class="bx bx-rocket"></i>
+        {{ t['home.btn_use_now'] }}
+      </a>
+      {% set prefix = '/en' if lang == 'en' else '' %}
+      <a
+        class="btn-primary btn-primary-outline"
+        href="{{ prefix }}/how-it-works"
+        >{{ t['home.btn_guide'] }}</a
+      >
+      <a class="btn-primary btn-primary-outline" href="{{ prefix }}/faq"
+        >{{ t['home.btn_faq'] }}</a
+      >
+    </div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <strong>350+</strong>
+        <span>{{ t['home.stat_cities'] }}</span>
+      </div>
+      <div class="stat-item">
+        <strong>2-10</strong>
+        <span>{{ t['home.stat_people'] }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- City Cards -->
+  <div class="city-card reveal reveal-4">
+    <div class="city-card-header">
+      <div>
+        <h2>{{ t['home.cities_title'] }}</h2>
+        <p
+          style="
+            margin: 4px 0 0 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+          "
+        >
+          {{ t['home.cities_desc'] }}
         </p>
-        <div class="btn-group">
-            <a class="btn-primary btn-primary-filled" href="/public/meetspot_finder.html" data-track="cta_click" data-track-label="main_content">
-                <i class='bx bx-rocket'></i>
-                {{ t['home.btn_use_now'] }}
-            </a>
-            {% set prefix = '/en' if lang == 'en' else '' %}
-            <a class="btn-primary btn-primary-outline" href="{{ prefix }}/how-it-works">{{ t['home.btn_guide'] }}</a>
-            <a class="btn-primary btn-primary-outline" href="{{ prefix }}/faq">{{ t['home.btn_faq'] }}</a>
-        </div>
-        <div class="stats-grid">
-            <div class="stat-item">
-                <strong>350+</strong>
-                <span>{{ t['home.stat_cities'] }}</span>
-            </div>
-            <div class="stat-item">
-                <strong>2-10</strong>
-                <span>{{ t['home.stat_people'] }}</span>
-            </div>
-        </div>
+      </div>
+      <a
+        href="#all-cities"
+        class="toggle-link"
+        onclick="toggleAllCities(event)"
+      >
+        <span id="toggle-text">{{ t['home.cities_toggle_show'] }}</span>
+      </a>
     </div>
 
-    <!-- City Cards -->
-    <div class="city-card reveal reveal-4">
-        <div class="city-card-header">
-            <div>
-                <h2>{{ t['home.cities_title'] }}</h2>
-                <p style="margin:4px 0 0 0;color:var(--text-muted);font-size:0.85rem;">{{ t['home.cities_desc'] }}</p>
-            </div>
-            <a href="#all-cities" class="toggle-link" onclick="toggleAllCities(event)">
-                <span id="toggle-text">{{ t['home.cities_toggle_show'] }}</span>
-            </a>
+    <div id="featured-cities" class="city-grid">
+      {% for city in cities[:8] %}
+      <a href="{{ prefix }}/meetspot/{{ city.slug }}" class="city-link">
+        <div class="city-name">
+          <strong>{{ city.name }}</strong>
+          <span>{{ city.name_en }}</span>
         </div>
-
-        <div id="featured-cities" class="city-grid">
-            {% for city in cities[:8] %}
-            <a href="{{ prefix }}/meetspot/{{ city.slug }}" class="city-link">
-                <div class="city-name">
-                    <strong>{{ city.name }}</strong>
-                    <span>{{ city.name_en }}</span>
-                </div>
-                <p style="margin:0;font-size:0.8rem;color:var(--text-muted);line-height:1.4;">{{ city.description[:35] }}...</p>
-            </a>
-            {% endfor %}
-        </div>
-
-        <div id="all-cities" style="display:none;max-height:350px;overflow-y:auto;border-top:1px solid rgba(10, 77, 104, 0.1);padding-top:16px;margin-top:16px;">
-            <div class="city-grid">
-                {% for city in cities[8:] %}
-                <a href="{{ prefix }}/meetspot/{{ city.slug }}" class="city-link">
-                    <div class="city-name">
-                        <strong>{{ city.name }}</strong>
-                        <span>{{ city.name_en }}</span>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
+        <p
+          style="
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+          "
+        >
+          {{ city.description[:35] }}...
+        </p>
+      </a>
+      {% endfor %}
     </div>
+
+    <div
+      id="all-cities"
+      style="
+        display: none;
+        max-height: 350px;
+        overflow-y: auto;
+        border-top: 1px solid rgba(10, 77, 104, 0.1);
+        padding-top: 16px;
+        margin-top: 16px;
+      "
+    >
+      <div class="city-grid">
+        {% for city in cities[8:] %}
+        <a href="{{ prefix }}/meetspot/{{ city.slug }}" class="city-link">
+          <div class="city-name">
+            <strong>{{ city.name }}</strong>
+            <span>{{ city.name_en }}</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Features Section -->
 <section class="section-card reveal reveal-5">
-    <h2>{{ t['home.features_title'] }}</h2>
-    <div class="feature-grid">
-        <article class="feature-card">
-            <span class="feature-icon">🎯</span>
-            <h3>{{ t['home.feat_geo_title'] }}</h3>
-            <p>{{ t['home.feat_geo_desc'] }}</p>
-        </article>
-        <article class="feature-card">
-            <span class="feature-icon">🤖</span>
-            <h3>{{ t['home.feat_gpt_title'] }}</h3>
-            <p>{{ t['home.feat_gpt_desc'] }}</p>
-        </article>
-        <article class="feature-card">
-            <span class="feature-icon">🏢</span>
-            <h3>{{ t['home.feat_themes_title'] }}</h3>
-            <p>{{ t['home.feat_themes_desc'] }}</p>
-        </article>
-        <article class="feature-card">
-            <span class="feature-icon">🧠</span>
-            <h3>{{ t['home.feat_transparent_title'] }}</h3>
-            <p>{{ t['home.feat_transparent_desc'] }}</p>
-        </article>
-        <article class="feature-card">
-            <span class="feature-icon">🎓</span>
-            <h3>{{ t['home.feat_uni_title'] }}</h3>
-            <p>{{ t['home.feat_uni_desc'] }}</p>
-        </article>
-        <article class="feature-card">
-            <span class="feature-icon">🌏</span>
-            <h3>{{ t['home.feat_cities_title'] }}</h3>
-            <p>{{ t['home.feat_cities_desc'] }}</p>
-        </article>
-    </div>
+  <h2>{{ t['home.features_title'] }}</h2>
+  <div class="feature-grid">
+    <article class="feature-card">
+      <span class="feature-icon">🎯</span>
+      <h3>{{ t['home.feat_geo_title'] }}</h3>
+      <p>{{ t['home.feat_geo_desc'] }}</p>
+    </article>
+    <article class="feature-card">
+      <span class="feature-icon">🤖</span>
+      <h3>{{ t['home.feat_gpt_title'] }}</h3>
+      <p>{{ t['home.feat_gpt_desc'] }}</p>
+    </article>
+    <article class="feature-card">
+      <span class="feature-icon">🏢</span>
+      <h3>{{ t['home.feat_themes_title'] }}</h3>
+      <p>{{ t['home.feat_themes_desc'] }}</p>
+    </article>
+    <article class="feature-card">
+      <span class="feature-icon">🧠</span>
+      <h3>{{ t['home.feat_transparent_title'] }}</h3>
+      <p>{{ t['home.feat_transparent_desc'] }}</p>
+    </article>
+    <article class="feature-card">
+      <span class="feature-icon">🎓</span>
+      <h3>{{ t['home.feat_uni_title'] }}</h3>
+      <p>{{ t['home.feat_uni_desc'] }}</p>
+    </article>
+    <article class="feature-card">
+      <span class="feature-icon">🌏</span>
+      <h3>{{ t['home.feat_cities_title'] }}</h3>
+      <p>{{ t['home.feat_cities_desc'] }}</p>
+    </article>
+  </div>
 </section>
 
 <!-- Use Cases Section -->
 <section class="section-card reveal reveal-6">
-    <h2>{{ t['home.cases_title'] }}</h2>
-    <div class="cases-grid">
-        <article class="case-card">
-            <h3>{{ t['home.case1_title'] }}</h3>
-            <p>{{ t['home.case1_desc'] }}</p>
-        </article>
-        <article class="case-card">
-            <h3>{{ t['home.case2_title'] }}</h3>
-            <p>{{ t['home.case2_desc'] }}</p>
-        </article>
-        <article class="case-card">
-            <h3>{{ t['home.case3_title'] }}</h3>
-            <p>{{ t['home.case3_desc'] }}</p>
-        </article>
-    </div>
+  <h2>{{ t['home.cases_title'] }}</h2>
+  <div class="cases-grid">
+    <article class="case-card">
+      <h3>{{ t['home.case1_title'] }}</h3>
+      <p>{{ t['home.case1_desc'] }}</p>
+    </article>
+    <article class="case-card">
+      <h3>{{ t['home.case2_title'] }}</h3>
+      <p>{{ t['home.case2_desc'] }}</p>
+    </article>
+    <article class="case-card">
+      <h3>{{ t['home.case3_title'] }}</h3>
+      <p>{{ t['home.case3_desc'] }}</p>
+    </article>
+  </div>
 </section>
 
 <!-- CTA Section -->
 <section class="cta-section reveal">
-    <div class="cta-content">
-        <h2>{{ t['home.cta_title'] }}</h2>
-        <p>{{ t['home.cta_desc'] | safe }}</p>
-        <div class="cta-buttons">
-            <a href="/public/meetspot_finder.html" class="cta-btn cta-btn-primary" data-track="cta_click" data-track-label="bottom">{{ t['home.cta_btn_primary'] }}</a>
-            <a href="{{ prefix }}/about" class="cta-btn cta-btn-secondary">{{ t['home.cta_btn_secondary'] }}</a>
-        </div>
+  <div class="cta-content">
+    <h2>{{ t['home.cta_title'] }}</h2>
+    <p>{{ t['home.cta_desc'] | safe }}</p>
+    <div class="cta-buttons">
+      <a
+        href="/public/meetspot_finder.html?lang={{ lang }}"
+        class="cta-btn cta-btn-primary"
+        data-track="cta_click"
+        data-track-label="bottom"
+        >{{ t['home.cta_btn_primary'] }}</a
+      >
+      <a href="{{ prefix }}/about" class="cta-btn cta-btn-secondary"
+        >{{ t['home.cta_btn_secondary'] }}</a
+      >
     </div>
+  </div>
 </section>
 
 <script>
-function toggleAllCities(e) {
-    e.preventDefault();
-    const allCities = document.getElementById('all-cities');
-    const toggleText = document.getElementById('toggle-text');
+  function toggleAllCities(e) {
+      e.preventDefault();
+      const allCities = document.getElementById('all-cities');
+      const toggleText = document.getElementById('toggle-text');
 
-    if (allCities.style.display === 'none') {
-        allCities.style.display = 'block';
-        toggleText.textContent = '{{ t['home.cities_toggle_hide'] }}';
-    } else {
-        allCities.style.display = 'none';
-        toggleText.textContent = '{{ t['home.cities_toggle_show'] }}';
-    }
-}
+      if (allCities.style.display === 'none') {
+          allCities.style.display = 'block';
+          toggleText.textContent = '{{ t['home.cities_toggle_hide'] }}';
+      } else {
+          allCities.style.display = 'none';
+          toggleText.textContent = '{{ t['home.cities_toggle_show'] }}';
+      }
+  }
 
-// Intersection Observer for reveal animations
-document.addEventListener('DOMContentLoaded', function() {
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.1
-    };
+  // Intersection Observer for reveal animations
+  document.addEventListener('DOMContentLoaded', function() {
+      const observerOptions = {
+          root: null,
+          rootMargin: '0px',
+          threshold: 0.1
+      };
 
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.animationPlayState = 'running';
-            }
-        });
-    }, observerOptions);
+      const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                  entry.target.style.animationPlayState = 'running';
+              }
+          });
+      }, observerOptions);
 
-    document.querySelectorAll('.reveal').forEach(el => {
-        el.style.animationPlayState = 'paused';
-        observer.observe(el);
-    });
-});
+      document.querySelectorAll('.reveal').forEach(el => {
+          el.style.animationPlayState = 'paused';
+          observer.observe(el);
+      });
+  });
 </script>
 {% endblock %}

@@ -185,13 +185,13 @@ async function initI18n() {
 - [x] Cookie 语言偏好持久化正常
 - [x] 自动语言检测（Accept-Language）正常工作
 
-### Phase 2: 推荐结果 HTML（后续迭代）
+### Phase 2: 推荐结果 HTML（已完成）
 
-- [ ] `_generate_html_content()` 接受 `language` 参数
-- [ ] `MeetSpotRequest` 模型增加 `language` 字段
-- [ ] `PLACE_TYPE_CONFIG` 显示字符串支持英文
-- [ ] 结果页 HTML 所有标签、描述、提示支持英文
-- [ ] 搜索过程可视化（thinking steps）支持英文
+- [x] `_generate_html_content()` 接受 `language` 参数
+- [x] `MeetSpotRequest` 模型增加 `language` 字段
+- [x] `PLACE_TYPE_CONFIG` 显示字符串支持英文
+- [x] 结果页 HTML 所有标签、描述、提示支持英文
+- [x] 搜索过程可视化（thinking steps）支持英文
 
 ## Implementation Phases
 

@@ -82,6 +82,9 @@ logs/
 workspace/js_src/
 *.log
 
+# Claude Code Playwright MCP runtime data
+.playwright-mcp/
+
 # 测试文件 - 这些不需要部署
 test_*.py
 *_test.py
@@ -140,7 +143,8 @@ marketing/
 openmanus.egg-info/
 
 # 测试目录
-tests/
+tests/*
+!tests/*.py
 meetspot.db
 
 # Large presentation files
@@ -177,3 +181,14 @@ meetspot演讲稿子.md
 
 # UI optimization guides (outdated)
 UI_UX_OPTIMIZATION_GUIDE.md
+
+# GTM pipeline outputs (local only)
+.agents/
+
+# CV and personal files
+Agent-EN_cv.pdf
+*.pdf
+!docs/**/*.pdf
+
+# Local plan docs
+docs/plans/

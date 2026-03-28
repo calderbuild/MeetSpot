@@ -13,6 +13,7 @@ import aiohttp
 from pydantic import Field
 
 from app.logger import logger
+from app.i18n import get_translations
 from app.tool.base import BaseTool, ToolResult
 from app.config import config
 
@@ -365,9 +366,92 @@ class CafeRecommender(BaseTool):
         }
     }
 
+    PLACE_TYPE_CONFIG_EN: Dict[str, Dict[str, str]] = {
+        "咖啡馆": {"topic": "Cafe Meetup", "map_legend": "Cafes", "noun_singular": "cafe", "noun_plural": "cafes"},
+        "图书馆": {"topic": "Library Meetup", "map_legend": "Libraries", "noun_singular": "library", "noun_plural": "libraries"},
+        "餐厅": {"topic": "Food Meetup", "map_legend": "Restaurants", "noun_singular": "restaurant", "noun_plural": "restaurants"},
+        "商场": {"topic": "Shopping Meetup", "map_legend": "Malls", "noun_singular": "mall", "noun_plural": "malls"},
+        "公园": {"topic": "Park Meetup", "map_legend": "Parks", "noun_singular": "park", "noun_plural": "parks"},
+        "电影院": {"topic": "Movie Meetup", "map_legend": "Cinemas", "noun_singular": "cinema", "noun_plural": "cinemas"},
+        "篮球场": {"topic": "Court Meetup", "map_legend": "Basketball Courts", "noun_singular": "basketball court", "noun_plural": "basketball courts"},
+        "健身房": {"topic": "Fitness Meetup", "map_legend": "Gyms", "noun_singular": "gym", "noun_plural": "gyms"},
+        "KTV": {"topic": "KTV Meetup", "map_legend": "KTV Venues", "noun_singular": "KTV venue", "noun_plural": "KTV venues"},
+        "博物馆": {"topic": "Museum Meetup", "map_legend": "Museums", "noun_singular": "museum", "noun_plural": "museums"},
+        "景点": {"topic": "Sightseeing Meetup", "map_legend": "Attractions", "noun_singular": "attraction", "noun_plural": "attractions"},
+        "酒吧": {"topic": "Nightlife Meetup", "map_legend": "Bars", "noun_singular": "bar", "noun_plural": "bars"},
+        "茶楼": {"topic": "Teahouse Meetup", "map_legend": "Teahouses", "noun_singular": "teahouse", "noun_plural": "teahouses"},
+        "default": {"topic": "Meeting Spots", "map_legend": "Venues", "noun_singular": "venue", "noun_plural": "venues"},
+    }
+
+    REQUIREMENT_LABELS_EN: Dict[str, str] = {
+        "停车": "parking",
+        "停车方便": "easy parking",
+        "安静": "quiet",
+        "环境安静": "quiet setting",
+        "商务": "business-friendly",
+        "适合商务": "business-friendly",
+        "交通": "convenient transit",
+        "WiFi": "Wi-Fi",
+        "有WiFi": "Wi-Fi",
+        "有Wi-Fi": "Wi-Fi",
+        "包间": "private room",
+        "有包间": "private room",
+        "可以久坐": "good for long stays",
+        "适合儿童": "family-friendly",
+        "24小时营业": "24/7",
+    }
+
     def _get_place_config(self, primary_keyword: str) -> Dict[str, str]:
         """获取指定场所类型的显示配置"""
         return self.PLACE_TYPE_CONFIG.get(primary_keyword, self.PLACE_TYPE_CONFIG["default"])
+
+    @staticmethod
+    def _normalize_language(language: str) -> str:
+        """将语言参数归一化为 zh/en."""
+        return "en" if str(language or "").lower().startswith("en") else "zh"
+
+    def _get_primary_keyword(self, keywords: str) -> str:
+        """从多关键词输入中提取主关键词."""
+        tokens = [token.strip() for token in keywords.replace("、", " ").split() if token.strip()]
+        return tokens[0] if tokens else "场所"
+
+    def _get_display_config(self, primary_keyword: str, language: str) -> Dict[str, str]:
+        """根据语言返回带显示文案的场所配置."""
+        cfg = dict(self._get_place_config(primary_keyword))
+        if self._normalize_language(language) == "en":
+            cfg.update(self.PLACE_TYPE_CONFIG_EN.get(primary_keyword, self.PLACE_TYPE_CONFIG_EN["default"]))
+        return cfg
+
+    def _result_text(self, language: str, key: str, default: str, **kwargs: Any) -> str:
+        """读取结果页翻译文案，缺失时回退默认值."""
+        template = get_translations(self._normalize_language(language)).get(key, default)
+        try:
+            return template.format(**kwargs)
+        except (KeyError, IndexError, ValueError):
+            return template
+
+    def _translate_requirement_label(self, label: str, language: str) -> str:
+        """将需求标签翻译为结果页展示语言."""
+        if self._normalize_language(language) != "en":
+            return label
+        return self.REQUIREMENT_LABELS_EN.get(label, label)
+
+    def _translate_keyword_label(self, keyword: str, language: str) -> str:
+        """翻译结果页中展示的场景关键词."""
+        if self._normalize_language(language) != "en":
+            return keyword
+
+        expanded = "扩大范围" in keyword
+        base_keyword = keyword.replace("（扩大范围）", "").strip()
+        extra_map = {
+            "美食": "food venues",
+            "场所": "venue",
+        }
+        if base_keyword in self.PLACE_TYPE_CONFIG_EN:
+            translated = self.PLACE_TYPE_CONFIG_EN[base_keyword]["noun_singular"]
+        else:
+            translated = extra_map.get(base_keyword, base_keyword)
+        return f"{translated} (expanded radius)" if expanded else translated
 
     @staticmethod
     @lru_cache(maxsize=1)
@@ -439,7 +523,9 @@ class CafeRecommender(BaseTool):
         max_distance: int = 100000,  # 最大距离筛选(米)
         price_range: str = "",  # 价格区间筛选
         pre_resolved_coords: List[dict] = None,  # 预解析坐标（来自前端 Autocomplete）
+        language: str = "zh",
     ) -> ToolResult:
+        language = self._normalize_language(language)
         # 尝试从多个来源获取API key
         if not self.api_key:
             # 首先尝试从config对象获取
@@ -683,7 +769,10 @@ class CafeRecommender(BaseTool):
 
             recommended_places = self._rank_places(
                 searched_places, center_point, user_requirements, keywords,
-                min_rating=min_rating, max_distance=max_distance, price_range=price_range
+                min_rating=min_rating,
+                max_distance=max_distance,
+                price_range=price_range,
+                language=language,
             )
 
             html_path = await self._generate_html_page(
@@ -694,11 +783,12 @@ class CafeRecommender(BaseTool):
                 keywords,
                 theme,
                 fallback_used,
-                fallback_keyword
+                fallback_keyword,
+                language=language,
             )
             result_text = self._format_result_text(
                 location_info, recommended_places, html_path, keywords,
-                fallback_used, fallback_keyword
+                fallback_used, fallback_keyword, language=language
             )
             return ToolResult(output=result_text)
 
@@ -1621,12 +1711,14 @@ class CafeRecommender(BaseTool):
     def _generate_recommendation_reason(
         self,
         place: Dict,
-        all_places: List[Dict]
+        all_places: List[Dict],
+        language: str = "zh",
     ) -> str:
         """生成推荐理由
 
         基于场所在各维度的表现生成个性化推荐理由
         """
+        language = self._normalize_language(language)
         reasons = []
 
         distance = place.get("_distance", float('inf'))
@@ -1637,40 +1729,82 @@ class CafeRecommender(BaseTool):
 
         # 距离优势
         if distance < 500:
-            reasons.append(f"距离最近，仅{int(distance)}米")
+            reasons.append(
+                f"Closest option, only {int(distance)}m away"
+                if language == "en"
+                else f"距离最近，仅{int(distance)}米"
+            )
         elif distance < 800:
-            reasons.append(f"位置便利，约{int(distance)}米")
+            reasons.append(
+                f"Convenient location, about {int(distance)}m away"
+                if language == "en"
+                else f"位置便利，约{int(distance)}米"
+            )
 
         # 评分优势
         if rating >= 4.5 and place.get("_has_rating"):
-            reasons.append(f"口碑极佳，评分{rating}")
+            reasons.append(
+                f"Excellent reputation with a {rating} rating"
+                if language == "en"
+                else f"口碑极佳，评分{rating}"
+            )
         elif rating >= 4.0 and place.get("_has_rating"):
-            reasons.append(f"评价良好，{rating}分")
+            reasons.append(
+                f"Well reviewed with a {rating} rating"
+                if language == "en"
+                else f"评价良好，{rating}分"
+            )
 
         # 热度优势
         if review_count >= 500:
-            reasons.append(f"人气火爆，{review_count}条评价")
+            reasons.append(
+                f"Very popular with {review_count} reviews"
+                if language == "en"
+                else f"人气火爆，{review_count}条评价"
+            )
         elif review_count >= 100:
-            reasons.append(f"热门推荐，{review_count}人评价")
+            reasons.append(
+                f"Popular choice with {review_count} reviews"
+                if language == "en"
+                else f"热门推荐，{review_count}人评价"
+            )
 
         # 需求匹配
         if matched_reqs:
-            req_text = "、".join(matched_reqs[:2])
-            reasons.append(f"满足{req_text}需求")
+            req_labels = [self._translate_requirement_label(req, language) for req in matched_reqs[:2]]
+            req_text = ", ".join(req_labels) if language == "en" else "、".join(req_labels)
+            reasons.append(
+                f"Matches your {req_text} needs"
+                if language == "en"
+                else f"满足{req_text}需求"
+            )
 
         # 场景匹配
         if scenario:
-            reasons.append(f"符合{scenario}场景")
+            scenario_label = self._translate_keyword_label(scenario, language)
+            reasons.append(
+                f"Fits the {scenario_label} scenario"
+                if language == "en"
+                else f"符合{scenario}场景"
+            )
 
         # 如果没有明显优势，给一个通用理由
         if not reasons:
             if distance < 1500:
-                reasons.append("位置适中，综合评价不错")
+                reasons.append(
+                    "Balanced location with solid overall quality"
+                    if language == "en"
+                    else "位置适中，综合评价不错"
+                )
             else:
-                reasons.append("特色场所，值得一试")
+                reasons.append(
+                    "A distinctive venue worth trying"
+                    if language == "en"
+                    else "特色场所，值得一试"
+                )
 
         # 最多返回2个理由
-        return "；".join(reasons[:2])
+        return " · ".join(reasons[:2]) if language == "en" else "；".join(reasons[:2])
 
     async def _llm_smart_ranking(
         self,
@@ -1808,7 +1942,8 @@ class CafeRecommender(BaseTool):
         places: List[Dict],
         center_point: Tuple[float, float],
         participant_locations: List[str],
-        keywords: str
+        keywords: str,
+        language: str = "zh",
     ) -> str:
         """LLM 动态生成交通与停车建议
 
@@ -1823,10 +1958,11 @@ class CafeRecommender(BaseTool):
         Returns:
             HTML 格式的交通停车建议
         """
+        language = self._normalize_language(language)
         llm = _get_llm()
         if not llm:
             logger.info("LLM 不可用，使用默认交通建议")
-            return self._generate_default_transport_tips(keywords)
+            return self._generate_default_transport_tips(keywords, language=language)
 
         try:
             # 构建场所信息摘要
@@ -1839,7 +1975,38 @@ class CafeRecommender(BaseTool):
                     "type": place.get("type", "")
                 })
 
-            prompt = f"""你是一个本地出行专家。根据以下信息，生成个性化的交通与停车建议。
+            if language == "en":
+                prompt = f"""You are a local mobility expert. Based on the information below, generate practical travel and parking suggestions.
+
+**Participant starting points**:
+{chr(10).join([f"- {loc}" for loc in participant_locations])}
+
+**Recommended venues**:
+{json.dumps(places_info, ensure_ascii=False, indent=2)}
+
+**Midpoint coordinates**: {center_point[0]:.6f}, {center_point[1]:.6f}
+
+**Venue type**: {self._translate_keyword_label(keywords, language)}
+
+Generate 4-5 practical travel suggestions:
+1. Recommend the best transport mode (metro, bus, taxi, driving)
+2. Consider nearby parking conditions
+3. Include time-planning advice
+4. Add special notes for universities or busy districts
+
+Return a JSON array directly, where each item contains icon and text:
+```json
+[
+  {{"icon": "bx-train", "text": "Suggestion text"}},
+  {{"icon": "bxs-car-garage", "text": "Parking advice"}}
+]
+```
+
+Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage (parking), bx-time (time), bx-info-circle (tip)
+"""
+                system_prompt = "You are a local mobility expert. Return only JSON-formatted travel suggestions."
+            else:
+                prompt = f"""你是一个本地出行专家。根据以下信息，生成个性化的交通与停车建议。
 
 **参与者出发地**：
 {chr(10).join([f"- {loc}" for loc in participant_locations])}
@@ -1867,11 +2034,12 @@ class CafeRecommender(BaseTool):
 
 可用图标：bx-train（地铁）、bx-bus（公交）、bx-taxi（打车）、bxs-car-garage（停车）、bx-time（时间）、bx-info-circle（提示）
 """
+                system_prompt = "你是一个本地出行专家，请直接返回 JSON 格式的交通建议。"
 
             from app.schema import Message
             response = await llm.ask(
                 messages=[Message.user_message(prompt)],
-                system_msgs=[Message.system_message("你是一个本地出行专家，请直接返回 JSON 格式的交通建议。")],
+                system_msgs=[Message.system_message(system_prompt)],
                 stream=False  # 使用非流式调用，更可靠
             )
 
@@ -1903,10 +2071,16 @@ class CafeRecommender(BaseTool):
 
         except Exception as e:
             logger.warning(f"LLM 生成交通建议失败: {e}")
-            return self._generate_default_transport_tips(keywords)
+            return self._generate_default_transport_tips(keywords, language=language)
 
-    def _generate_default_transport_tips(self, keywords: str) -> str:
+    def _generate_default_transport_tips(self, keywords: str, language: str = "zh") -> str:
         """生成默认交通建议（兜底逻辑）"""
+        language = self._normalize_language(language)
+        if language == "en":
+            return """<li><i class='bx bx-check'></i>Use Amap or Baidu Maps for turn-by-turn navigation</li>
+                        <li><i class='bx bx-check'></i>Leave about 30 minutes earlier during peak hours</li>
+                        <li><i class='bx bx-check'></i>Some venues may offer parking, so it is worth confirming in advance</li>
+                        <li><i class='bx bx-check'></i>If using public transit, check nearby metro and bus stops first</li>"""
         return """<li><i class='bx bx-check'></i>建议使用高德地图或百度地图导航到目的地</li>
                         <li><i class='bx bx-check'></i>高峰时段建议提前30分钟出发</li>
                         <li><i class='bx bx-check'></i>部分场所可能提供停车服务，建议提前确认</li>
@@ -2018,7 +2192,8 @@ class CafeRecommender(BaseTool):
         keywords: str,
         min_rating: float = 0.0,
         max_distance: int = 100000,
-        price_range: str = ""
+        price_range: str = "",
+        language: str = "zh",
     ) -> List[Dict]:
         """V2 多维度评分排序算法
 
@@ -2034,6 +2209,7 @@ class CafeRecommender(BaseTool):
         - max_distance: 最大距离过滤(米)
         - price_range: 价格区间过滤
         """
+        language = self._normalize_language(language)
         logger.info(f"开始V2多维度评分，共{len(places)}个场所")
 
         # ========== 硬筛选阶段 ==========
@@ -2133,7 +2309,11 @@ class CafeRecommender(BaseTool):
             if place.get("_llm_reason"):
                 place["_recommendation_reason"] = place["_llm_reason"]
             else:
-                place["_recommendation_reason"] = self._generate_recommendation_reason(place, ranked_places)
+                place["_recommendation_reason"] = self._generate_recommendation_reason(
+                    place,
+                    ranked_places,
+                    language=language,
+                )
 
         # 对于多场景搜索，确保每个场景都有代表性
         if any(place.get('_source_keyword') for place in ranked_places):
@@ -2212,7 +2392,8 @@ class CafeRecommender(BaseTool):
         theme: str = "",
         fallback_used: bool = False,
         fallback_keyword: Optional[str] = None,
-        participant_locations: Optional[List[str]] = None
+        participant_locations: Optional[List[str]] = None,
+        language: str = "zh",
     ) -> str:
         file_name_prefix = "place"
 
@@ -2222,7 +2403,7 @@ class CafeRecommender(BaseTool):
 
         html_content = await self._generate_html_content(
             locations, places, center_point, user_requirements, keywords,
-            theme, fallback_used, fallback_keyword, participant_locations
+            theme, fallback_used, fallback_keyword, participant_locations, language
         )
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
@@ -2250,8 +2431,10 @@ class CafeRecommender(BaseTool):
         theme: str = "",
         fallback_used: bool = False,
         fallback_keyword: Optional[str] = None,
-        participant_locations: Optional[List[str]] = None
+        participant_locations: Optional[List[str]] = None,
+        language: str = "zh",
     ) -> str:
+        language = self._normalize_language(language)
         # 根据主题参数确定配置
         if theme:
             # 主题映射：前端theme -> 后端配置key
@@ -2271,18 +2454,31 @@ class CafeRecommender(BaseTool):
                 'custom': 'default'
             }
             config_key = theme_mapping.get(theme, 'default')
-            cfg = self._get_place_config(config_key)
             primary_keyword = config_key if config_key != 'default' else '场所'
         else:
             # 兼容旧逻辑：从关键词确定配置
-            primary_keyword = keywords.split("、")[0] if keywords else "场所"
-            cfg = self._get_place_config(primary_keyword)
+            primary_keyword = self._get_primary_keyword(keywords)
+        cfg = self._get_display_config(primary_keyword, language)
+        display_keyword = self._translate_keyword_label(primary_keyword, language)
+        lang_attr = "en" if language == "en" else "zh-CN"
 
         city_name = self._extract_city_from_locations(locations)
         meta_tags = {
-            "title": f"{cfg['topic']} - 最佳会面{cfg['noun_singular']}推荐",
-            "description": f"MeetSpot在{city_name}为多人聚会智能推荐公平会面地点, 支持{primary_keyword}等场景。",
-            "keywords": f"{city_name},{primary_keyword},MeetSpot,聚会地点",
+            "title": (
+                f"{cfg['topic']} - Best {cfg['noun_singular']} recommendations"
+                if language == "en"
+                else f"{cfg['topic']} - 最佳会面{cfg['noun_singular']}推荐"
+            ),
+            "description": (
+                f"MeetSpot recommends fair {display_keyword} options in {city_name} for group meetups."
+                if language == "en"
+                else f"MeetSpot在{city_name}为多人聚会智能推荐公平会面地点, 支持{primary_keyword}等场景。"
+            ),
+            "keywords": (
+                f"{city_name},{display_keyword},MeetSpot,meeting point"
+                if language == "en"
+                else f"{city_name},{primary_keyword},MeetSpot,聚会地点"
+            ),
         }
         schema_graph: List[Dict] = []
         try:
@@ -2293,8 +2489,9 @@ class CafeRecommender(BaseTool):
                 "recommendation",
                 {
                     "city": city_name,
-                    "keyword": primary_keyword,
+                    "keyword": display_keyword if language == "en" else primary_keyword,
                     "locations_count": len(locations),
+                    "lang": language,
                 },
             )
             schema_graph = []
@@ -2330,12 +2527,25 @@ class CafeRecommender(BaseTool):
                 "    </script>\n"
             )
 
-        search_process_html = self._generate_search_process(locations, center_point, user_requirements, keywords, places) 
+        search_process_html = self._generate_search_process(
+            locations,
+            center_point,
+            user_requirements,
+            keywords,
+            places,
+            language=language,
+        )
 
         location_markers = []
         for idx, loc in enumerate(locations):
             location_markers.append({
-                "name": f"地点{idx+1}: {loc['name']}",
+                "name": self._result_text(
+                    language,
+                    "result.map.participant_label",
+                    "Location {index}: {name}",
+                    index=idx + 1,
+                    name=loc["name"],
+                ) if language == "en" else f"地点{idx+1}: {loc['name']}",
                 "position": [loc["lng"], loc["lat"]],
                 "icon": "location"
             })
@@ -2351,7 +2561,7 @@ class CafeRecommender(BaseTool):
                 })
 
         center_marker = {
-            "name": "最佳会面点",
+            "name": self._result_text(language, "result.map.best_point", "Best Meeting Point"),
             "position": [center_point[0], center_point[1]],
             "icon": "center"
         }
@@ -2363,29 +2573,58 @@ class CafeRecommender(BaseTool):
 
         location_distance_html = ""
         for loc in locations:
-            distance = self._calculate_distance(center_point, (loc['lng'], loc['lat']))/1000
-            location_distance_html += f"<li><i class='bx bx-map'></i><strong>{loc['name']}</strong>: 距离中心点约 <span class='distance'>{distance:.1f} 公里</span></li>"
+            distance = self._calculate_distance(center_point, (loc['lng'], loc['lat'])) / 1000
+            distance_line = self._result_text(
+                language,
+                "result.transport.distance_item",
+                "<strong>{name}</strong>: about <span class='distance'>{distance:.1f} km</span> from the midpoint",
+                name=loc["name"],
+                distance=distance,
+            ) if language == "en" else (
+                f"<strong>{loc['name']}</strong>: 距离中心点约 <span class='distance'>{distance:.1f} 公里</span>"
+            )
+            location_distance_html += f"<li><i class='bx bx-map'></i>{distance_line}</li>"
 
         # LLM 动态生成交通与停车建议 (带超时保护)
         if participant_locations is None:
             participant_locations = [loc.get("name", loc.get("formatted_address", "")) for loc in locations]
         try:
             transport_tips_html = await asyncio.wait_for(
-                self._llm_generate_transport_tips(places, center_point, participant_locations, keywords),
+                self._llm_generate_transport_tips(
+                    places,
+                    center_point,
+                    participant_locations,
+                    keywords,
+                    language=language,
+                ),
                 timeout=15.0  # 15秒超时，避免Render 30秒请求超时
             )
         except asyncio.TimeoutError:
             logger.warning("LLM 交通建议生成超时，使用默认建议")
-            transport_tips_html = self._generate_default_transport_tips(keywords)
+            transport_tips_html = self._generate_default_transport_tips(keywords, language=language)
 
         place_cards_html = "" 
         for place in places:
-            rating = place.get("biz_ext", {}).get("rating", "暂无评分")
-            address = place.get("address", "地址未知")
-            business_hours = place.get("business_hours", "营业时间未知")
+            rating = place.get(
+                "biz_ext", {}
+            ).get(
+                "rating",
+                self._result_text(language, "result.place.no_rating", "No rating yet") if language == "en" else "暂无评分",
+            )
+            address = place.get(
+                "address",
+                self._result_text(language, "result.place.unknown_address", "Address unavailable") if language == "en" else "地址未知",
+            )
+            business_hours = place.get(
+                "business_hours",
+                self._result_text(language, "result.place.unknown_hours", "Hours unavailable") if language == "en" else "营业时间未知",
+            )
             if isinstance(business_hours, list) and business_hours:
                 business_hours = "; ".join(business_hours)
-            tel = place.get("tel", "电话未知")
+            tel = place.get(
+                "tel",
+                self._result_text(language, "result.place.unknown_phone", "Phone unavailable") if language == "en" else "电话未知",
+            )
             
             tags = place.get("tag", [])
             if isinstance(tags, str): tags = tags.split(";") if tags else []
@@ -2406,28 +2645,29 @@ class CafeRecommender(BaseTool):
                     if confidence == "high":
                         icon = "bx-check-circle"
                         tag_class = "match-tag-high"
-                        tooltip = "已验证"
+                        tooltip = self._result_text(language, "result.match.verified", "Verified") if language == "en" else "已验证"
                     elif confidence == "medium":
                         icon = "bx-check"
                         tag_class = "match-tag-medium"
-                        tooltip = "品牌特征"
+                        tooltip = self._result_text(language, "result.match.brand_signal", "Brand signal") if language == "en" else "品牌特征"
                     else:
                         icon = "bx-question-mark"
                         tag_class = "match-tag-low"
-                        tooltip = "建议确认"
-                    match_tags.append(f"<span class='match-tag {tag_class}' title='{tooltip}'><i class='bx {icon}'></i>{req}</span>")
+                        tooltip = self._result_text(language, "result.match.confirm", "Suggested, please confirm") if language == "en" else "建议确认"
+                    label = self._translate_requirement_label(req, language)
+                    match_tags.append(f"<span class='match-tag {tag_class}' title='{tooltip}'><i class='bx {icon}'></i>{label}</span>")
                 requirement_match_html = f'''
                         <div class="requirement-match">
                             {"".join(match_tags)}
                         </div>'''
 
             lng_str, lat_str = place.get("location",",").split(",")
-            distance_text = "未知距离"
+            distance_text = self._result_text(language, "result.place.unknown_distance", "Distance unavailable") if language == "en" else "未知距离"
             map_link_coords = ""
             if lng_str and lat_str:
                 lng, lat = float(lng_str), float(lat_str)
                 distance = self._calculate_distance(center_point, (lng, lat))
-                distance_text = f"{distance/1000:.1f} 公里"
+                distance_text = f"{distance/1000:.1f} km" if language == "en" else f"{distance/1000:.1f} 公里"
                 map_link_coords = f"{lng},{lat}"
 
             # 获取推荐理由
@@ -2443,7 +2683,16 @@ class CafeRecommender(BaseTool):
             # 获取评分明细用于tooltip（可选展示）
             score_breakdown = place.get("_score_breakdown", {})
             total_score = place.get("_score", 0)
-            score_title = f"综合评分: {total_score:.0f}/100"
+            score_title = (
+                self._result_text(
+                    language,
+                    "result.place.score_title",
+                    "Overall score: {score:.0f}/100",
+                    score=total_score,
+                )
+                if language == "en"
+                else f"综合评分: {total_score:.0f}/100"
+            )
 
             place_cards_html += f'''
             <div class="cafe-card" title="{score_title}">
@@ -2455,7 +2704,7 @@ class CafeRecommender(BaseTool):
                         <div>
                             <h3 class="cafe-name">{place['name']}</h3>
                         </div>
-                        <span class="cafe-rating">评分: {rating}</span>
+                        <span class="cafe-rating">{self._result_text(language, "result.place.rating_label", "Rating", ) if language == "en" else "评分"}: {rating}</span>
                     </div>{reason_html}
                     <div class="cafe-details">
                         <div class="cafe-info">
@@ -2480,7 +2729,7 @@ class CafeRecommender(BaseTool):
                         </div>
                         <div class="cafe-actions">
                             <a href="https://uri.amap.com/marker?position={map_link_coords}&name={place['name']}" target="_blank">
-                                <i class='bx bx-navigation'></i>导航
+                                <i class='bx bx-navigation'></i>{self._result_text(language, "result.place.navigate", "Navigate") if language == "en" else "导航"}
                             </a>
                         </div>
                     </div>
@@ -2492,13 +2741,13 @@ class CafeRecommender(BaseTool):
             place_cards_html = f'''
             <div class="empty-state">
                 <i class='bx bx-coffee empty-state-icon'></i>
-                <h3 class="empty-state-title">暂无推荐{cfg["noun_plural"]}</h3>
+                <h3 class="empty-state-title">{self._result_text(language, "result.empty.title", "No recommended {venues} found", venues=cfg["noun_plural"]) if language == "en" else f"暂无推荐{cfg['noun_plural']}"}</h3>
                 <p class="empty-state-description">
-                    很抱歉，在您指定的区域内未能找到符合条件的{cfg["noun_plural"]}。<br>
-                    建议扩大搜索范围或调整搜索关键词。
+                    {self._result_text(language, "result.empty.desc_line1", "We couldn't find any matching {venues} in the selected area.", venues=cfg["noun_plural"]) if language == "en" else f"很抱歉，在您指定的区域内未能找到符合条件的{cfg['noun_plural']}。"}<br>
+                    {self._result_text(language, "result.empty.desc_line2", "Try expanding the radius or adjusting your keywords.") if language == "en" else "建议扩大搜索范围或调整搜索关键词。"}
                 </p>
                 <a href="/public/meetspot_finder.html" class="btn-modern btn-primary-modern">
-                    <i class='bx bx-redo'></i>重新搜索
+                    <i class='bx bx-redo'></i>{self._result_text(language, "result.nav.research", "Search Again") if language == "en" else "重新搜索"}
                 </a>
             </div>'''
 
@@ -2564,7 +2813,7 @@ class CafeRecommender(BaseTool):
             )
 
         html_content = f"""<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{lang_attr}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3007,10 +3256,10 @@ class CafeRecommender(BaseTool):
 </head>
 <body>
     <nav style="background:#001524;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1000;">
-        <a href="/" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;">MeetSpot</a>
+        <a href="{'/en/' if language == 'en' else '/'}" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;">MeetSpot</a>
         <div style="display:flex;gap:16px;align-items:center;">
-            <a href="/public/meetspot_finder.html" style="color:#06D6A0;text-decoration:none;font-size:0.9rem;">重新搜索</a>
-            <button onclick="navigator.clipboard.writeText(location.href).then(function(){{this.textContent='已复制!'}}.bind(this))" data-track="result_share" data-track-label="copy_link" style="background:#FF6B35;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;">复制链接</button>
+            <a href="/public/meetspot_finder.html" style="color:#06D6A0;text-decoration:none;font-size:0.9rem;">{self._result_text(language, "result.nav.research", "Search Again") if language == "en" else "重新搜索"}</a>
+            <button onclick="navigator.clipboard.writeText(location.href).then(function(){{this.textContent='{self._result_text(language, 'result.nav.copied', 'Copied!') if language == 'en' else '已复制!'}'}}.bind(this))" data-track="result_share" data-track-label="copy_link" style="background:#FF6B35;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;">{self._result_text(language, "result.nav.copy_link", "Copy Link") if language == "en" else "复制链接"}</button>
         </div>
     </nav>
     <header>
@@ -3018,83 +3267,83 @@ class CafeRecommender(BaseTool):
             <div class="header-logo">
                 <i class='bx {cfg["icon_header"]} coffee-icon'></i>{cfg["topic"]}
             </div>
-            <div class="header-subtitle">为您找到的最佳会面{cfg["noun_plural"]}</div>
+            <div class="header-subtitle">{self._result_text(language, "result.header.subtitle", "Best meeting {venues} selected for your group", venues=cfg["noun_plural"]) if language == "en" else f"为您找到的最佳会面{cfg['noun_plural']}"}</div>
         </div>
     </header>
 
     {f'''<div class="fallback-notice">
         <i class="bx bx-info-circle"></i>
         <span class="fallback-notice-text">
-            未找到「{keywords}」相关场所，已为您推荐附近的「<span class="fallback-notice-keyword">{fallback_keyword}</span>」
+            {self._result_text(language, "result.fallback.message", 'We could not find "{keyword}", so we recommended nearby <span class="fallback-notice-keyword">{fallback}</span> instead.', keyword=self._translate_keyword_label(keywords, language), fallback=self._translate_keyword_label(fallback_keyword, language)) if language == "en" else f'未找到「{keywords}」相关场所，已为您推荐附近的「<span class="fallback-notice-keyword">{fallback_keyword}</span>」'}
         </span>
     </div>''' if fallback_used and fallback_keyword else ''}
 
     <div class="container main-content">
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-info-circle'></i>推荐摘要</h2>
+            <h2 class="section-title"><i class='bx bx-info-circle'></i>{self._result_text(language, "result.summary.title", "Recommendation Summary") if language == "en" else "推荐摘要"}</h2>
             <div class="summary-card">
                 <div class="summary-item">
-                    <div class="summary-label">参与地点数</div>
-                    <div class="summary-value">{len(locations)} 个地点</div>
+                    <div class="summary-label">{self._result_text(language, "result.summary.participants", "Participants") if language == "en" else "参与地点数"}</div>
+                    <div class="summary-value">{self._result_text(language, "result.summary.participants_value", "{count} locations", count=len(locations)) if language == "en" else f"{len(locations)} 个地点"}</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">推荐{cfg["noun_plural"]}数</div>
-                    <div class="summary-value">{len(places)} 家{cfg["noun_plural"]}</div>
+                    <div class="summary-label">{self._result_text(language, "result.summary.recommendations", "Recommended {venues}", venues=cfg["noun_plural"]) if language == "en" else f"推荐{cfg['noun_plural']}数"}</div>
+                    <div class="summary-value">{self._result_text(language, "result.summary.recommendations_value", "{count} {venues}", count=len(places), venues=cfg["noun_plural"]) if language == "en" else f"{len(places)} 家{cfg['noun_plural']}"}</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">特殊需求</div>
-                    <div class="summary-value">{user_requirements or "无特殊需求"}</div>
+                    <div class="summary-label">{self._result_text(language, "result.summary.requirements", "Special Requirements") if language == "en" else "特殊需求"}</div>
+                    <div class="summary-value">{user_requirements or (self._result_text(language, "result.summary.none", "No special requirements") if language == "en" else "无特殊需求")}</div>
                 </div>
             </div>
         </div>
         {search_process_html}
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-map-pin'></i>地点信息</h2>
+            <h2 class="section-title"><i class='bx bx-map-pin'></i>{self._result_text(language, "result.section.locations", "Participant Locations") if language == "en" else "地点信息"}</h2>
             <table class="location-table">
-                <thead><tr><th>序号</th><th>地点名称</th><th>详细地址</th></tr></thead>
+                <thead><tr><th>{self._result_text(language, "result.table.index", "#") if language == "en" else "序号"}</th><th>{self._result_text(language, "result.table.name", "Location") if language == "en" else "地点名称"}</th><th>{self._result_text(language, "result.table.address", "Address") if language == "en" else "详细地址"}</th></tr></thead>
                 <tbody>{location_rows_html}</tbody>
             </table>
         </div>
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-map-alt'></i>地图展示</h2>
+            <h2 class="section-title"><i class='bx bx-map-alt'></i>{self._result_text(language, "result.section.map", "Map Overview") if language == "en" else "地图展示"}</h2>
             <div class="map-container">
                 <div id="map"></div>
                 <div class="map-legend">
-                    <div class="legend-item"><div class="legend-color legend-center"></div><span>最佳会面点</span></div>
-                    <div class="legend-item"><div class="legend-color legend-location"></div><span>所在地点</span></div>
+                    <div class="legend-item"><div class="legend-color legend-center"></div><span>{self._result_text(language, "result.map.best_point", "Best Meeting Point") if language == "en" else "最佳会面点"}</span></div>
+                    <div class="legend-item"><div class="legend-color legend-location"></div><span>{self._result_text(language, "result.map.locations", "Participant Locations") if language == "en" else "所在地点"}</span></div>
                     <div class="legend-item"><div class="legend-color legend-place"></div><span>{cfg["map_legend"]}</span></div>
                 </div>
             </div>
         </div>
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx {cfg["icon_section"]}'></i>推荐{cfg["noun_plural"]}</h2>
+            <h2 class="section-title"><i class='bx {cfg["icon_section"]}'></i>{self._result_text(language, "result.section.venues", "Recommended {venues}", venues=cfg["noun_plural"]) if language == "en" else f"推荐{cfg['noun_plural']}"}</h2>
             <div class="cafe-grid">
                 {place_cards_html}
             </div>
         </div>
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-car'></i>交通与停车建议</h2>
+            <h2 class="section-title"><i class='bx bx-car'></i>{self._result_text(language, "result.transport.title", "Travel & Parking Tips") if language == "en" else "交通与停车建议"}</h2>
             <div class="transportation-info">
                 <div class="transport-card">
-                    <h3 class="transport-title"><i class='bx bx-trip'></i>前往方式</h3>
-                    <p>最佳会面点位于<span class="center-coords">{center_point[0]:.6f}, {center_point[1]:.6f}</span>附近</p>
+                    <h3 class="transport-title"><i class='bx bx-trip'></i>{self._result_text(language, "result.transport.routes", "Getting There") if language == "en" else "前往方式"}</h3>
+                    <p>{self._result_text(language, "result.transport.center_near", 'The midpoint is near <span class="center-coords">{lng:.6f}, {lat:.6f}</span>.', lng=center_point[0], lat=center_point[1]) if language == "en" else f'最佳会面点位于<span class="center-coords">{center_point[0]:.6f}, {center_point[1]:.6f}</span>附近'}</p>
                     <ul class="transport-list">{location_distance_html}</ul>
                 </div>
                 <div class="transport-card">
-                    <h3 class="transport-title"><i class='bx bxs-car-garage'></i>智能出行建议</h3>
+                    <h3 class="transport-title"><i class='bx bxs-car-garage'></i>{self._result_text(language, "result.transport.smart", "Smart Travel Suggestions") if language == "en" else "智能出行建议"}</h3>
                     <ul class="transport-list">
                         {transport_tips_html}
                     </ul>
                 </div>
             </div>
-            <a href="/" class="btn-modern btn-primary-modern">
-                <i class='bx bx-left-arrow-alt'></i>返回首页
+            <a href="{'/en/' if language == 'en' else '/'}" class="btn-modern btn-primary-modern">
+                <i class='bx bx-left-arrow-alt'></i>{self._result_text(language, "result.nav.home", "Back to Home") if language == "en" else "返回首页"}
             </a>
         </div>
     </div>
     <footer class="footer">
         <div class="container">
-            <p>© {datetime.now().year} {cfg["topic"]} - 智能{cfg["noun_singular"]}推荐服务 | 数据来源：高德地图</p>
+            <p>{self._result_text(language, "result.footer.text", "© {year} {topic} - Smart {noun} recommendation service | Powered by Amap", year=datetime.now().year, topic=cfg["topic"], noun=cfg["noun_singular"]) if language == "en" else f"© {datetime.now().year} {cfg['topic']} - 智能{cfg['noun_singular']}推荐服务 | 数据来源：高德地图"}</p>
         </div>
     </footer>
     <script type="text/javascript">
@@ -3112,7 +3361,7 @@ class CafeRecommender(BaseTool):
                     AMapUI: {{ version: "1.1", plugins: ["overlay/SimpleMarker"] }}
                 }})
                 .then(function(AMap) {{ initMap(AMap); }})
-                .catch(function(e) {{ console.error('地图加载失败:', e); }});
+                .catch(function(e) {{ console.error('{self._result_text(language, "result.map.load_error", "Map failed to load") if language == "en" else "地图加载失败"}:', e); }});
             }};
             document.body.appendChild(script);
             animateCafeCards(); 
@@ -3130,7 +3379,7 @@ class CafeRecommender(BaseTool):
                 var labelText = '';
                 if (item.icon === 'center') {{
                     color = '#2ecc71';
-                    labelText = '最佳会面点';
+                    labelText = '{self._result_text(language, "result.map.best_point", "Best Meeting Point") if language == "en" else "最佳会面点"}';
                 }} else if (item.icon === 'location') {{
                     color = '#3498db';
                     // Extract location name from "地点N: XXX" format
@@ -3231,33 +3480,66 @@ class CafeRecommender(BaseTool):
         html_path: str,
         keywords: str,
         fallback_used: bool = False,
-        fallback_keyword: str = None
+        fallback_keyword: str = None,
+        language: str = "zh",
     ) -> str:
-        primary_keyword = keywords.split("、")[0] if keywords else "场所"
-        cfg = self._get_place_config(primary_keyword)
+        language = self._normalize_language(language)
+        primary_keyword = self._get_primary_keyword(keywords)
+        cfg = self._get_display_config(primary_keyword, language)
         num_places = len(places)
 
-        result = [
-            f"## 已为您找到{num_places}家适合会面的{cfg['noun_plural']}",
-            "",
-        ]
+        if language == "en":
+            result = [
+                f"## Found {num_places} {cfg['noun_plural']} that work well for your meetup",
+                "",
+            ]
+        else:
+            result = [
+                f"## 已为您找到{num_places}家适合会面的{cfg['noun_plural']}",
+                "",
+            ]
 
         # 添加 Fallback 提示
         if fallback_used and fallback_keyword:
-            result.append(f"> 提示：未找到「{keywords}」相关场所，已为您推荐附近的「{fallback_keyword}」")
+            if language == "en":
+                result.append(
+                    f'> Note: "{self._translate_keyword_label(keywords, language)}" was not found, so nearby "{self._translate_keyword_label(fallback_keyword, language)}" venues were recommended instead.'
+                )
+            else:
+                result.append(f"> 提示：未找到「{keywords}」相关场所，已为您推荐附近的「{fallback_keyword}」")
             result.append("")
 
-        result.append(f"### 推荐{cfg['noun_plural']}:")
+        result.append(
+            f"### Recommended {cfg['noun_plural']}:"
+            if language == "en"
+            else f"### 推荐{cfg['noun_plural']}:"
+        )
         for i, place in enumerate(places):
-            rating = place.get("biz_ext", {}).get("rating", "暂无评分")
-            address = place.get("address", "地址未知")
-            result.append(f"{i+1}. **{place['name']}** (评分: {rating})")
-            result.append(f"   地址: {address}")
+            rating = place.get("biz_ext", {}).get("rating", "No rating yet" if language == "en" else "暂无评分")
+            address = place.get("address", "Address unavailable" if language == "en" else "地址未知")
+            result.append(
+                f"{i+1}. **{place['name']}** (Rating: {rating})"
+                if language == "en"
+                else f"{i+1}. **{place['name']}** (评分: {rating})"
+            )
+            result.append(
+                f"   Address: {address}"
+                if language == "en"
+                else f"   地址: {address}"
+            )
             result.append("")
         
         html_file_basename = os.path.basename(html_path)
-        result.append(f"HTML页面: {html_file_basename}") 
-        result.append(f"可在浏览器中打开查看详细地图和{cfg['noun_plural']}信息。") 
+        result.append(
+            f"HTML page: {html_file_basename}"
+            if language == "en"
+            else f"HTML页面: {html_file_basename}"
+        )
+        result.append(
+            f"Open it in a browser to view the detailed map and {cfg['noun_plural']} information."
+            if language == "en"
+            else f"可在浏览器中打开查看详细地图和{cfg['noun_plural']}信息。"
+        )
 
         return "\n".join(result)
 
@@ -3267,10 +3549,13 @@ class CafeRecommender(BaseTool):
         center_point: Tuple[float, float],
         user_requirements: str,
         keywords: str,
-        places: List[Dict] = None  # 新增：传入推荐结果用于显示评分详情
+        places: List[Dict] = None,  # 新增：传入推荐结果用于显示评分详情
+        language: str = "zh",
     ) -> str:
-        primary_keyword = keywords.split("、")[0] if keywords else "场所"
-        cfg = self._get_place_config(primary_keyword)
+        language = self._normalize_language(language)
+        primary_keyword = self._get_primary_keyword(keywords)
+        cfg = self._get_display_config(primary_keyword, language)
+        keyword_label = self._translate_keyword_label(primary_keyword, language)
         search_steps = []
 
         # Step 1: 位置分析 - 显示坐标信息
@@ -3287,27 +3572,50 @@ class CafeRecommender(BaseTool):
             </div>"""
         location_analysis += "</div>"
         search_steps.append({
-            "icon": "bx-map-pin", "title": "Step 1: 位置解析与地理编码",
-            "content": f"<p>成功解析 <span class='highlight-text'>{len(locations)}</span> 个地点坐标，准备计算最优会面点...</p>{location_analysis}"
+            "icon": "bx-map-pin",
+            "title": "Step 1: Address Parsing & Geocoding" if language == "en" else "Step 1: 位置解析与地理编码",
+            "content": (
+                f"<p>Resolved coordinates for <span class='highlight-text'>{len(locations)}</span> participant locations. Preparing midpoint calculation...</p>{location_analysis}"
+                if language == "en"
+                else f"<p>成功解析 <span class='highlight-text'>{len(locations)}</span> 个地点坐标，准备计算最优会面点...</p>{location_analysis}"
+            ),
         })
 
         # Step 2: 智能中点计算 - 显示球面几何算法
         center_lat, center_lng = center_point[1], center_point[0]
-        algo_type = "球面几何中点算法" if len(locations) == 2 else "多点质心算法"
+        algo_type = (
+            "spherical midpoint algorithm" if len(locations) == 2 else "multi-point centroid algorithm"
+        ) if language == "en" else (
+            "球面几何中点算法" if len(locations) == 2 else "多点质心算法"
+        )
+        step2_note = (
+            "Uses spherical geometry to find the true great-circle midpoint, which is fairer than simple averaging."
+            if len(locations) == 2 and language == "en"
+            else (
+                f"Computes the geographic centroid of {len(locations)} locations to keep travel fair for everyone."
+                if language == "en"
+                else (
+                    "采用球面几何学计算两点间的真实大圆中点，比简单平均更精确"
+                    if len(locations) == 2
+                    else f"计算{len(locations)}个位置的地理质心，确保对所有人公平"
+                )
+            )
+        )
         search_steps.append({
-            "icon": "bx-math", "title": "Step 2: 智能中点计算",
+            "icon": "bx-math",
+            "title": "Step 2: Midpoint Calculation" if language == "en" else "Step 2: 智能中点计算",
             "content": f"""
-            <p>使用 <span class='highlight-text'>{algo_type}</span> 计算最优会面点：</p>
+            <p>{'Using' if language == 'en' else '使用'} <span class='highlight-text'>{algo_type}</span> {'to calculate the best shared meeting point:' if language == 'en' else '计算最优会面点：'}</p>
             <div class="ai-algo-box">
                 <div class="ai-algo-formula">
                     <i class='bx bx-target-lock'></i>
                     <div>
-                        <span class="ai-algo-label">最佳会面点坐标</span>
+                        <span class="ai-algo-label">{'Midpoint coordinates' if language == 'en' else '最佳会面点坐标'}</span>
                         <span class="ai-algo-value">{center_lat:.6f}°N, {center_lng:.6f}°E</span>
                     </div>
                 </div>
                 <div class="ai-algo-note">
-                    {f'采用球面几何学计算两点间的真实大圆中点，比简单平均更精确' if len(locations) == 2 else f'计算{len(locations)}个位置的地理质心，确保对所有人公平'}
+                    {step2_note}
                 </div>
             </div>
             <div class="map-operation-animation">
@@ -3325,85 +3633,108 @@ class CafeRecommender(BaseTool):
             }
             detected_requirements = [key for key, kw_list in requirement_keywords_map.items() if any(kw.lower() in user_requirements.lower() for kw in kw_list)]
             if detected_requirements:
-                req_tags = "".join([f"<span class='ai-req-tag'>{req}</span>" for req in detected_requirements])
+                req_tags = "".join([
+                    f"<span class='ai-req-tag'>{self._translate_requirement_label(req, language)}</span>"
+                    for req in detected_requirements
+                ])
                 requirement_analysis = f"""
-                <p>从您的需求 "<em>{user_requirements}</em>" 中识别到：</p>
+                <p>{f'From your request \"<em>{user_requirements}</em>\", MeetSpot detected:' if language == 'en' else f'从您的需求 \"<em>{user_requirements}</em>\" 中识别到：'}</p>
                 <div class="ai-req-detected">{req_tags}</div>
                 <div class="ai-matching-layers">
                     <div class="ai-layer">
                         <span class="ai-layer-badge high">Layer 1</span>
-                        <span>POI标签匹配 <span class="ai-layer-conf">高置信度</span></span>
+                        <span>{'POI tag match' if language == 'en' else 'POI标签匹配'} <span class="ai-layer-conf">{'high confidence' if language == 'en' else '高置信度'}</span></span>
                     </div>
                     <div class="ai-layer">
                         <span class="ai-layer-badge medium">Layer 2</span>
-                        <span>品牌知识库匹配 <span class="ai-layer-conf">中置信度</span></span>
+                        <span>{'brand knowledge match' if language == 'en' else '品牌知识库匹配'} <span class="ai-layer-conf">{'medium confidence' if language == 'en' else '中置信度'}</span></span>
                     </div>
                     <div class="ai-layer">
                         <span class="ai-layer-badge low">Layer 3</span>
-                        <span>场所类型推断 <span class="ai-layer-conf">低置信度</span></span>
+                        <span>{'venue-type inference' if language == 'en' else '场所类型推断'} <span class="ai-layer-conf">{'low confidence' if language == 'en' else '低置信度'}</span></span>
                     </div>
                 </div>"""
             else:
-                requirement_analysis = f"<p>未检测到特定需求关键词，将基于综合评分推荐最佳{cfg['noun_plural']}。</p>"
+                requirement_analysis = (
+                    f"<p>No specific requirement keywords were detected, so MeetSpot will recommend the best {cfg['noun_plural']} based on overall scoring.</p>"
+                    if language == "en"
+                    else f"<p>未检测到特定需求关键词，将基于综合评分推荐最佳{cfg['noun_plural']}。</p>"
+                )
         else:
-            requirement_analysis = f"<p>未提供特殊需求，将使用多维度评分系统推荐{cfg['noun_plural']}。</p>"
-        search_steps.append({"icon": "bx-brain", "title": "Step 3: 需求语义解析", "content": requirement_analysis})
+            requirement_analysis = (
+                f"<p>No special requirements were provided, so MeetSpot will use its multi-factor scoring system to rank the best {cfg['noun_plural']}.</p>"
+                if language == "en"
+                else f"<p>未提供特殊需求，将使用多维度评分系统推荐{cfg['noun_plural']}。</p>"
+            )
+        search_steps.append({
+            "icon": "bx-brain",
+            "title": "Step 3: Requirement Analysis" if language == "en" else "Step 3: 需求语义解析",
+            "content": requirement_analysis,
+        })
 
         # Step 4: 场所检索
         search_places_explanation = f"""
-        <p>以最佳会面点为圆心，在 <span class='highlight-text'>2公里</span> 范围内检索 "{primary_keyword}" 相关场所...</p>
+        <p>{f'Searching for {keyword_label} within a <span class=\"highlight-text\">2 km</span> radius around the midpoint...' if language == 'en' else f'以最佳会面点为圆心，在 <span class=\"highlight-text\">2公里</span> 范围内检索 \"{primary_keyword}\" 相关场所...'}</p>
         <div class="search-animation">
             <div class="radar-circle"></div> <div class="radar-circle"></div> <div class="radar-circle"></div>
             <div class="center-point"></div>
         </div>"""
-        search_steps.append({"icon": "bx-search-alt", "title": f"Step 4: POI检索", "content": search_places_explanation})
+        search_steps.append({
+            "icon": "bx-search-alt",
+            "title": "Step 4: POI Search" if language == "en" else "Step 4: POI检索",
+            "content": search_places_explanation,
+        })
 
         # Step 5: 智能评分 - 显示评分维度
         ranking_explanation = f"""
-        <p>使用 <span class='highlight-text'>V2 多维度评分系统</span> 对候选场所进行智能排序：</p>
+        <p>{'Using the <span class=\"highlight-text\">V2 multi-factor scoring system</span> to rank candidate venues:' if language == 'en' else '使用 <span class=\"highlight-text\">V2 多维度评分系统</span> 对候选场所进行智能排序：'}</p>
         <div class="ai-score-dimensions">
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">基础分</span>
-                    <span class="ai-dim-max">30分</span>
+                    <span class="ai-dim-name">{'Base score' if language == 'en' else '基础分'}</span>
+                    <span class="ai-dim-max">{'30 pts' if language == 'en' else '30分'}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 100%;"></div></div>
-                <span class="ai-dim-desc">商家评分 × 6</span>
+                <span class="ai-dim-desc">{'venue rating × 6' if language == 'en' else '商家评分 × 6'}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">距离分</span>
-                    <span class="ai-dim-max">25分</span>
+                    <span class="ai-dim-name">{'Distance score' if language == 'en' else '距离分'}</span>
+                    <span class="ai-dim-max">{'25 pts' if language == 'en' else '25分'}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 83%;"></div></div>
-                <span class="ai-dim-desc">非线性衰减，500m内满分</span>
+                <span class="ai-dim-desc">{'non-linear decay, full score within 500m' if language == 'en' else '非线性衰减，500m内满分'}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">热度分</span>
-                    <span class="ai-dim-max">20分</span>
+                    <span class="ai-dim-name">{'Popularity score' if language == 'en' else '热度分'}</span>
+                    <span class="ai-dim-max">{'20 pts' if language == 'en' else '20分'}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 67%;"></div></div>
-                <span class="ai-dim-desc">评论数(log) + 图片数</span>
+                <span class="ai-dim-desc">{'review volume (log) + photo count' if language == 'en' else '评论数(log) + 图片数'}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">场景分</span>
-                    <span class="ai-dim-max">15分</span>
+                    <span class="ai-dim-name">{'Scenario score' if language == 'en' else '场景分'}</span>
+                    <span class="ai-dim-max">{'15 pts' if language == 'en' else '15分'}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 50%;"></div></div>
-                <span class="ai-dim-desc">关键词匹配度</span>
+                <span class="ai-dim-desc">{'keyword relevance' if language == 'en' else '关键词匹配度'}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">需求分</span>
-                    <span class="ai-dim-max">10分</span>
+                    <span class="ai-dim-name">{'Requirement score' if language == 'en' else '需求分'}</span>
+                    <span class="ai-dim-max">{'10 pts' if language == 'en' else '10分'}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 33%;"></div></div>
-                <span class="ai-dim-desc">三层匹配算法</span>
+                <span class="ai-dim-desc">{'three-layer matching engine' if language == 'en' else '三层匹配算法'}</span>
             </div>
         </div>"""
-        search_steps.append({"icon": "bx-calculator", "title": "Step 5: 多维度智能评分", "content": ranking_explanation})
+        search_steps.append({
+            "icon": "bx-calculator",
+            "title": "Step 5: Multi-factor Scoring" if language == "en" else "Step 5: 多维度智能评分",
+            "content": ranking_explanation,
+        })
 
         # Step 6: 评分结果 - 显示Top 3场所的评分详情
         if places and len(places) > 0:
@@ -3427,7 +3758,7 @@ class CafeRecommender(BaseTool):
                 if matched_reqs:
                     for r in matched_reqs[:3]:
                         conf = confidence_map.get(r, 'low')
-                        req_badges += f"<span class='ai-conf-badge {conf}'>{r}</span>"
+                        req_badges += f"<span class='ai-conf-badge {conf}'>{self._translate_requirement_label(r, language)}</span>"
 
                 medal = ["🥇", "🥈", "🥉"][idx]
                 top_places_html += f"""
@@ -3440,25 +3771,33 @@ class CafeRecommender(BaseTool):
                         </div>
                     </div>
                     <div class="ai-place-breakdown">
-                        <span title="基础分">⭐{base:.0f}</span>
-                        <span title="距离分">📍{dist:.0f}</span>
-                        <span title="热度分">🔥{pop:.0f}</span>
-                        <span title="场景分">🎯{scene:.0f}</span>
-                        <span title="需求分">✓{req:.0f}</span>
+                        <span title="{'Base score' if language == 'en' else '基础分'}">⭐{base:.0f}</span>
+                        <span title="{'Distance score' if language == 'en' else '距离分'}">📍{dist:.0f}</span>
+                        <span title="{'Popularity score' if language == 'en' else '热度分'}">🔥{pop:.0f}</span>
+                        <span title="{'Scenario score' if language == 'en' else '场景分'}">🎯{scene:.0f}</span>
+                        <span title="{'Requirement score' if language == 'en' else '需求分'}">✓{req:.0f}</span>
                     </div>
                     {f'<div class="ai-place-reqs">{req_badges}</div>' if req_badges else ''}
                 </div>"""
             top_places_html += "</div>"
             search_steps.append({
                 "icon": "bx-trophy",
-                "title": "Step 6: 推荐结果",
-                "content": f"<p>经过智能评分，为您推荐以下最佳会面地点：</p>{top_places_html}"
+                "title": "Step 6: Final Recommendations" if language == "en" else "Step 6: 推荐结果",
+                "content": (
+                    f"<p>After scoring all candidates, MeetSpot recommends these top meeting options:</p>{top_places_html}"
+                    if language == "en"
+                    else f"<p>经过智能评分，为您推荐以下最佳会面地点：</p>{top_places_html}"
+                ),
             })
         else:
             search_steps.append({
                 "icon": "bx-trophy",
-                "title": "Step 6: 推荐结果",
-                "content": f"<p>正在生成{cfg['noun_plural']}推荐结果...</p>"
+                "title": "Step 6: Final Recommendations" if language == "en" else "Step 6: 推荐结果",
+                "content": (
+                    f"<p>Generating {cfg['noun_plural']} recommendations...</p>"
+                    if language == "en"
+                    else f"<p>正在生成{cfg['noun_plural']}推荐结果...</p>"
+                ),
             }) 
 
         search_process_html = ""
@@ -3493,14 +3832,14 @@ class CafeRecommender(BaseTool):
                     </div>
                     <div class="ai-thinking-content">
                         <div class="ai-thinking-header">
-                            <span class="ai-thinking-title">AI 搜索过程</span>
+                            <span class="ai-thinking-title">{'AI Search Process' if language == 'en' else 'AI 搜索过程'}</span>
                             <span class="ai-thinking-badge">Explainable</span>
                         </div>
-                        <span class="ai-thinking-hint">点击展开 Agent 思维链可视化</span>
+                        <span class="ai-thinking-hint">{'Expand to inspect the agent reasoning flow' if language == 'en' else '点击展开 Agent 思维链可视化'}</span>
                     </div>
                     <div class="ai-thinking-expand">
-                        <span class="expand-text">展开</span>
-                        <span class="collapse-text">收起</span>
+                        <span class="expand-text">{'Expand' if language == 'en' else '展开'}</span>
+                        <span class="collapse-text">{'Collapse' if language == 'en' else '收起'}</span>
                         <i class='bx bx-chevron-down ai-thinking-arrow'></i>
                     </div>
                 </summary>
@@ -3508,4 +3847,3 @@ class CafeRecommender(BaseTool):
             </details>
             {search_process_javascript}
         </div>"""
-

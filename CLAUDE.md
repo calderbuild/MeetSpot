@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MeetSpot is an **AI Agent** for multi-person meeting point recommendations. Users provide locations and requirements; the Agent calculates the geographic center and recommends optimal venues. Built with FastAPI and Python 3.11+, uses Amap (Gaode Map) API for geocoding/POI search, and DeepSeek/GPT-4o-mini for semantic scoring.
 
 **Live Demo**: https://meetspot-irq2.onrender.com
+**Video Demo**: https://www.bilibili.com/video/BV1aUK7zNEvo/
+**Contact**: Johnrobertdestiny@gmail.com | [Blog](http://calderbuild.github.io/) | [@CalderBuild](https://twitter.com/CalderBuild)
 
 ## Quick Reference
 
@@ -117,11 +119,31 @@ Final Score = Rule Score * 0.4 + LLM Score * 0.6
 ```
 Agent Mode is currently disabled (`agent_available = False`) to conserve memory on free hosting tiers.
 
+### Token Counting
+
+`app/llm.py` uses UTF-8 byte length estimation (`len(text.encode("utf-8")) // 3`) instead of tiktoken. This avoids loading tiktoken's ~80MB model data. Precision is sufficient for internal token limit checks -- not used for billing or exact truncation.
+
+### i18n System
+
+Lightweight JSON-based translations in `app/i18n.py`. Supported languages: `zh` (default), `en`. Translation files: `locales/{lang}.json`.
+
+Language detection priority in `detect_language()`: URL prefix (`/en/`) > Cookie (`lang`) > `Accept-Language` header > default `zh`.
+
+To add a new language: create `locales/{lang}.json` with all keys from `locales/zh.json`, then add the lang code to `SUPPORTED_LANGS` in `app/i18n.py`.
+
+### Concurrency & Memory Budget
+
+`MAX_CONCURRENT_REQUESTS = 3` semaphore in `api/index.py` prevents OOM on Render's 512MB free tier. Rate limiting via slowapi. Agent mode disabled (`agent_available = False`) for the same reason. If re-enabling Agent mode or raising concurrency, monitor memory on the hosting tier.
+
 ### Optional Components
 
-Database layer (`app/db/`, `app/models/`) is optional - core recommendation works without it. Used for auth/social features with SQLite + aiosqlite.
+Database layer (`app/db/`, `app/models/`) is optional -- core recommendation works without it. Used for auth/payment/social features. Supports PostgreSQL (Supabase via asyncpg, with pgbouncer transaction mode hardening) as primary, SQLite + aiosqlite as local fallback. Controlled by `DATABASE_URL` env var in `app/db/database.py`.
 
-Experimental agent endpoint (`/api/find_meetspot_agent`) requires OpenManus framework - **not production-ready**.
+Payment integration: 302.ai checkout via `api/routers/payment.py`. Config: `PAY302_APP_ID`, `PAY302_SECRET`, `PAY302_API_URL` env vars. Free daily limit (`FREE_DAILY_LIMIT`, default 1) + credit purchase system (`CREDIT_PRICE_CENTS`, `CREDITS_PER_PURCHASE`). Signature verification in `app/payment/signature.py`.
+
+API routers: `api/routers/auth.py` (authentication), `api/routers/payment.py` (payments), `api/routers/seo_pages.py` (SEO landing pages).
+
+Experimental agent endpoint (`/api/find_meetspot_agent`) requires OpenManus framework -- **not production-ready**.
 
 ## Key Patterns
 
@@ -184,8 +206,11 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 | Wrong city geocoding | Add to `_enhance_address()` alias dict with city prefix |
 | Empty POI results | Fallback mechanism handles this automatically |
 | SSR 页面 env var 读取为空 | 勿用 `templates.env.globals["key"] = os.getenv(...)` (模块导入时求值)；改用 `TemplateResponse` context 字典在每次请求时动态传入 (见 `_common_context()` in `api/routers/seo_pages.py`) |
-| Render OOM (512MB) | Caches are reduced (30/15 limits); Agent mode disabled |
+| Render OOM (512MB) | Heavy deps removed (jieba/tiktoken); caches reduced (30/15 limits); Agent mode disabled. If OOM recurs, check `pip list` for new heavy imports |
 | Render service down | Trigger redeploy: `git commit --allow-empty -m "trigger redeploy" && git push` |
+| Amap API quota exceeded | Free tier: 5000 calls/day. Check usage at https://console.amap.com/dev/flow/manage |
+| Frontend map not loading | Verify `AMAP_SECURITY_JS_CODE` is set for JS API security verification |
+| asyncpg + pgbouncer errors | `app/db/database.py` disables prepared statement cache and uses dynamic statement names. If adding raw SQL, avoid named prepared statements |
 
 **Logging**: Uses loguru via `app/logger.py`. `/health` endpoint shows config status.
 

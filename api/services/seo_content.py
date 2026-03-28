@@ -60,13 +60,22 @@ class SEOContentGenerator:
             city = data.get("city", "未知城市")
             keyword = data.get("keyword", "聚会地点")
             count = data.get("locations_count", 2)
-            title = f"{city}{keyword}推荐 - {count}人聚会 | MeetSpot"
-            description = (
-                f"{city} {count} 人{keyword}推荐，"
-                f"MeetSpot 根据所有参与者位置计算公平中点，"
-                f"智能推荐评分最高的{keyword}。"
-            )
-            keywords = f"{city},{keyword},聚会地点推荐,中点计算"
+            lang = data.get("lang", "zh")
+            if lang == "en":
+                title = f"{city} {keyword} for {count} People | MeetSpot"
+                description = (
+                    f"MeetSpot finds fair {keyword} options in {city} for {count} people "
+                    f"by calculating the shared midpoint and highlighting top-rated venues."
+                )
+                keywords = f"{city},{keyword},meeting point,midpoint,group meetup"
+            else:
+                title = f"{city}{keyword}推荐 - {count}人聚会 | MeetSpot"
+                description = (
+                    f"{city} {count} 人{keyword}推荐，"
+                    f"MeetSpot 根据所有参与者位置计算公平中点，"
+                    f"智能推荐评分最高的{keyword}。"
+                )
+                keywords = f"{city},{keyword},聚会地点推荐,中点计算"
         else:
             title = "MeetSpot 聚点 - 智能聚会地点推荐"
             description = "MeetSpot 通过公平的中点计算，为多人聚会推荐最佳会面地点。"

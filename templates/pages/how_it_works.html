@@ -1,341 +1,358 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <style>
-    .guide-hero {
-        background: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-dark) 100%);
-        color: white;
-        padding: 48px;
-        border-radius: 24px;
-        text-align: center;
-        margin-bottom: 40px;
-        position: relative;
-        overflow: hidden;
-    }
+  .guide-hero {
+    background: linear-gradient(
+      135deg,
+      var(--nav-primary) 0%,
+      var(--nav-dark) 100%
+    );
+    color: white;
+    padding: 48px;
+    border-radius: 24px;
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
 
-    .guide-hero::before {
-        content: '';
-        position: absolute;
-        top: -100px;
-        left: -100px;
-        right: -100px;
-        bottom: -100px;
-        background-image:
-            repeating-radial-gradient(circle at 20% 30%, transparent 0, transparent 30px, rgba(6, 214, 160, 0.08) 30px, rgba(6, 214, 160, 0.08) 32px);
-        animation: heroPattern 30s linear infinite;
-        pointer-events: none;
-        will-change: transform;
-    }
+  .guide-hero::before {
+    content: "";
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    right: -100px;
+    bottom: -100px;
+    background-image: repeating-radial-gradient(
+      circle at 20% 30%,
+      transparent 0,
+      transparent 30px,
+      rgba(6, 214, 160, 0.08) 30px,
+      rgba(6, 214, 160, 0.08) 32px
+    );
+    animation: heroPattern 30s linear infinite;
+    pointer-events: none;
+    will-change: transform;
+  }
 
-    /* GPU-accelerated animation using transform instead of background-position */
-    @keyframes heroPattern {
-        0% { transform: translate(0, 0); }
-        100% { transform: translate(100px, 100px); }
+  /* GPU-accelerated animation using transform instead of background-position */
+  @keyframes heroPattern {
+    0% {
+      transform: translate(0, 0);
     }
-
-    .guide-hero h1 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        font-size: 2.5rem;
-        margin-bottom: 16px;
-        position: relative;
-        z-index: 1;
+    100% {
+      transform: translate(100px, 100px);
     }
+  }
 
-    .guide-hero p {
-        font-size: 1.2rem;
-        opacity: 0.95;
-        max-width: 600px;
-        margin: 0 auto;
-        position: relative;
-        z-index: 1;
-    }
+  .guide-hero h1 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+  }
 
-    .steps-container {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-    }
+  .guide-hero p {
+    font-size: 1.2rem;
+    opacity: 0.95;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
 
+  .steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .step-card {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(10, 77, 104, 0.1);
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+  }
+
+  .step-card:hover {
+    border-color: var(--nav-secondary);
+    transform: translateY(-2px);
+  }
+
+  .step-number {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--nav-accent) 0%, #d84315 100%);
+    color: white;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Outfit", sans-serif;
+    font-weight: 900;
+    font-size: 1.5rem;
+  }
+
+  .step-content h3 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    color: var(--nav-dark);
+    margin-bottom: 12px;
+    font-size: 1.4rem;
+  }
+
+  .step-content p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+
+  .step-tips {
+    background: rgba(240, 247, 244, 0.8);
+    padding: 16px;
+    border-radius: 12px;
+    margin-top: 16px;
+    border-left: 4px solid var(--nav-secondary);
+  }
+
+  .step-tips strong {
+    color: var(--nav-primary);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .step-tips ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-secondary);
+  }
+
+  .step-tips li {
+    margin-bottom: 6px;
+  }
+
+  .advanced-section {
+    background: white;
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+    margin-top: 40px;
+    border: 1px solid rgba(10, 77, 104, 0.1);
+  }
+
+  .advanced-section h2 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    color: var(--nav-dark);
+    margin-bottom: 24px;
+    font-size: 1.8rem;
+  }
+
+  .feature-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .feature-item {
+    padding: 20px;
+    background: rgba(240, 247, 244, 0.5);
+    border-radius: 16px;
+    border: 1px solid rgba(10, 77, 104, 0.1);
+  }
+
+  .feature-item h4 {
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    color: var(--nav-primary);
+    margin-bottom: 8px;
+  }
+
+  .feature-item p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .cta-section {
+    background: linear-gradient(
+      135deg,
+      var(--nav-primary) 0%,
+      var(--nav-dark) 100%
+    );
+    color: white;
+    padding: 40px;
+    border-radius: 24px;
+    text-align: center;
+    margin-top: 40px;
+  }
+
+  .cta-section h2 {
+    color: white;
+    font-family: "Outfit", sans-serif;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .cta-section p {
+    opacity: 0.95;
+    margin-bottom: 24px;
+  }
+
+  .cta-btn {
+    display: inline-block;
+    padding: 16px 40px;
+    background: linear-gradient(135deg, var(--nav-accent) 0%, #d84315 100%);
+    color: white;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-family: "Outfit", sans-serif;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+  }
+
+  .cta-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(255, 107, 53, 0.5);
+    color: white;
+  }
+
+  @media (max-width: 640px) {
     .step-card {
-        background: white;
-        border-radius: 24px;
-        padding: 32px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
-        border: 1px solid rgba(10, 77, 104, 0.1);
-        display: flex;
-        gap: 24px;
-        align-items: flex-start;
-        transition: all 0.3s ease;
+      flex-direction: column;
     }
-
-    .step-card:hover {
-        border-color: var(--nav-secondary);
-        transform: translateY(-2px);
-    }
-
-    .step-number {
-        flex-shrink: 0;
-        width: 56px;
-        height: 56px;
-        background: linear-gradient(135deg, var(--nav-accent) 0%, #D84315 100%);
-        color: white;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: "Outfit", sans-serif;
-        font-weight: 900;
-        font-size: 1.5rem;
-    }
-
-    .step-content h3 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-        color: var(--nav-dark);
-        margin-bottom: 12px;
-        font-size: 1.4rem;
-    }
-
-    .step-content p {
-        color: var(--text-secondary);
-        line-height: 1.8;
-        margin-bottom: 12px;
-    }
-
-    .step-tips {
-        background: rgba(240, 247, 244, 0.8);
-        padding: 16px;
-        border-radius: 12px;
-        margin-top: 16px;
-        border-left: 4px solid var(--nav-secondary);
-    }
-
-    .step-tips strong {
-        color: var(--nav-primary);
-        display: block;
-        margin-bottom: 8px;
-    }
-
-    .step-tips ul {
-        margin: 0;
-        padding-left: 20px;
-        color: var(--text-secondary);
-    }
-
-    .step-tips li {
-        margin-bottom: 6px;
-    }
-
-    .advanced-section {
-        background: white;
-        border-radius: 24px;
-        padding: 40px;
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
-        margin-top: 40px;
-        border: 1px solid rgba(10, 77, 104, 0.1);
-    }
-
-    .advanced-section h2 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-        color: var(--nav-dark);
-        margin-bottom: 24px;
-        font-size: 1.8rem;
-    }
-
-    .feature-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
-    }
-
-    .feature-item {
-        padding: 20px;
-        background: rgba(240, 247, 244, 0.5);
-        border-radius: 16px;
-        border: 1px solid rgba(10, 77, 104, 0.1);
-    }
-
-    .feature-item h4 {
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-        color: var(--nav-primary);
-        margin-bottom: 8px;
-    }
-
-    .feature-item p {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        margin: 0;
-        line-height: 1.6;
-    }
-
-    .cta-section {
-        background: linear-gradient(135deg, var(--nav-primary) 0%, var(--nav-dark) 100%);
-        color: white;
-        padding: 40px;
-        border-radius: 24px;
-        text-align: center;
-        margin-top: 40px;
-    }
-
-    .cta-section h2 {
-        color: white;
-        font-family: "Outfit", sans-serif;
-        font-weight: 700;
-        margin-bottom: 16px;
-    }
-
-    .cta-section p {
-        opacity: 0.95;
-        margin-bottom: 24px;
-    }
-
-    .cta-btn {
-        display: inline-block;
-        padding: 16px 40px;
-        background: linear-gradient(135deg, var(--nav-accent) 0%, #D84315 100%);
-        color: white;
-        border-radius: 999px;
-        text-decoration: none;
-        font-weight: 700;
-        font-family: "Outfit", sans-serif;
-        font-size: 1.1rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
-    }
-
-    .cta-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 32px rgba(255, 107, 53, 0.5);
-        color: white;
-    }
-
-    @media (max-width: 640px) {
-        .step-card {
-            flex-direction: column;
-        }
-    }
+  }
 </style>
 
 <div class="guide-hero">
-    <h1>{{ t['how.hero_title'] }}</h1>
-    <p>{{ t['how.hero_desc'] }}</p>
+  <h1>{{ t['how.hero_title'] }}</h1>
+  <p>{{ t['how.hero_desc'] }}</p>
 </div>
 
 <div class="steps-container">
-    <div class="step-card">
-        <div class="step-number">1</div>
-        <div class="step-content">
-            <h3>{{ t['how.step1_title'] }}</h3>
-            <p>{{ t['how.step1_desc'] }}</p>
-            <div class="step-tips">
-                <strong>{{ t['how.step1_tips_label'] }}</strong>
-                <ul>
-                    <li>{{ t['how.step1_tip1'] }}</li>
-                    <li>{{ t['how.step1_tip2'] }}</li>
-                    <li>{{ t['how.step1_tip3'] }}</li>
-                </ul>
-            </div>
-        </div>
+  <div class="step-card">
+    <div class="step-number">1</div>
+    <div class="step-content">
+      <h3>{{ t['how.step1_title'] }}</h3>
+      <p>{{ t['how.step1_desc'] }}</p>
+      <div class="step-tips">
+        <strong>{{ t['how.step1_tips_label'] }}</strong>
+        <ul>
+          <li>{{ t['how.step1_tip1'] }}</li>
+          <li>{{ t['how.step1_tip2'] }}</li>
+          <li>{{ t['how.step1_tip3'] }}</li>
+        </ul>
+      </div>
     </div>
+  </div>
 
-    <div class="step-card">
-        <div class="step-number">2</div>
-        <div class="step-content">
-            <h3>{{ t['how.step2_title'] }}</h3>
-            <p>{{ t['how.step2_desc'] }}</p>
-            <div class="step-tips">
-                <strong>{{ t['how.step2_tips_label'] }}</strong>
-                <ul>
-                    <li>{{ t['how.step2_tip1'] }}</li>
-                    <li>{{ t['how.step2_tip2'] }}</li>
-                    <li>{{ t['how.step2_tip3'] }}</li>
-                    <li>{{ t['how.step2_tip4'] }}</li>
-                </ul>
-            </div>
-        </div>
+  <div class="step-card">
+    <div class="step-number">2</div>
+    <div class="step-content">
+      <h3>{{ t['how.step2_title'] }}</h3>
+      <p>{{ t['how.step2_desc'] }}</p>
+      <div class="step-tips">
+        <strong>{{ t['how.step2_tips_label'] }}</strong>
+        <ul>
+          <li>{{ t['how.step2_tip1'] }}</li>
+          <li>{{ t['how.step2_tip2'] }}</li>
+          <li>{{ t['how.step2_tip3'] }}</li>
+          <li>{{ t['how.step2_tip4'] }}</li>
+        </ul>
+      </div>
     </div>
+  </div>
 
-    <div class="step-card">
-        <div class="step-number">3</div>
-        <div class="step-content">
-            <h3>{{ t['how.step3_title'] }}</h3>
-            <p>{{ t['how.step3_desc'] }}</p>
-            <div class="step-tips">
-                <strong>{{ t['how.step3_tips_label'] }}</strong>
-                <ul>
-                    <li>{{ t['how.step3_tip1'] }}</li>
-                    <li>{{ t['how.step3_tip2'] }}</li>
-                    <li>{{ t['how.step3_tip3'] }}</li>
-                    <li>{{ t['how.step3_tip4'] }}</li>
-                </ul>
-            </div>
-        </div>
+  <div class="step-card">
+    <div class="step-number">3</div>
+    <div class="step-content">
+      <h3>{{ t['how.step3_title'] }}</h3>
+      <p>{{ t['how.step3_desc'] }}</p>
+      <div class="step-tips">
+        <strong>{{ t['how.step3_tips_label'] }}</strong>
+        <ul>
+          <li>{{ t['how.step3_tip1'] }}</li>
+          <li>{{ t['how.step3_tip2'] }}</li>
+          <li>{{ t['how.step3_tip3'] }}</li>
+          <li>{{ t['how.step3_tip4'] }}</li>
+        </ul>
+      </div>
     </div>
+  </div>
 
-    <div class="step-card">
-        <div class="step-number">4</div>
-        <div class="step-content">
-            <h3>{{ t['how.step4_title'] }}</h3>
-            <p>{{ t['how.step4_desc'] }}</p>
-            <div class="step-tips">
-                <strong>{{ t['how.step4_tips_label'] }}</strong>
-                <ul>
-                    <li>{{ t['how.step4_tip1'] | safe }}</li>
-                    <li>{{ t['how.step4_tip2'] | safe }}</li>
-                    <li>{{ t['how.step4_tip3'] | safe }}</li>
-                    <li>{{ t['how.step4_tip4'] | safe }}</li>
-                    <li>{{ t['how.step4_tip5'] | safe }}</li>
-                </ul>
-            </div>
-        </div>
+  <div class="step-card">
+    <div class="step-number">4</div>
+    <div class="step-content">
+      <h3>{{ t['how.step4_title'] }}</h3>
+      <p>{{ t['how.step4_desc'] }}</p>
+      <div class="step-tips">
+        <strong>{{ t['how.step4_tips_label'] }}</strong>
+        <ul>
+          <li>{{ t['how.step4_tip1'] | safe }}</li>
+          <li>{{ t['how.step4_tip2'] | safe }}</li>
+          <li>{{ t['how.step4_tip3'] | safe }}</li>
+          <li>{{ t['how.step4_tip4'] | safe }}</li>
+          <li>{{ t['how.step4_tip5'] | safe }}</li>
+        </ul>
+      </div>
     </div>
+  </div>
 
-    <div class="step-card">
-        <div class="step-number">5</div>
-        <div class="step-content">
-            <h3>{{ t['how.step5_title'] }}</h3>
-            <p>{{ t['how.step5_desc'] }}</p>
-            <div class="step-tips">
-                <strong>{{ t['how.step5_tips_label'] }}</strong>
-                <ul>
-                    <li>{{ t['how.step5_tip1'] }}</li>
-                    <li>{{ t['how.step5_tip2'] }}</li>
-                    <li>{{ t['how.step5_tip3'] }}</li>
-                    <li>{{ t['how.step5_tip4'] }}</li>
-                </ul>
-            </div>
-        </div>
+  <div class="step-card">
+    <div class="step-number">5</div>
+    <div class="step-content">
+      <h3>{{ t['how.step5_title'] }}</h3>
+      <p>{{ t['how.step5_desc'] }}</p>
+      <div class="step-tips">
+        <strong>{{ t['how.step5_tips_label'] }}</strong>
+        <ul>
+          <li>{{ t['how.step5_tip1'] }}</li>
+          <li>{{ t['how.step5_tip2'] }}</li>
+          <li>{{ t['how.step5_tip3'] }}</li>
+          <li>{{ t['how.step5_tip4'] }}</li>
+        </ul>
+      </div>
     </div>
+  </div>
 </div>
 
 <section class="advanced-section">
-    <h2>{{ t['how.advanced_title'] }}</h2>
-    <div class="feature-list">
-        <div class="feature-item">
-            <h4>{{ t['how.adv_geo_title'] }}</h4>
-            <p>{{ t['how.adv_geo_desc'] }}</p>
-        </div>
-        <div class="feature-item">
-            <h4>{{ t['how.adv_gpt_title'] }}</h4>
-            <p>{{ t['how.adv_gpt_desc'] }}</p>
-        </div>
-        <div class="feature-item">
-            <h4>{{ t['how.adv_uni_title'] }}</h4>
-            <p>{{ t['how.adv_uni_desc'] }}</p>
-        </div>
-        <div class="feature-item">
-            <h4>{{ t['how.adv_themes_title'] }}</h4>
-            <p>{{ t['how.adv_themes_desc'] }}</p>
-        </div>
+  <h2>{{ t['how.advanced_title'] }}</h2>
+  <div class="feature-list">
+    <div class="feature-item">
+      <h4>{{ t['how.adv_geo_title'] }}</h4>
+      <p>{{ t['how.adv_geo_desc'] }}</p>
     </div>
+    <div class="feature-item">
+      <h4>{{ t['how.adv_gpt_title'] }}</h4>
+      <p>{{ t['how.adv_gpt_desc'] }}</p>
+    </div>
+    <div class="feature-item">
+      <h4>{{ t['how.adv_uni_title'] }}</h4>
+      <p>{{ t['how.adv_uni_desc'] }}</p>
+    </div>
+    <div class="feature-item">
+      <h4>{{ t['how.adv_themes_title'] }}</h4>
+      <p>{{ t['how.adv_themes_desc'] }}</p>
+    </div>
+  </div>
 </section>
 
 <section class="cta-section">
-    <h2>{{ t['how.cta_title'] }}</h2>
-    <p>{{ t['how.cta_desc'] }}</p>
-    <a href="/public/meetspot_finder.html" class="cta-btn">{{ t['how.cta_btn'] }}</a>
+  <h2>{{ t['how.cta_title'] }}</h2>
+  <p>{{ t['how.cta_desc'] }}</p>
+  <a href="/public/meetspot_finder.html?lang={{ lang }}" class="cta-btn"
+    >{{ t['how.cta_btn'] }}</a
+  >
 </section>
 {% endblock %}

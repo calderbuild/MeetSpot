@@ -175,34 +175,26 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     if not order_id:
         raise HTTPException(status_code=400, detail="缺少 order_id")
 
-    # 通过 order_id 查找本地订单
-    order = await payment_crud.get_order_by_id(db, order_id)
-    if not order:
-        raise HTTPException(status_code=404, detail="订单不存在")
-
-    # 幂等：已处理过的订单直接返回成功
-    if order.status == "paid":
-        return {"success": True, "message": "已处理"}
-
     status_str = _PAY_STATUS_MAP.get(payment_status_code, "failed")
 
     if status_str == "paid":
-        order.status = "paid"
-        order.pay302_payment_order = pay302_payment_order
-        from datetime import datetime
-        order.paid_at = datetime.utcnow()
-        await db.commit()
-
-        await payment_crud.add_credits(
-            db,
-            user_identifier=order.user_identifier,
-            amount=order.credits,
-            order_id=order.id,
-            description=f"购买 {order.credits} credits",
+        # 事务+行锁+流水幂等检查，避免并发回调重复加币
+        order = await payment_crud.mark_order_paid_and_grant_credits(
+            db=db,
+            order_id=order_id,
+            pay302_payment_order=pay302_payment_order,
+            description="302 webhook 支付成功入账",
         )
+        if not order:
+            raise HTTPException(status_code=404, detail="订单不存在")
     else:
-        order.status = status_str
-        await db.commit()
+        order = await payment_crud.mark_order_status_if_unpaid(
+            db=db,
+            order_id=order_id,
+            status=status_str,
+        )
+        if not order:
+            raise HTTPException(status_code=404, detail="订单不存在")
 
     # 必须返回 200 OK 告诉 302 平台已收到
     return {"success": True}

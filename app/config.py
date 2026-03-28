@@ -42,7 +42,13 @@ class SearchSettings(BaseModel):
 class AMapSettings(BaseModel):
     """高德地图API配置"""
     api_key: str = Field(..., description="高德地图API密钥")
-    web_api_key: Optional[str] = Field(None, description="高德地图JavaScript API密钥")
+    js_api_key: Optional[str] = Field(None, description="高德地图JavaScript API密钥")
+    security_js_code: Optional[str] = Field(None, description="高德地图JavaScript API安全密钥")
+
+    @property
+    def web_api_key(self) -> Optional[str]:
+        """兼容历史字段名。"""
+        return self.js_api_key
 
 
 class BrowserSettings(BaseModel):
@@ -190,6 +196,8 @@ class Config:
         import os
         openai_api_key = os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", "")
         amap_api_key = os.getenv("AMAP_API_KEY", "")
+        amap_js_api_key = os.getenv("AMAP_JS_API_KEY", "")
+        amap_security_js_code = os.getenv("AMAP_SECURITY_JS_CODE", "")
         # 支持 Render 部署的环境变量配置
         llm_base_url = os.getenv("LLM_API_BASE", "") or base_llm.get("base_url", "")
         llm_model = os.getenv("LLM_MODEL", "") or base_llm.get("model", "gpt-3.5-turbo")
@@ -259,10 +267,23 @@ class Config:
         if amap_api_key:
             amap_settings = AMapSettings(
                 api_key=amap_api_key,
-                security_js_code=os.getenv("AMAP_SECURITY_JS_CODE", amap_config.get("security_js_code", ""))
+                js_api_key=(
+                    amap_js_api_key
+                    or amap_config.get("js_api_key", "")
+                    or amap_config.get("web_api_key", "")
+                ),
+                security_js_code=amap_security_js_code or amap_config.get("security_js_code", ""),
             )
         elif amap_config and amap_config.get("api_key"):
-            amap_settings = AMapSettings(**amap_config)
+            amap_settings = AMapSettings(
+                api_key=amap_config.get("api_key", ""),
+                js_api_key=(
+                    amap_js_api_key
+                    or amap_config.get("js_api_key", "")
+                    or amap_config.get("web_api_key", "")
+                ),
+                security_js_code=amap_security_js_code or amap_config.get("security_js_code", ""),
+            )
 
         config_dict = {
             "llm": {
