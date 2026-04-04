@@ -1,0 +1,27 @@
+id: PM-2026-015
+created_at: '2026-04-04T16:03:04.680385+00:00'
+source_commit: 02448ef
+severity: medium
+title: resolve flake8 E999 backslash-in-fstring syntax er
+description: 'Python 3.11 flake8 rejects backslash escapes inside f-string expressions.
+
+  Extract conditional strings into variables before interpolation.'
+root_cause: See commit body for details
+triggers:
+  files:
+  - app/tool/meetspot_recommender.py
+  functions:
+  - _get_llm
+  patterns: []
+  keywords: &id001
+  - ci
+fix_pattern:
+  approach: resolve flake8 E999 backslash-in-fstring syntax error
+  key_changes:
+  - resolve flake8 E999 backslash-in-fstring syntax error
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - app/tool/meetspot_recommender.py
+tags: *id001
