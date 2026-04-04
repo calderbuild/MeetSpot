@@ -1,0 +1,47 @@
+id: PM-2026-014
+created_at: '2026-04-04T15:41:07.393281+00:00'
+source_commit: 690e609
+severity: medium
+title: comprehensive SEO and AI SEO audit fixes
+description: 'Technical SEO fixes:
+
+  - Fix sitemap 404: /en/public/meetspot_finder.html now uses ?lang=en
+
+  - Fix About page meta description using wrong i18n key (seo.home -> seo.about)
+
+  - Replace sitemap datetime.now() with static CONTENT_DATES
+
+  - Clean robots.txt: remove Crawl-delay, fix /*.json$, add Google-Extende'
+root_cause: See commit body for details
+triggers:
+  files:
+  - .github/workflows/lighthouse-ci.yml
+  - api/routers/seo_pages.py
+  - api/services/seo_content.py
+  - locales/en.json
+  - locales/zh.json
+  functions:
+  - _render_homepage
+  - _render_about
+  - _render_compare
+  - _hreflang_links
+  - faq_page_en
+  patterns: []
+  keywords: &id001
+  - seo
+fix_pattern:
+  approach: comprehensive SEO and AI SEO audit fixes
+  key_changes:
+  - comprehensive SEO and AI SEO audit fixes
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - .github/workflows/lighthouse-ci.yml
+  - api/routers/seo_pages.py
+  - api/services/seo_content.py
+  - locales/en.json
+  - locales/zh.json
+  - public/meetspot_finder.html
+  - templates/base.html
+tags: *id001
