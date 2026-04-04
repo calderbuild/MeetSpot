@@ -3,6 +3,7 @@
 负责关键词提取、Meta标签、结构化数据以及城市内容片段生成。
 该模块与Jinja2模板配合, 为SSR页面提供语义化上下文。
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -117,7 +118,8 @@ class SEOContentGenerator:
                 "@type": "WebSite",
                 "name": "MeetSpot",
                 "url": base_url + "/",
-                "inLanguage": "zh-CN",
+                "inLanguage": ["zh-CN", "en"],
+                "alternateName": "MeetSpot 聚点",
             }
         if page_type == "organization":
             return {
@@ -220,11 +222,75 @@ class SEOContentGenerator:
                     for idx, item in enumerate(items)
                 ],
             }
+        if page_type == "compare":
+            return {
+                "@context": "https://schema.org",
+                "@type": "ItemList",
+                "name": data.get("name", "Meeting Point Selection Methods"),
+                "description": data.get(
+                    "description",
+                    "Comparison of different methods for choosing group meeting locations",
+                ),
+                "numberOfItems": 3,
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": data.get("item1", "Group Chat Discussion"),
+                        "description": data.get(
+                            "item1_desc",
+                            "Manual group negotiation, time-consuming and often unfair",
+                        ),
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": data.get("item2", "One Person Decides"),
+                        "description": data.get(
+                            "item2_desc",
+                            "Fast but biased toward the decision maker's location",
+                        ),
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": "MeetSpot",
+                        "description": data.get(
+                            "item3_desc",
+                            "AI-powered spherical geometry midpoint calculation, mathematically fair for all participants",
+                        ),
+                        "url": base_url + "/",
+                    },
+                ],
+            }
+        if page_type == "city":
+            city_name = data.get("name", "")
+            city_en = data.get("name_en", "")
+            coords = data.get("coordinates", {})
+            return {
+                "@context": "https://schema.org",
+                "@type": "City",
+                "name": city_name,
+                "alternateName": city_en,
+                "geo": {
+                    "@type": "GeoCoordinates",
+                    "latitude": coords.get("lat"),
+                    "longitude": coords.get("lng"),
+                },
+                "containedInPlace": {
+                    "@type": "Country",
+                    "name": "China",
+                },
+                "description": data.get("description", ""),
+            }
         return {}
 
-    def generate_city_content(self, city_data: Dict, lang: str = "zh") -> Dict[str, str]:
+    def generate_city_content(
+        self, city_data: Dict, lang: str = "zh"
+    ) -> Dict[str, str]:
         """生成城市页面内容块, 使用丰富的城市数据."""
         from app.i18n import get_translations
+
         t = get_translations(lang)
 
         city = city_data.get("name", "")
@@ -241,19 +307,33 @@ class SEOContentGenerator:
         popular_venues = city_data.get("popular_venues", [])
 
         # 生成地标标签
-        landmarks_html = "".join(
-            f'<span class="tag tag-landmark">{lm}</span>' for lm in landmarks[:5]
-        ) if landmarks else ""
+        landmarks_html = (
+            "".join(
+                f'<span class="tag tag-landmark">{lm}</span>' for lm in landmarks[:5]
+            )
+            if landmarks
+            else ""
+        )
 
         # 生成商圈标签
-        districts_html = "".join(
-            f'<span class="tag tag-district">{d}</span>' for d in business_districts[:4]
-        ) if business_districts else ""
+        districts_html = (
+            "".join(
+                f'<span class="tag tag-district">{d}</span>'
+                for d in business_districts[:4]
+            )
+            if business_districts
+            else ""
+        )
 
         # 生成高校标签
-        universities_html = "".join(
-            f'<span class="tag tag-university">{u}</span>' for u in university_clusters[:4]
-        ) if university_clusters else ""
+        universities_html = (
+            "".join(
+                f'<span class="tag tag-university">{u}</span>'
+                for u in university_clusters[:4]
+            )
+            if university_clusters
+            else ""
+        )
 
         # 生成使用场景卡片
         use_cases_html = ""
@@ -262,37 +342,51 @@ class SEOContentGenerator:
             for uc in use_cases[:3]:
                 scenario = uc.get("scenario", "")
                 example = uc.get("example", "")
-                cases_items += f'''
+                cases_items += f"""
                 <div class="use-case-card">
                     <h4>{scenario}</h4>
                     <p>{example}</p>
-                </div>'''
-            section_title = t.get("city.use_cases_title", "").replace("{city}", city_display)
-            use_cases_html = f'''
+                </div>"""
+            section_title = t.get("city.use_cases_title", "").replace(
+                "{city}", city_display
+            )
+            use_cases_html = f"""
             <section class="use-cases">
                 <h2>{section_title}</h2>
                 <div class="use-cases-grid">{cases_items}</div>
-            </section>'''
+            </section>"""
 
         # 生成场所类型
         joiner = ", " if lang == "en" else "、"
-        venues_html = joiner.join(popular_venues[:4]) if popular_venues else ("cafes, restaurants" if lang == "en" else "咖啡馆、餐厅")
+        venues_html = (
+            joiner.join(popular_venues[:4])
+            if popular_venues
+            else ("cafes, restaurants" if lang == "en" else "咖啡馆、餐厅")
+        )
 
         # Helper to resolve template strings
         def _t(key: str) -> str:
-            return t.get(key, key).replace("{city}", city_display).replace("{count}", str(metro_lines)).replace("{venues}", venues_html)
+            return (
+                t.get(key, key)
+                .replace("{city}", city_display)
+                .replace("{count}", str(metro_lines))
+                .replace("{venues}", venues_html)
+            )
 
-        intro_title = f"{city_display} Meeting Point Finder - {city_en}" if lang == "en" else f"{city}聚会地点推荐 - {city_en}"
+        intro_title = (
+            f"{city_display} Meeting Point Finder - {city_en}"
+            if lang == "en"
+            else f"{city}聚会地点推荐 - {city_en}"
+        )
 
         content = {
-            "intro": f'''
+            "intro": f"""
                 <div class="city-hero">
                     <h1>{intro_title}</h1>
                     <p class="tagline">{tagline}</p>
                     <p class="lead">{description}</p>
-                </div>''',
-
-            "features": f'''
+                </div>""",
+            "features": f"""
                 <section class="city-features">
                     <h2>{_t("city.features_title")}</h2>
                     <div class="features-grid">
@@ -312,9 +406,8 @@ class SEOContentGenerator:
                             <p>{_t("city.local_desc")}</p>
                         </div>
                     </div>
-                </section>''',
-
-            "landmarks": f'''
+                </section>""",
+            "landmarks": f"""
                 <section class="city-landmarks">
                     <h2>{_t("city.landmarks_title")}</h2>
                     <div class="tags-section">
@@ -331,20 +424,21 @@ class SEOContentGenerator:
                             <div class="tags">{universities_html}</div>
                         </div>
                     </div>
-                </section>''' if landmarks or business_districts or university_clusters else "",
-
+                </section>"""
+            if landmarks or business_districts or university_clusters
+            else "",
             "use_cases": use_cases_html,
-
-            "local_tips": f'''
+            "local_tips": f"""
                 <section class="local-tips">
                     <h2>{_t("city.tips_title")}</h2>
                     <div class="tip-card">
                         <div class="tip-icon">💡</div>
                         <p>{local_tips}</p>
                     </div>
-                </section>''' if local_tips else "",
-
-            "how_it_works": f'''
+                </section>"""
+            if local_tips
+            else "",
+            "how_it_works": f"""
                 <section class="how-it-works">
                     <h2>{_t("city.how_title")}</h2>
                     <div class="steps">
@@ -370,14 +464,13 @@ class SEOContentGenerator:
                             </div>
                         </div>
                     </div>
-                </section>''',
-
-            "cta": f'''
+                </section>""",
+            "cta": f"""
                 <section class="cta-section">
                     <h2>{_t("city.cta_title")}</h2>
                     <p>{_t("city.cta_desc")}</p>
                     <a href="/public/meetspot_finder.html" class="cta-button" data-track="cta_click" data-track-label="city_page">{_t("city.cta_btn")}</a>
-                </section>''',
+                </section>""",
         }
 
         # 计算字数

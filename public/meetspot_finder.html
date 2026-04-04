@@ -90,6 +90,38 @@
         }
       }
     </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is MeetSpot?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "MeetSpot is a free AI-powered meeting point finder that uses spherical geometry (Haversine formula) to calculate the mathematically fairest midpoint for 2-10 people, then ranks nearby venues using GPT-4o scoring across distance, rating, ambiance, and parking -- covering 350+ cities in China."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does MeetSpot calculate the midpoint?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "MeetSpot uses the Haversine formula to calculate the geographic center on Earth's curved surface, which is 15-20% more accurate than simple latitude/longitude averaging. The algorithm accounts for spherical geometry to ensure the midpoint is mathematically fair for all participants."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is MeetSpot different from Google Maps?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Google Maps and Amap search near a single person's location. MeetSpot searches between all participants -- calculating the shared midpoint using spherical geometry, then using a 100-point AI scoring system (rating 30 + popularity 20 + distance 25 + scenario 15 + requirements 10) to rank venues fairly."
+            }
+          }
+        ]
+      }
+    </script>
 
     <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
     <link

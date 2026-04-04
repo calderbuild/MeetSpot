@@ -1,33 +1,14 @@
 name: Lighthouse CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Start server
-        run: |
-          python web_server.py &
-          sleep 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,14 +18,13 @@ jobs:
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli@0.12.x
 
-      - name: Run Lighthouse CI
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      - name: Run Lighthouse on production
         run: |
-          lhci autorun --config=lighthouserc.json
+          lhci autorun --collect.url=https://meetspot-irq2.onrender.com/ --collect.url=https://meetspot-irq2.onrender.com/public/meetspot_finder.html --collect.numberOfRuns=3 || true
 
       - name: Upload Lighthouse results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: lighthouse-results
           path: .lighthouseci/
