@@ -20,6 +20,7 @@ from app.config import config
 # LLM 智能评分（延迟导入以避免循环依赖）
 _llm_instance = None
 
+
 def _get_llm():
     """延迟加载 LLM 实例"""
     global _llm_instance
@@ -27,14 +28,23 @@ def _get_llm():
         try:
             from app.llm import LLM
             from app.config import config
+
             # 检查 API Key 是否已配置
             llm_config = config.llm.get("default", {})
-            api_key = getattr(llm_config, "api_key", "") if hasattr(llm_config, "api_key") else llm_config.get("api_key", "")
+            api_key = (
+                getattr(llm_config, "api_key", "")
+                if hasattr(llm_config, "api_key")
+                else llm_config.get("api_key", "")
+            )
             if not api_key:
                 logger.info("LLM API Key 未配置，跳过 LLM 初始化")
                 return None
             _llm_instance = LLM()
-            logger.info(f"LLM 初始化成功，模型: {_llm_instance.model}, base_url: {_llm_instance.base_url[:30]}..." if _llm_instance.base_url else f"LLM 初始化成功，模型: {_llm_instance.model}")
+            logger.info(
+                f"LLM 初始化成功，模型: {_llm_instance.model}, base_url: {_llm_instance.base_url[:30]}..."
+                if _llm_instance.base_url
+                else f"LLM 初始化成功，模型: {_llm_instance.model}"
+            )
         except Exception as e:
             logger.warning(f"LLM 初始化失败，智能评分不可用: {e}")
     return _llm_instance
@@ -94,26 +104,82 @@ class CafeRecommender(BaseTool):
         "瑞幸": {"安静": 0.4, "WiFi": 0.7, "商务": 0.4, "停车": 0.3, "可以久坐": 0.5},
         "Costa": {"安静": 0.9, "WiFi": 1.0, "商务": 0.8, "停车": 0.4, "可以久坐": 0.9},
         "漫咖啡": {"安静": 0.9, "WiFi": 0.9, "商务": 0.6, "停车": 0.5, "可以久坐": 1.0},
-        "太平洋咖啡": {"安静": 0.8, "WiFi": 0.9, "商务": 0.7, "停车": 0.4, "可以久坐": 0.8},
+        "太平洋咖啡": {
+            "安静": 0.8,
+            "WiFi": 0.9,
+            "商务": 0.7,
+            "停车": 0.4,
+            "可以久坐": 0.8,
+        },
         "Manner": {"安静": 0.5, "WiFi": 0.6, "商务": 0.4, "停车": 0.2, "可以久坐": 0.3},
         "Seesaw": {"安静": 0.8, "WiFi": 0.9, "商务": 0.6, "停车": 0.3, "可以久坐": 0.8},
-        "M Stand": {"安静": 0.7, "WiFi": 0.8, "商务": 0.5, "停车": 0.3, "可以久坐": 0.7},
+        "M Stand": {
+            "安静": 0.7,
+            "WiFi": 0.8,
+            "商务": 0.5,
+            "停车": 0.3,
+            "可以久坐": 0.7,
+        },
         "Tims": {"安静": 0.6, "WiFi": 0.8, "商务": 0.5, "停车": 0.4, "可以久坐": 0.6},
-        "上岛咖啡": {"安静": 0.9, "WiFi": 0.8, "商务": 0.8, "停车": 0.6, "可以久坐": 0.9, "包间": 0.7},
-        "Zoo Coffee": {"安静": 0.7, "WiFi": 0.8, "商务": 0.5, "停车": 0.4, "可以久坐": 0.8, "适合儿童": 0.6},
-        "猫屎咖啡": {"安静": 0.8, "WiFi": 0.8, "商务": 0.6, "停车": 0.4, "可以久坐": 0.8},
-        "皮爷咖啡": {"安静": 0.7, "WiFi": 0.8, "商务": 0.5, "停车": 0.3, "可以久坐": 0.7},
+        "上岛咖啡": {
+            "安静": 0.9,
+            "WiFi": 0.8,
+            "商务": 0.8,
+            "停车": 0.6,
+            "可以久坐": 0.9,
+            "包间": 0.7,
+        },
+        "Zoo Coffee": {
+            "安静": 0.7,
+            "WiFi": 0.8,
+            "商务": 0.5,
+            "停车": 0.4,
+            "可以久坐": 0.8,
+            "适合儿童": 0.6,
+        },
+        "猫屎咖啡": {
+            "安静": 0.8,
+            "WiFi": 0.8,
+            "商务": 0.6,
+            "停车": 0.4,
+            "可以久坐": 0.8,
+        },
+        "皮爷咖啡": {
+            "安静": 0.7,
+            "WiFi": 0.8,
+            "商务": 0.5,
+            "停车": 0.3,
+            "可以久坐": 0.7,
+        },
         "咖世家": {"安静": 0.8, "WiFi": 0.9, "商务": 0.7, "停车": 0.4, "可以久坐": 0.8},
-        "挪瓦咖啡": {"安静": 0.5, "WiFi": 0.6, "商务": 0.4, "停车": 0.2, "可以久坐": 0.4},
+        "挪瓦咖啡": {
+            "安静": 0.5,
+            "WiFi": 0.6,
+            "商务": 0.4,
+            "停车": 0.2,
+            "可以久坐": 0.4,
+        },
         # ========== 中餐厅 (15个) ==========
-        "海底捞": {"包间": 0.9, "停车": 0.8, "安静": 0.2, "适合儿童": 0.9, "24小时营业": 0.3},
+        "海底捞": {
+            "包间": 0.9,
+            "停车": 0.8,
+            "安静": 0.2,
+            "适合儿童": 0.9,
+            "24小时营业": 0.3,
+        },
         "西贝": {"包间": 0.7, "停车": 0.6, "安静": 0.5, "适合儿童": 0.7},
         "外婆家": {"包间": 0.5, "停车": 0.5, "安静": 0.3, "适合儿童": 0.6},
         "绿茶": {"包间": 0.4, "停车": 0.5, "安静": 0.4, "适合儿童": 0.5},
         "小龙坎": {"包间": 0.6, "停车": 0.5, "安静": 0.2, "适合儿童": 0.4},
         "呷哺呷哺": {"包间": 0.0, "停车": 0.4, "安静": 0.3, "适合儿童": 0.5},
         "大龙燚": {"包间": 0.5, "停车": 0.5, "安静": 0.2, "适合儿童": 0.4},
-        "眉州东坡": {"包间": 0.8, "停车": 0.7, "安静": 0.6, "适合儿童": 0.7, "商务": 0.7},
+        "眉州东坡": {
+            "包间": 0.8,
+            "停车": 0.7,
+            "安静": 0.6,
+            "适合儿童": 0.7,
+            "商务": 0.7,
+        },
         "全聚德": {"包间": 0.9, "停车": 0.7, "安静": 0.6, "适合儿童": 0.6, "商务": 0.8},
         "大董": {"包间": 0.9, "停车": 0.8, "安静": 0.8, "商务": 0.9},
         "鼎泰丰": {"包间": 0.5, "停车": 0.6, "安静": 0.6, "适合儿童": 0.7},
@@ -162,7 +228,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "咖啡馆",
             "noun_singular": "咖啡馆",
             "noun_plural": "咖啡馆",
-            "theme_primary": "#9c6644", # 棕色系
+            "theme_primary": "#9c6644",  # 棕色系
             "theme_primary_light": "#c68b59",
             "theme_primary_dark": "#7f5539",
             "theme_secondary": "#c9ada7",
@@ -177,7 +243,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "图书馆",
             "noun_singular": "图书馆",
             "noun_plural": "图书馆",
-            "theme_primary": "#4a6fa5", # 蓝色系
+            "theme_primary": "#4a6fa5",  # 蓝色系
             "theme_primary_light": "#6e8fc5",
             "theme_primary_dark": "#305182",
             "theme_secondary": "#9dc0e5",
@@ -192,7 +258,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "餐厅",
             "noun_singular": "餐厅",
             "noun_plural": "餐厅",
-            "theme_primary": "#e74c3c", # 红色系
+            "theme_primary": "#e74c3c",  # 红色系
             "theme_primary_light": "#f1948a",
             "theme_primary_dark": "#c0392b",
             "theme_secondary": "#fadbd8",
@@ -207,7 +273,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "商场",
             "noun_singular": "商场",
             "noun_plural": "商场",
-            "theme_primary": "#8e44ad", # 紫色系
+            "theme_primary": "#8e44ad",  # 紫色系
             "theme_primary_light": "#af7ac5",
             "theme_primary_dark": "#6c3483",
             "theme_secondary": "#d7bde2",
@@ -222,7 +288,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "公园",
             "noun_singular": "公园",
             "noun_plural": "公园",
-            "theme_primary": "#27ae60", # 绿色系
+            "theme_primary": "#27ae60",  # 绿色系
             "theme_primary_light": "#58d68d",
             "theme_primary_dark": "#1e8449",
             "theme_secondary": "#a9dfbf",
@@ -237,7 +303,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "电影院",
             "noun_singular": "电影院",
             "noun_plural": "电影院",
-            "theme_primary": "#34495e", # 深蓝灰色系
+            "theme_primary": "#34495e",  # 深蓝灰色系
             "theme_primary_light": "#5d6d7e",
             "theme_primary_dark": "#2c3e50",
             "theme_secondary": "#aeb6bf",
@@ -252,7 +318,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "篮球场",
             "noun_singular": "篮球场",
             "noun_plural": "篮球场",
-            "theme_primary": "#f39c12", # 橙色系
+            "theme_primary": "#f39c12",  # 橙色系
             "theme_primary_light": "#f8c471",
             "theme_primary_dark": "#d35400",
             "theme_secondary": "#fdebd0",
@@ -267,7 +333,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "健身房",
             "noun_singular": "健身房",
             "noun_plural": "健身房",
-            "theme_primary": "#e67e22", # 活力橙色系
+            "theme_primary": "#e67e22",  # 活力橙色系
             "theme_primary_light": "#f39c12",
             "theme_primary_dark": "#d35400",
             "theme_secondary": "#fdebd0",
@@ -282,7 +348,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "KTV",
             "noun_singular": "KTV",
             "noun_plural": "KTV",
-            "theme_primary": "#FF1493", # 音乐粉色系
+            "theme_primary": "#FF1493",  # 音乐粉色系
             "theme_primary_light": "#FF69B4",
             "theme_primary_dark": "#DC143C",
             "theme_secondary": "#FFB6C1",
@@ -297,7 +363,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "博物馆",
             "noun_singular": "博物馆",
             "noun_plural": "博物馆",
-            "theme_primary": "#DAA520", # 文化金色系
+            "theme_primary": "#DAA520",  # 文化金色系
             "theme_primary_light": "#FFD700",
             "theme_primary_dark": "#B8860B",
             "theme_secondary": "#F0E68C",
@@ -312,7 +378,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "景点",
             "noun_singular": "景点",
             "noun_plural": "景点",
-            "theme_primary": "#17A2B8", # 旅游青色系
+            "theme_primary": "#17A2B8",  # 旅游青色系
             "theme_primary_light": "#20C997",
             "theme_primary_dark": "#138496",
             "theme_secondary": "#7FDBDA",
@@ -327,7 +393,7 @@ class CafeRecommender(BaseTool):
             "map_legend": "酒吧",
             "noun_singular": "酒吧",
             "noun_plural": "酒吧",
-            "theme_primary": "#2C3E50", # 夜晚蓝色系
+            "theme_primary": "#2C3E50",  # 夜晚蓝色系
             "theme_primary_light": "#5D6D7E",
             "theme_primary_dark": "#1B2631",
             "theme_secondary": "#85929E",
@@ -342,14 +408,14 @@ class CafeRecommender(BaseTool):
             "map_legend": "茶楼",
             "noun_singular": "茶楼",
             "noun_plural": "茶楼",
-            "theme_primary": "#52796F", # 茶香绿色系
+            "theme_primary": "#52796F",  # 茶香绿色系
             "theme_primary_light": "#84A98C",
             "theme_primary_dark": "#354F52",
             "theme_secondary": "#CAD2C5",
             "theme_light": "#F7F9F7",
             "theme_dark": "#2F3E46",
         },
-        "default": { # 默认主题颜色 (同咖啡馆)
+        "default": {  # 默认主题颜色 (同咖啡馆)
             "topic": "会面点",
             "icon_header": "bxs-map-pin",
             "icon_section": "bx-map-pin",
@@ -363,24 +429,94 @@ class CafeRecommender(BaseTool):
             "theme_secondary": "#c9ada7",
             "theme_light": "#f2e9e4",
             "theme_dark": "#22223b",
-        }
+        },
     }
 
     PLACE_TYPE_CONFIG_EN: Dict[str, Dict[str, str]] = {
-        "咖啡馆": {"topic": "Cafe Meetup", "map_legend": "Cafes", "noun_singular": "cafe", "noun_plural": "cafes"},
-        "图书馆": {"topic": "Library Meetup", "map_legend": "Libraries", "noun_singular": "library", "noun_plural": "libraries"},
-        "餐厅": {"topic": "Food Meetup", "map_legend": "Restaurants", "noun_singular": "restaurant", "noun_plural": "restaurants"},
-        "商场": {"topic": "Shopping Meetup", "map_legend": "Malls", "noun_singular": "mall", "noun_plural": "malls"},
-        "公园": {"topic": "Park Meetup", "map_legend": "Parks", "noun_singular": "park", "noun_plural": "parks"},
-        "电影院": {"topic": "Movie Meetup", "map_legend": "Cinemas", "noun_singular": "cinema", "noun_plural": "cinemas"},
-        "篮球场": {"topic": "Court Meetup", "map_legend": "Basketball Courts", "noun_singular": "basketball court", "noun_plural": "basketball courts"},
-        "健身房": {"topic": "Fitness Meetup", "map_legend": "Gyms", "noun_singular": "gym", "noun_plural": "gyms"},
-        "KTV": {"topic": "KTV Meetup", "map_legend": "KTV Venues", "noun_singular": "KTV venue", "noun_plural": "KTV venues"},
-        "博物馆": {"topic": "Museum Meetup", "map_legend": "Museums", "noun_singular": "museum", "noun_plural": "museums"},
-        "景点": {"topic": "Sightseeing Meetup", "map_legend": "Attractions", "noun_singular": "attraction", "noun_plural": "attractions"},
-        "酒吧": {"topic": "Nightlife Meetup", "map_legend": "Bars", "noun_singular": "bar", "noun_plural": "bars"},
-        "茶楼": {"topic": "Teahouse Meetup", "map_legend": "Teahouses", "noun_singular": "teahouse", "noun_plural": "teahouses"},
-        "default": {"topic": "Meeting Spots", "map_legend": "Venues", "noun_singular": "venue", "noun_plural": "venues"},
+        "咖啡馆": {
+            "topic": "Cafe Meetup",
+            "map_legend": "Cafes",
+            "noun_singular": "cafe",
+            "noun_plural": "cafes",
+        },
+        "图书馆": {
+            "topic": "Library Meetup",
+            "map_legend": "Libraries",
+            "noun_singular": "library",
+            "noun_plural": "libraries",
+        },
+        "餐厅": {
+            "topic": "Food Meetup",
+            "map_legend": "Restaurants",
+            "noun_singular": "restaurant",
+            "noun_plural": "restaurants",
+        },
+        "商场": {
+            "topic": "Shopping Meetup",
+            "map_legend": "Malls",
+            "noun_singular": "mall",
+            "noun_plural": "malls",
+        },
+        "公园": {
+            "topic": "Park Meetup",
+            "map_legend": "Parks",
+            "noun_singular": "park",
+            "noun_plural": "parks",
+        },
+        "电影院": {
+            "topic": "Movie Meetup",
+            "map_legend": "Cinemas",
+            "noun_singular": "cinema",
+            "noun_plural": "cinemas",
+        },
+        "篮球场": {
+            "topic": "Court Meetup",
+            "map_legend": "Basketball Courts",
+            "noun_singular": "basketball court",
+            "noun_plural": "basketball courts",
+        },
+        "健身房": {
+            "topic": "Fitness Meetup",
+            "map_legend": "Gyms",
+            "noun_singular": "gym",
+            "noun_plural": "gyms",
+        },
+        "KTV": {
+            "topic": "KTV Meetup",
+            "map_legend": "KTV Venues",
+            "noun_singular": "KTV venue",
+            "noun_plural": "KTV venues",
+        },
+        "博物馆": {
+            "topic": "Museum Meetup",
+            "map_legend": "Museums",
+            "noun_singular": "museum",
+            "noun_plural": "museums",
+        },
+        "景点": {
+            "topic": "Sightseeing Meetup",
+            "map_legend": "Attractions",
+            "noun_singular": "attraction",
+            "noun_plural": "attractions",
+        },
+        "酒吧": {
+            "topic": "Nightlife Meetup",
+            "map_legend": "Bars",
+            "noun_singular": "bar",
+            "noun_plural": "bars",
+        },
+        "茶楼": {
+            "topic": "Teahouse Meetup",
+            "map_legend": "Teahouses",
+            "noun_singular": "teahouse",
+            "noun_plural": "teahouses",
+        },
+        "default": {
+            "topic": "Meeting Spots",
+            "map_legend": "Venues",
+            "noun_singular": "venue",
+            "noun_plural": "venues",
+        },
     }
 
     REQUIREMENT_LABELS_EN: Dict[str, str] = {
@@ -403,7 +539,9 @@ class CafeRecommender(BaseTool):
 
     def _get_place_config(self, primary_keyword: str) -> Dict[str, str]:
         """获取指定场所类型的显示配置"""
-        return self.PLACE_TYPE_CONFIG.get(primary_keyword, self.PLACE_TYPE_CONFIG["default"])
+        return self.PLACE_TYPE_CONFIG.get(
+            primary_keyword, self.PLACE_TYPE_CONFIG["default"]
+        )
 
     @staticmethod
     def _normalize_language(language: str) -> str:
@@ -412,19 +550,31 @@ class CafeRecommender(BaseTool):
 
     def _get_primary_keyword(self, keywords: str) -> str:
         """从多关键词输入中提取主关键词."""
-        tokens = [token.strip() for token in keywords.replace("、", " ").split() if token.strip()]
+        tokens = [
+            token.strip()
+            for token in keywords.replace("、", " ").split()
+            if token.strip()
+        ]
         return tokens[0] if tokens else "场所"
 
-    def _get_display_config(self, primary_keyword: str, language: str) -> Dict[str, str]:
+    def _get_display_config(
+        self, primary_keyword: str, language: str
+    ) -> Dict[str, str]:
         """根据语言返回带显示文案的场所配置."""
         cfg = dict(self._get_place_config(primary_keyword))
         if self._normalize_language(language) == "en":
-            cfg.update(self.PLACE_TYPE_CONFIG_EN.get(primary_keyword, self.PLACE_TYPE_CONFIG_EN["default"]))
+            cfg.update(
+                self.PLACE_TYPE_CONFIG_EN.get(
+                    primary_keyword, self.PLACE_TYPE_CONFIG_EN["default"]
+                )
+            )
         return cfg
 
     def _result_text(self, language: str, key: str, default: str, **kwargs: Any) -> str:
         """读取结果页翻译文案，缺失时回退默认值."""
-        template = get_translations(self._normalize_language(language)).get(key, default)
+        template = get_translations(self._normalize_language(language)).get(
+            key, default
+        )
         try:
             return template.format(**kwargs)
         except (KeyError, IndexError, ValueError):
@@ -529,15 +679,22 @@ class CafeRecommender(BaseTool):
         # 尝试从多个来源获取API key
         if not self.api_key:
             # 首先尝试从config对象获取
-            if hasattr(config, "amap") and config.amap and hasattr(config.amap, "api_key"):
+            if (
+                hasattr(config, "amap")
+                and config.amap
+                and hasattr(config.amap, "api_key")
+            ):
                 self.api_key = config.amap.api_key
             # 如果config不可用，尝试从环境变量获取
             elif not self.api_key:
                 import os
+
                 self.api_key = os.getenv("AMAP_API_KEY", "")
 
         if not self.api_key:
-            logger.error("高德地图API密钥未配置。请在config.toml中设置 amap.api_key 或设置环境变量 AMAP_API_KEY。")
+            logger.error(
+                "高德地图API密钥未配置。请在config.toml中设置 amap.api_key 或设置环境变量 AMAP_API_KEY。"
+            )
             return ToolResult(output="推荐失败: 高德地图API密钥未配置。")
 
         try:
@@ -547,40 +704,54 @@ class CafeRecommender(BaseTool):
 
             # 检查是否有预解析坐标（来自前端 Autocomplete 选择）
             if pre_resolved_coords and len(pre_resolved_coords) == len(locations):
-                logger.info(f"使用前端预解析坐标，跳过 geocoding: {len(pre_resolved_coords)} 个地点")
+                logger.info(
+                    f"使用前端预解析坐标，跳过 geocoding: {len(pre_resolved_coords)} 个地点"
+                )
                 for i, coord in enumerate(pre_resolved_coords):
                     coordinates.append((coord["lng"], coord["lat"]))
-                    location_info.append({
-                        "name": locations[i],
-                        "formatted_address": coord.get("address", locations[i]),
-                        "location": f"{coord['lng']},{coord['lat']}",
-                        "lng": coord["lng"],
-                        "lat": coord["lat"],
-                        "city": coord.get("city", "")
-                    })
-                    geocode_results.append({
-                        "original_location": locations[i],
-                        "result": {
+                    location_info.append(
+                        {
+                            "name": locations[i],
                             "formatted_address": coord.get("address", locations[i]),
                             "location": f"{coord['lng']},{coord['lat']}",
-                            "city": coord.get("city", "")
+                            "lng": coord["lng"],
+                            "lat": coord["lat"],
+                            "city": coord.get("city", ""),
                         }
-                    })
+                    )
+                    geocode_results.append(
+                        {
+                            "original_location": locations[i],
+                            "result": {
+                                "formatted_address": coord.get("address", locations[i]),
+                                "location": f"{coord['lng']},{coord['lat']}",
+                                "city": coord.get("city", ""),
+                            },
+                        }
+                    )
             else:
                 # 原有的 geocoding 逻辑
                 # 并行地理编码 - 大幅提升性能
                 async def geocode_with_delay(location: str, index: int):
                     """带轻微延迟的地理编码，避免API限流"""
                     if index > 0:
-                        await asyncio.sleep(0.05 * index)  # 50ms递增延迟，比原来的500ms快10倍
+                        await asyncio.sleep(
+                            0.05 * index
+                        )  # 50ms递增延迟，比原来的500ms快10倍
                     return await self._geocode(location)
 
                 # 使用 asyncio.gather 并行执行所有地理编码请求
-                geocode_tasks = [geocode_with_delay(loc, i) for i, loc in enumerate(locations)]
-                geocode_raw_results = await asyncio.gather(*geocode_tasks, return_exceptions=True)
+                geocode_tasks = [
+                    geocode_with_delay(loc, i) for i, loc in enumerate(locations)
+                ]
+                geocode_raw_results = await asyncio.gather(
+                    *geocode_tasks, return_exceptions=True
+                )
 
                 # 处理结果并检查错误
-                for i, (location, result) in enumerate(zip(locations, geocode_raw_results)):
+                for i, (location, result) in enumerate(
+                    zip(locations, geocode_raw_results)
+                ):
                     if isinstance(result, Exception):
                         logger.error(f"地理编码异常: {location} - {result}")
                         result = None
@@ -589,21 +760,26 @@ class CafeRecommender(BaseTool):
                         # 检查是否为大学简称但地理编码失败
                         enhanced_address = self._enhance_address(location)
                         if enhanced_address != location:
-                            return ToolResult(output=f"无法找到地点: {location}\n\n识别为大学简称\n您输入的 '{location}' 可能是大学简称，但未能成功解析。\n\n建议尝试：\n完整名称：'{enhanced_address}'\n添加城市：'北京 {location}'、'上海 {location}'\n具体地址：'北京市海淀区{enhanced_address}'\n校区信息：如 '{location}本部'、'{location}新校区'")
+                            return ToolResult(
+                                output=f"无法找到地点: {location}\n\n识别为大学简称\n您输入的 '{location}' 可能是大学简称，但未能成功解析。\n\n建议尝试：\n完整名称：'{enhanced_address}'\n添加城市：'北京 {location}'、'上海 {location}'\n具体地址：'北京市海淀区{enhanced_address}'\n校区信息：如 '{location}本部'、'{location}新校区'"
+                            )
                         else:
                             # 提供更详细的地址输入指导
                             suggestions = self._get_address_suggestions(location)
-                            return ToolResult(output=f"无法找到地点: {location}\n\n地址解析失败\n系统无法识别您输入的地址，请检查以下几点：\n\n具体建议：\n{suggestions}\n\n标准地址格式示例：\n完整地址：'北京市海淀区中关村大街27号'\n知名地标：'北京大学'、'天安门广场'、'上海外滩'\n商圈区域：'三里屯'、'王府井'、'南京路步行街'\n交通枢纽：'北京南站'、'上海虹桥机场'\n\n常见错误避免：\n避免过于简短：'大学' -> '北京大学'\n避免拼写错误：'北大' -> '北京大学'\n避免模糊描述：'那个商场' -> '王府井百货大楼'\n\n如果仍有问题：\n检查网络连接是否正常\n尝试使用地址的官方全称\n确认地点确实存在且对外开放")
+                            return ToolResult(
+                                output=f"无法找到地点: {location}\n\n地址解析失败\n系统无法识别您输入的地址，请检查以下几点：\n\n具体建议：\n{suggestions}\n\n标准地址格式示例：\n完整地址：'北京市海淀区中关村大街27号'\n知名地标：'北京大学'、'天安门广场'、'上海外滩'\n商圈区域：'三里屯'、'王府井'、'南京路步行街'\n交通枢纽：'北京南站'、'上海虹桥机场'\n\n常见错误避免：\n避免过于简短：'大学' -> '北京大学'\n避免拼写错误：'北大' -> '北京大学'\n避免模糊描述：'那个商场' -> '王府井百货大楼'\n\n如果仍有问题：\n检查网络连接是否正常\n尝试使用地址的官方全称\n确认地点确实存在且对外开放"
+                            )
 
-                    geocode_results.append({
-                        "original_location": location,
-                        "result": result
-                    })
+                    geocode_results.append(
+                        {"original_location": location, "result": result}
+                    )
 
                 # 智能城市推断：检测是否有地点被解析到完全不同的城市
                 if len(geocode_results) > 1:
                     city_hint = self._extract_city_hint(locations)
-                    geocode_results = await self._smart_city_inference(locations, geocode_results, city_hint)
+                    geocode_results = await self._smart_city_inference(
+                        locations, geocode_results, city_hint
+                    )
 
                 # 处理最终的 geocode 结果
                 for item in geocode_results:
@@ -611,14 +787,18 @@ class CafeRecommender(BaseTool):
                     location = item["original_location"]
                     lng, lat = geocode_result["location"].split(",")
                     coordinates.append((float(lng), float(lat)))
-                    location_info.append({
-                        "name": location,
-                        "formatted_address": geocode_result.get("formatted_address", location),
-                        "location": geocode_result["location"],
-                        "lng": float(lng),
-                        "lat": float(lat),
-                        "city": geocode_result.get("city", "")
-                })
+                    location_info.append(
+                        {
+                            "name": location,
+                            "formatted_address": geocode_result.get(
+                                "formatted_address", location
+                            ),
+                            "location": geocode_result["location"],
+                            "lng": float(lng),
+                            "lat": float(lat),
+                            "city": geocode_result.get("city", ""),
+                        }
+                    )
 
             if not coordinates:
                 error_msg = "❌ 未能解析任何有效的地点位置。\n\n"
@@ -629,7 +809,7 @@ class CafeRecommender(BaseTool):
                     if suggestions:
                         error_msg += f"  💡 建议：{suggestions}\n"
                 error_msg += "\n"
-                
+
                 error_msg += "📍 **地址输入检查清单：**\n"
                 error_msg += "• **拼写准确性**：确保地名、路名拼写无误\n"
                 error_msg += "• **地理层级**：包含省市区信息，如 '北京市海淀区...'\n"
@@ -639,7 +819,9 @@ class CafeRecommender(BaseTool):
                 error_msg += "• **完整地址**：'北京市海淀区中关村大街1号'\n"
                 error_msg += "• **知名地标**：'北京大学'、'上海外滩'、'广州塔'\n"
                 error_msg += "• **商圈/区域**：'三里屯'、'南京路步行街'、'春熙路'\n"
-                error_msg += "• **交通枢纽**：'北京南站'、'上海虹桥机场'、'广州白云机场'\n\n"
+                error_msg += (
+                    "• **交通枢纽**：'北京南站'、'上海虹桥机场'、'广州白云机场'\n\n"
+                )
                 error_msg += "📝 **多地点输入说明：**\n"
                 error_msg += "• **方式一**：在不同输入框中分别填写，如第一个框填'北京大学'，第二个框填'中关村'\n"
                 error_msg += "• **方式二**：在一个输入框中用空格分隔，如'北京大学 中关村'（系统会自动拆分）\n"
@@ -647,17 +829,17 @@ class CafeRecommender(BaseTool):
                 return ToolResult(output=error_msg)
 
             center_point = self._calculate_center_point(coordinates)
-            
+
             # 处理多个关键词的搜索
             keywords_list = [kw.strip() for kw in keywords.split() if kw.strip()]
             primary_keyword = keywords_list[0] if keywords_list else "咖啡馆"
-            
+
             searched_places = []
-            
+
             # 如果有多个关键词，使用并发搜索提高性能
             if len(keywords_list) > 1:
                 logger.info(f"多场景并发搜索: {keywords_list}")
-                
+
                 # 创建并发搜索任务
                 async def search_keyword(keyword):
                     logger.info(f"开始搜索场景: '{keyword}'")
@@ -665,22 +847,22 @@ class CafeRecommender(BaseTool):
                         f"{center_point[0]},{center_point[1]}",
                         keyword,
                         radius=5000,
-                        types=""
+                        types="",
                     )
                     if places:
                         # 为每个场所添加来源标记
                         for place in places:
-                            place['_source_keyword'] = keyword
+                            place["_source_keyword"] = keyword
                         logger.info(f"'{keyword}' 找到 {len(places)} 个结果")
                         return places
                     else:
                         logger.info(f"'{keyword}' 未找到结果")
                         return []
-                
+
                 # 并发执行所有搜索
                 tasks = [search_keyword(keyword) for keyword in keywords_list]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                
+
                 # 合并结果
                 all_places = []
                 for i, result in enumerate(results):
@@ -688,29 +870,29 @@ class CafeRecommender(BaseTool):
                         logger.error(f"搜索 '{keywords_list[i]}' 时出错: {result}")
                     elif result:
                         all_places.extend(result)
-                
+
                 # 去重（基于场所名称和坐标位置，更宽松的去重策略）
                 seen = set()
                 unique_places = []
                 for place in all_places:
                     # 使用名称和坐标进行去重，而不是地址（地址可能格式不同）
-                    location = place.get('location', '')
-                    name = place.get('name', '')
+                    location = place.get("location", "")
+                    name = place.get("name", "")
                     identifier = f"{name}_{location}"
-                    
+
                     if identifier not in seen:
                         seen.add(identifier)
                         unique_places.append(place)
-                
+
                 searched_places = unique_places
                 logger.info(f"多场景搜索完成，去重后共 {len(searched_places)} 个结果")
             else:
                 # 单个关键词的传统搜索
                 searched_places = await self._search_pois(
                     f"{center_point[0]},{center_point[1]}",
-                    keywords, 
+                    keywords,
                     radius=5000,
-                    types=place_type 
+                    types=place_type,
                 )
 
             # Fallback机制：确保始终有推荐结果
@@ -718,12 +900,14 @@ class CafeRecommender(BaseTool):
             fallback_keyword = None
 
             if not searched_places:
-                logger.info(f"使用 keywords '{keywords}' 和 types '{place_type}' 未找到结果，尝试仅使用 keywords 进行搜索。")
+                logger.info(
+                    f"使用 keywords '{keywords}' 和 types '{place_type}' 未找到结果，尝试仅使用 keywords 进行搜索。"
+                )
                 searched_places = await self._search_pois(
                     f"{center_point[0]},{center_point[1]}",
                     keywords,
                     radius=5000,
-                    types=""
+                    types="",
                 )
 
             # 如果仍无结果，启用 Fallback 搜索
@@ -737,12 +921,14 @@ class CafeRecommender(BaseTool):
                             f"{center_point[0]},{center_point[1]}",
                             fallback_kw,
                             radius=5000,
-                            types=""
+                            types="",
                         )
                         if searched_places:
                             fallback_used = True
                             fallback_keyword = fallback_kw
-                            logger.info(f"Fallback 成功：使用 '{fallback_kw}' 找到 {len(searched_places)} 个结果")
+                            logger.info(
+                                f"Fallback 成功：使用 '{fallback_kw}' 找到 {len(searched_places)} 个结果"
+                            )
                             break
 
             # 如果 Fallback 也失败，扩大搜索半径到不限制（API最大50km）
@@ -752,7 +938,7 @@ class CafeRecommender(BaseTool):
                     f"{center_point[0]},{center_point[1]}",
                     "餐厅",
                     radius=50000,
-                    types=""
+                    types="",
                 )
                 if searched_places:
                     fallback_used = True
@@ -768,7 +954,10 @@ class CafeRecommender(BaseTool):
                 return ToolResult(output=error_msg)
 
             recommended_places = self._rank_places(
-                searched_places, center_point, user_requirements, keywords,
+                searched_places,
+                center_point,
+                user_requirements,
+                keywords,
                 min_rating=min_rating,
                 max_distance=max_distance,
                 price_range=price_range,
@@ -787,13 +976,18 @@ class CafeRecommender(BaseTool):
                 language=language,
             )
             result_text = self._format_result_text(
-                location_info, recommended_places, html_path, keywords,
-                fallback_used, fallback_keyword, language=language
+                location_info,
+                recommended_places,
+                html_path,
+                keywords,
+                fallback_used,
+                fallback_keyword,
+                language=language,
             )
             return ToolResult(output=result_text)
 
         except Exception as e:
-            logger.exception(f"场所推荐过程中发生错误: {str(e)}") 
+            logger.exception(f"场所推荐过程中发生错误: {str(e)}")
             return ToolResult(output=f"推荐失败: {str(e)}")
 
     def _enhance_address(self, address: str) -> str:
@@ -831,8 +1025,26 @@ class CafeRecommender(BaseTool):
     def _extract_city_hint(self, locations: List[str]) -> str:
         """从输入地点中抽取城市提示（用于 citylimit）。"""
         city_keywords = [
-            "北京", "上海", "广州", "深圳", "杭州", "南京", "武汉", "成都", "西安", "天津",
-            "重庆", "苏州", "长沙", "郑州", "济南", "青岛", "大连", "厦门", "福州", "昆明",
+            "北京",
+            "上海",
+            "广州",
+            "深圳",
+            "杭州",
+            "南京",
+            "武汉",
+            "成都",
+            "西安",
+            "天津",
+            "重庆",
+            "苏州",
+            "长沙",
+            "郑州",
+            "济南",
+            "青岛",
+            "大连",
+            "厦门",
+            "福州",
+            "昆明",
         ]
 
         votes: Dict[str, int] = {}
@@ -851,7 +1063,9 @@ class CafeRecommender(BaseTool):
         logger.info(f"城市提示投票: {votes} -> '{best_city}'")
         return best_city
 
-    async def _geocode_via_poi(self, address: str, city_hint: str = "") -> Optional[Dict[str, Any]]:
+    async def _geocode_via_poi(
+        self, address: str, city_hint: str = ""
+    ) -> Optional[Dict[str, Any]]:
         """使用 AMap POI 文本检索优先解析地点。"""
         keyword = self._enhance_address(address)
         if not keyword:
@@ -886,7 +1100,8 @@ class CafeRecommender(BaseTool):
 
             return {
                 "location": poi.get("location", ""),
-                "formatted_address": (poi.get("address") or "") or poi.get("name", address),
+                "formatted_address": (poi.get("address") or "")
+                or poi.get("name", address),
                 "city": poi.get("cityname", ""),
                 "province": poi.get("pname", ""),
                 "district": poi.get("adname", ""),
@@ -896,7 +1111,9 @@ class CafeRecommender(BaseTool):
         except Exception:
             return None
 
-    def _select_best_poi(self, pois: List[Dict], keyword: str, city_hint: str) -> Optional[Dict]:
+    def _select_best_poi(
+        self, pois: List[Dict], keyword: str, city_hint: str
+    ) -> Optional[Dict]:
         if not pois:
             return None
 
@@ -908,7 +1125,9 @@ class CafeRecommender(BaseTool):
 
         if city_hint:
             for poi in pois:
-                if keyword_lower in poi.get("name", "").lower() and city_hint in poi.get("cityname", ""):
+                if keyword_lower in poi.get(
+                    "name", ""
+                ).lower() and city_hint in poi.get("cityname", ""):
                     return poi
 
         for poi in pois:
@@ -920,7 +1139,7 @@ class CafeRecommender(BaseTool):
     def _get_address_suggestions(self, address: str) -> str:
         """根据输入的地址提供智能建议"""
         suggestions = []
-        
+
         # 检查是否包含常见的模糊词汇
         vague_terms = {
             "大学": "**请输入完整大学名称**，如 '北京大学'、'清华大学'、'复旦大学'",
@@ -932,51 +1151,78 @@ class CafeRecommender(BaseTool):
             "公园": "**请输入具体公园名称**，如 '颐和园'、'中山公园'、'西湖公园'",
             "广场": "**请输入具体广场名称**，如 '天安门广场'、'人民广场'",
             "地铁站": "**请输入完整地铁站名**，如 '中关村地铁站'、'人民广场地铁站'",
-            "购物中心": "**请输入具体购物中心名称**，如 '北京apm'、'上海iapm'"
+            "购物中心": "**请输入具体购物中心名称**，如 '北京apm'、'上海iapm'",
         }
-        
+
         for term, suggestion in vague_terms.items():
             if term in address:
                 suggestions.append(f"• {suggestion}")
-        
+
         # 检查是否只是城市名
-        major_cities = ["北京", "上海", "广州", "深圳", "杭州", "南京", "武汉", "成都", "西安", "天津"]
+        major_cities = [
+            "北京",
+            "上海",
+            "广州",
+            "深圳",
+            "杭州",
+            "南京",
+            "武汉",
+            "成都",
+            "西安",
+            "天津",
+        ]
         if address in major_cities:
-            suggestions.append(f"• **城市名过于宽泛**，请添加具体区域，如 '{address}市海淀区中关村'")
-            suggestions.append(f"• **或使用知名地标**，如 '{address}大学'、'{address}火车站'、'{address}机场'")
-            suggestions.append(f"• **推荐格式**：'{address}市 + 区县 + 街道/地标'，如 '{address}市朝阳区三里屯'")
-        
+            suggestions.append(
+                f"• **城市名过于宽泛**，请添加具体区域，如 '{address}市海淀区中关村'"
+            )
+            suggestions.append(
+                f"• **或使用知名地标**，如 '{address}大学'、'{address}火车站'、'{address}机场'"
+            )
+            suggestions.append(
+                f"• **推荐格式**：'{address}市 + 区县 + 街道/地标'，如 '{address}市朝阳区三里屯'"
+            )
+
         # 检查长度
         if len(address) <= 2:
             suggestions.append("• **地址过于简短**，请提供更详细的信息")
-            suggestions.append("• **标准格式**：'省市 + 区县 + 具体地点'，如 '北京市海淀区中关村大街'")
-            suggestions.append("• **或使用完整地标名**：如 '北京大学'、'天安门广场'、'上海外滩'")
+            suggestions.append(
+                "• **标准格式**：'省市 + 区县 + 具体地点'，如 '北京市海淀区中关村大街'"
+            )
+            suggestions.append(
+                "• **或使用完整地标名**：如 '北京大学'、'天安门广场'、'上海外滩'"
+            )
         elif len(address) <= 4:
             suggestions.append("• **地址信息不够具体**，建议添加更多细节")
-            suggestions.append("• **如果是地标**：请使用完整名称，如 '北京大学' 而非 '北大'")
-            suggestions.append("• **如果是地址**：请添加区县信息，如 '海淀区' + 您的地址")
-        
+            suggestions.append(
+                "• **如果是地标**：请使用完整名称，如 '北京大学' 而非 '北大'"
+            )
+            suggestions.append(
+                "• **如果是地址**：请添加区县信息，如 '海淀区' + 您的地址"
+            )
+
         # 通用建议
         if not suggestions:
-            suggestions.extend([
-                "• **请输入具体地址**：如 '北京市海淀区中关村大街1号'",
-                "• **使用知名地标**：如 '北京大学'、'天安门广场'、'上海外滩'",
-                "• **添加省市区信息**：如 '北京市朝阳区三里屯'",
-                "• **使用完整建筑名**：如 '王府井百货大楼'、'北京协和医院'",
-                "• **检查拼写准确性**：确保地名无错别字",
-                "• **尝试官方全称**：避免使用简称或昵称"
-            ])
+            suggestions.extend(
+                [
+                    "• **请输入具体地址**：如 '北京市海淀区中关村大街1号'",
+                    "• **使用知名地标**：如 '北京大学'、'天安门广场'、'上海外滩'",
+                    "• **添加省市区信息**：如 '北京市朝阳区三里屯'",
+                    "• **使用完整建筑名**：如 '王府井百货大楼'、'北京协和医院'",
+                    "• **检查拼写准确性**：确保地名无错别字",
+                    "• **尝试官方全称**：避免使用简称或昵称",
+                ]
+            )
         else:
             # 如果有特定建议，添加通用的具体地址要求
             suggestions.insert(0, "• **请输入更具体的地址信息**")
-        
+
         # 添加多地点输入说明
         suggestions.append("")
         suggestions.append("📝 **多地点输入提示：**")
         suggestions.append("• 可在一个输入框中用空格分隔多个地点，如 '北京大学 中关村'")
         suggestions.append("• 或在不同输入框中分别填写每个地点")
         suggestions.append("• 完整地址（含'市'、'区'、'县'）不会被自动拆分")
-        
+
         return "\n".join(suggestions)
 
     async def _geocode(self, address: str) -> Optional[Dict[str, Any]]:
@@ -985,7 +1231,11 @@ class CafeRecommender(BaseTool):
 
         # 确保API密钥已设置
         if not self.api_key:
-            if hasattr(config, "amap") and config.amap and hasattr(config.amap, "api_key"):
+            if (
+                hasattr(config, "amap")
+                and config.amap
+                and hasattr(config.amap, "api_key")
+            ):
                 self.api_key = config.amap.api_key
             else:
                 logger.error("高德地图API密钥未配置")
@@ -1029,15 +1279,23 @@ class CafeRecommender(BaseTool):
 
                         # 检查API限制错误
                         if data.get("info") == "CUQPS_HAS_EXCEEDED_THE_LIMIT":
-                            logger.warning(f"API并发限制超出，地址: {address}, 尝试: {attempt + 1}, 等待后重试")
+                            logger.warning(
+                                f"API并发限制超出，地址: {address}, 尝试: {attempt + 1}, 等待后重试"
+                            )
                             if attempt == max_retries - 1:
-                                logger.error(f"地理编码失败: API并发限制超出，地址: {address}")
+                                logger.error(
+                                    f"地理编码失败: API并发限制超出，地址: {address}"
+                                )
                                 return None
-                            await asyncio.sleep(0.5 * (attempt + 1))  # 500ms延迟（优化：原为2s）
+                            await asyncio.sleep(
+                                0.5 * (attempt + 1)
+                            )  # 500ms延迟（优化：原为2s）
                             continue
 
                         if data["status"] != "1" or not data["geocodes"]:
-                            logger.error(f"地理编码失败: {data.get('info', '未知错误')}, 地址: {address}")
+                            logger.error(
+                                f"地理编码失败: {data.get('info', '未知错误')}, 地址: {address}"
+                            )
                             return None
 
                         result = data["geocodes"][0]
@@ -1049,10 +1307,14 @@ class CafeRecommender(BaseTool):
                         return result
 
             except Exception as e:
-                logger.error(f"地理编码请求异常: {str(e)}, 地址: {address}, 尝试: {attempt + 1}")
+                logger.error(
+                    f"地理编码请求异常: {str(e)}, 地址: {address}, 尝试: {attempt + 1}"
+                )
                 if attempt == max_retries - 1:
                     return None
-                await asyncio.sleep(0.2 * (attempt + 1))  # 200ms递增延迟（优化：原为1s）
+                await asyncio.sleep(
+                    0.2 * (attempt + 1)
+                )  # 200ms递增延迟（优化：原为1s）
 
         return None
 
@@ -1060,7 +1322,7 @@ class CafeRecommender(BaseTool):
         self,
         original_locations: List[str],
         geocode_results: List[Dict],
-        city_hint: str = ""
+        city_hint: str = "",
     ) -> List[Dict]:
         """智能城市推断：检测并修正被解析到错误城市的地点
 
@@ -1083,6 +1345,7 @@ class CafeRecommender(BaseTool):
         # 如果输入本身是跨城（例如：北京 + 广州），不要强行拉到同一城市。
         # 只在“同城为主、少数点明显跑偏”的场景做纠正。
         from collections import Counter
+
         city_counts = Counter(cities)
         if not city_counts:
             return geocode_results
@@ -1111,7 +1374,10 @@ class CafeRecommender(BaseTool):
         # 当地点数量较少时，如果更像是跨城输入，直接跳过纠正。
         # 典型情况：两地相距很远（例如北京 + 广州），不应强行拉同城。
         if len(cities) <= 2:
-            if len(coords) == 2 and self._calculate_distance(coords[0], coords[1]) > 300000:
+            if (
+                len(coords) == 2
+                and self._calculate_distance(coords[0], coords[1]) > 300000
+            ):
                 return geocode_results
 
         # 允许纠正的前提：城市提示（如果有）必须与主城市一致
@@ -1133,7 +1399,9 @@ class CafeRecommender(BaseTool):
                 ) / len(other_coords)
 
                 # 如果当前地点距离其他地点平均超过100公里，且城市不同，尝试重新解析
-                if avg_distance > 100000 and current_city != main_city:  # 100km = 100000m
+                if (
+                    avg_distance > 100000 and current_city != main_city
+                ):  # 100km = 100000m
                     logger.warning(
                         f"检测到地点 '{location}' 被解析到远离其他地点的城市 "
                         f"({current_city})，尝试用 {main_city} 重新解析"
@@ -1155,17 +1423,18 @@ class CafeRecommender(BaseTool):
                             logger.info(
                                 f"成功将 '{location}' 重新解析为 {new_result.get('formatted_address')}"
                             )
-                            updated_results.append({
-                                "original_location": location,
-                                "result": new_result
-                            })
+                            updated_results.append(
+                                {"original_location": location, "result": new_result}
+                            )
                             continue
 
             updated_results.append(item)
 
         return updated_results
 
-    def _calculate_center_point(self, coordinates: List[Tuple[float, float]]) -> Tuple[float, float]:
+    def _calculate_center_point(
+        self, coordinates: List[Tuple[float, float]]
+    ) -> Tuple[float, float]:
         """计算多个坐标点的中心点（使用球面几何）"""
         if not coordinates:
             raise ValueError("至少需要一个坐标来计算中心点。")
@@ -1175,16 +1444,24 @@ class CafeRecommender(BaseTool):
 
         # 对于两个点，使用球面中点计算
         if len(coordinates) == 2:
-            lat1, lng1 = math.radians(coordinates[0][1]), math.radians(coordinates[0][0])
-            lat2, lng2 = math.radians(coordinates[1][1]), math.radians(coordinates[1][0])
+            lat1, lng1 = (
+                math.radians(coordinates[0][1]),
+                math.radians(coordinates[0][0]),
+            )
+            lat2, lng2 = (
+                math.radians(coordinates[1][1]),
+                math.radians(coordinates[1][0]),
+            )
 
             dLng = lng2 - lng1
 
             Bx = math.cos(lat2) * math.cos(dLng)
             By = math.cos(lat2) * math.sin(dLng)
 
-            lat3 = math.atan2(math.sin(lat1) + math.sin(lat2),
-                              math.sqrt((math.cos(lat1) + Bx) * (math.cos(lat1) + Bx) + By * By))
+            lat3 = math.atan2(
+                math.sin(lat1) + math.sin(lat2),
+                math.sqrt((math.cos(lat1) + Bx) * (math.cos(lat1) + Bx) + By * By),
+            )
             lng3 = lng1 + math.atan2(By, math.cos(lat1) + Bx)
 
             return (math.degrees(lng3), math.degrees(lat3))
@@ -1195,9 +1472,7 @@ class CafeRecommender(BaseTool):
         return (avg_lng, avg_lat)
 
     async def _calculate_smart_center(
-        self,
-        coordinates: List[Tuple[float, float]],
-        keywords: str = "咖啡馆"
+        self, coordinates: List[Tuple[float, float]], keywords: str = "咖啡馆"
     ) -> Tuple[Tuple[float, float], Dict]:
         """智能中心点算法 - 考虑 POI 密度、交通便利性和公平性
 
@@ -1217,7 +1492,9 @@ class CafeRecommender(BaseTool):
         logger.info(f"几何中心: {geo_center}")
 
         # 2. 生成候选点网格（在几何中心周围 1.5km 范围内）
-        candidates = self._generate_candidate_points(geo_center, radius_km=1.5, grid_size=3)
+        candidates = self._generate_candidate_points(
+            geo_center, radius_km=1.5, grid_size=3
+        )
         candidates.insert(0, geo_center)  # 几何中心作为第一个候选
 
         logger.info(f"生成了 {len(candidates)} 个候选中心点")
@@ -1231,11 +1508,9 @@ class CafeRecommender(BaseTool):
             score, details = await self._evaluate_center_candidate(
                 candidate, coordinates, keywords
             )
-            evaluation_results.append({
-                "point": candidate,
-                "score": score,
-                "details": details
-            })
+            evaluation_results.append(
+                {"point": candidate, "score": score, "details": details}
+            )
 
             if score > best_score:
                 best_score = score
@@ -1250,14 +1525,11 @@ class CafeRecommender(BaseTool):
             "geo_center": geo_center,
             "best_candidate": best_candidate,
             "best_score": best_score,
-            "all_candidates": evaluation_results[:5]  # 返回前5个
+            "all_candidates": evaluation_results[:5],  # 返回前5个
         }
 
     def _generate_candidate_points(
-        self,
-        center: Tuple[float, float],
-        radius_km: float = 1.5,
-        grid_size: int = 3
+        self, center: Tuple[float, float], radius_km: float = 1.5, grid_size: int = 3
     ) -> List[Tuple[float, float]]:
         """在中心点周围生成候选点网格
 
@@ -1291,7 +1563,7 @@ class CafeRecommender(BaseTool):
         self,
         candidate: Tuple[float, float],
         participant_coords: List[Tuple[float, float]],
-        keywords: str
+        keywords: str,
     ) -> Tuple[float, Dict]:
         """评估候选中心点的质量
 
@@ -1303,21 +1575,14 @@ class CafeRecommender(BaseTool):
         lng, lat = candidate
         location_str = f"{lng},{lat}"
 
-        scores = {
-            "poi_density": 0,
-            "transit": 0,
-            "fairness": 0
-        }
+        scores = {"poi_density": 0, "transit": 0, "fairness": 0}
         details = {}
 
         # 1. POI 密度评分（40分）
         try:
             # 搜索目标场所
             pois = await self._search_pois(
-                location=location_str,
-                keywords=keywords,
-                radius=1500,
-                offset=10
+                location=location_str, keywords=keywords, radius=1500, offset=10
             )
             poi_count = len(pois)
 
@@ -1333,10 +1598,7 @@ class CafeRecommender(BaseTool):
         try:
             # 搜索地铁站
             transit_pois = await self._search_pois(
-                location=location_str,
-                keywords="地铁站",
-                radius=1000,
-                offset=5
+                location=location_str, keywords="地铁站", radius=1000, offset=5
             )
             transit_count = len(transit_pois)
 
@@ -1348,10 +1610,7 @@ class CafeRecommender(BaseTool):
             else:
                 # 搜索公交站
                 bus_pois = await self._search_pois(
-                    location=location_str,
-                    keywords="公交站",
-                    radius=500,
-                    offset=5
+                    location=location_str, keywords="公交站", radius=500, offset=5
                 )
                 scores["transit"] = min(15, len(bus_pois) * 5)
 
@@ -1395,8 +1654,8 @@ class CafeRecommender(BaseTool):
         location: str,
         keywords: str,
         radius: int = 2000,
-        types: str = "", 
-        offset: int = 20
+        types: str = "",
+        offset: int = 20,
     ) -> List[Dict]:
         cache_key = f"{location}_{keywords}_{radius}_{types}"
         if cache_key in self.poi_cache:
@@ -1409,19 +1668,23 @@ class CafeRecommender(BaseTool):
             "radius": radius,
             "offset": offset,
             "page": 1,
-            "extensions": "all"
+            "extensions": "all",
         }
-        if types: 
+        if types:
             params["types"] = types
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 if response.status != 200:
-                    logger.error(f"高德地图POI搜索失败: {response.status}, 参数: {params}")
+                    logger.error(
+                        f"高德地图POI搜索失败: {response.status}, 参数: {params}"
+                    )
                     return []
                 data = await response.json()
                 if data["status"] != "1":
-                    logger.error(f"POI搜索API返回错误: {data.get('info', '未知错误')}, 参数: {params}")
+                    logger.error(
+                        f"POI搜索API返回错误: {data.get('info', '未知错误')}, 参数: {params}"
+                    )
                     return []
                 pois = data.get("pois", [])
                 # 缓存大小限制：超限时删除最旧的条目
@@ -1486,9 +1749,7 @@ class CafeRecommender(BaseTool):
         return score, review_count, photo_count
 
     def _calculate_distance_score_v2(
-        self,
-        place: Dict,
-        center_point: Tuple[float, float]
+        self, place: Dict, center_point: Tuple[float, float]
     ) -> Tuple[float, float]:
         """计算距离分 (满分25分) - 非线性衰减
 
@@ -1497,13 +1758,13 @@ class CafeRecommender(BaseTool):
         """
         location = place.get("location", "")
         if not location or "," not in location:
-            return 0, float('inf')
+            return 0, float("inf")
 
         try:
             lng_str, lat_str = location.split(",")
             place_lng, place_lat = float(lng_str), float(lat_str)
         except (ValueError, TypeError):
-            return 0, float('inf')
+            return 0, float("inf")
 
         distance = self._calculate_distance(center_point, (place_lng, place_lat))
         place["_distance"] = distance
@@ -1515,7 +1776,7 @@ class CafeRecommender(BaseTool):
         elif distance <= 2500:
             # (1 - (distance/2500)^1.5) * 25
             ratio = (distance - 500) / 2000  # 归一化到0-1
-            decay = ratio ** 1.5
+            decay = ratio**1.5
             score = 25 * (1 - decay * 0.8)  # 最低保留20%
         else:
             score = 5  # 超远距离给最低分
@@ -1523,16 +1784,14 @@ class CafeRecommender(BaseTool):
         return score, distance
 
     def _calculate_scenario_match_score(
-        self,
-        place: Dict,
-        keywords: str
+        self, place: Dict, keywords: str
     ) -> Tuple[float, str]:
         """计算场景匹配分 (满分15分)
 
         Returns:
             (score, matched_keyword): 场景分和匹配的关键词
         """
-        source_keyword = place.get('_source_keyword', '')
+        source_keyword = place.get("_source_keyword", "")
 
         if source_keyword and source_keyword in keywords:
             return 15, source_keyword
@@ -1548,9 +1807,7 @@ class CafeRecommender(BaseTool):
         return 0, ""
 
     def _calculate_requirement_score(
-        self,
-        place: Dict,
-        user_requirements: str
+        self, place: Dict, user_requirements: str
     ) -> Tuple[float, List[str], Dict[str, str]]:
         """计算需求匹配分 (满分10分) - 三层匹配算法
 
@@ -1583,27 +1840,27 @@ class CafeRecommender(BaseTool):
         poi_match_rules = {
             "停车": {
                 "check_fields": ["tag", "parking_type", "navi_poiid"],
-                "match_values": ["停车", "车位", "免费停车", "parking"]
+                "match_values": ["停车", "车位", "免费停车", "parking"],
             },
             "安静": {
                 "check_fields": ["tag"],
-                "match_values": ["安静", "环境", "氛围", "舒适", "优雅"]
+                "match_values": ["安静", "环境", "氛围", "舒适", "优雅"],
             },
             "商务": {
                 "check_fields": ["tag", "type"],
-                "match_values": ["商务", "会议", "办公", "商务区"]
+                "match_values": ["商务", "会议", "办公", "商务区"],
             },
             "交通": {
                 "check_fields": ["tag", "address"],
-                "match_values": ["地铁", "公交", "站", "枢纽"]
+                "match_values": ["地铁", "公交", "站", "枢纽"],
             },
             "包间": {
                 "check_fields": ["tag"],
-                "match_values": ["包间", "包厢", "私密", "独立房间"]
+                "match_values": ["包间", "包厢", "私密", "独立房间"],
             },
             "WiFi": {
                 "check_fields": ["tag"],
-                "match_values": ["wifi", "无线", "免费WiFi", "网络"]
+                "match_values": ["wifi", "无线", "免费WiFi", "网络"],
             },
         }
 
@@ -1673,10 +1930,7 @@ class CafeRecommender(BaseTool):
 
         return min(10, total_score), matched, confidence_map
 
-    def _apply_diversity_adjustment(
-        self,
-        places: List[Dict]
-    ) -> List[Dict]:
+    def _apply_diversity_adjustment(self, places: List[Dict]) -> List[Dict]:
         """应用多样性调整
 
         - 同名连锁店惩罚
@@ -1695,7 +1949,9 @@ class CafeRecommender(BaseTool):
         seen_brands = {}
         for place in places:
             name = place.get("name", "")
-            brand_name = name.split("(")[0].split("（")[0].replace("店", "").replace("分店", "")
+            brand_name = (
+                name.split("(")[0].split("（")[0].replace("店", "").replace("分店", "")
+            )
 
             if name_counts.get(brand_name, 0) > 1:
                 seen_count = seen_brands.get(brand_name, 0)
@@ -1721,7 +1977,7 @@ class CafeRecommender(BaseTool):
         language = self._normalize_language(language)
         reasons = []
 
-        distance = place.get("_distance", float('inf'))
+        distance = place.get("_distance", float("inf"))
         rating = place.get("_raw_rating", 0)
         review_count = place.get("_review_count", 0)
         matched_reqs = place.get("_matched_requirements", [])
@@ -1771,8 +2027,13 @@ class CafeRecommender(BaseTool):
 
         # 需求匹配
         if matched_reqs:
-            req_labels = [self._translate_requirement_label(req, language) for req in matched_reqs[:2]]
-            req_text = ", ".join(req_labels) if language == "en" else "、".join(req_labels)
+            req_labels = [
+                self._translate_requirement_label(req, language)
+                for req in matched_reqs[:2]
+            ]
+            req_text = (
+                ", ".join(req_labels) if language == "en" else "、".join(req_labels)
+            )
             reasons.append(
                 f"Matches your {req_text} needs"
                 if language == "en"
@@ -1812,7 +2073,7 @@ class CafeRecommender(BaseTool):
         user_requirements: str,
         participant_locations: List[str],
         keywords: str,
-        top_n: int = 8
+        top_n: int = 8,
     ) -> List[Dict]:
         """LLM 智能评分重排序
 
@@ -1849,7 +2110,7 @@ class CafeRecommender(BaseTool):
                 "distance": round(place.get("_distance", 0)),
                 "address": place.get("address", ""),
                 "rule_score": round(place.get("_score", 0), 1),
-                "features": place.get("tag", "")[:100] if place.get("tag") else ""
+                "features": place.get("tag", "")[:100] if place.get("tag") else "",
             }
             places_summary.append(summary)
 
@@ -1857,9 +2118,9 @@ class CafeRecommender(BaseTool):
         prompt = f"""你是一个智能会面地点推荐助手。请对以下候选场所进行评分和排序。
 
 ## 会面信息
-- **参与者位置**: {', '.join(participant_locations)}
+- **参与者位置**: {", ".join(participant_locations)}
 - **寻找的场所类型**: {keywords}
-- **用户特殊需求**: {user_requirements or '无特殊要求'}
+- **用户特殊需求**: {user_requirements or "无特殊要求"}
 
 ## 候选场所
 {json.dumps(places_summary, ensure_ascii=False, indent=2)}
@@ -1884,9 +2145,14 @@ class CafeRecommender(BaseTool):
 
         try:
             from app.schema import Message
+
             response = await llm.ask(
                 messages=[Message.user_message(prompt)],
-                system_msgs=[Message.system_message("你是一个专业的地点推荐助手，请直接返回 JSON 格式的评分结果。")]
+                system_msgs=[
+                    Message.system_message(
+                        "你是一个专业的地点推荐助手，请直接返回 JSON 格式的评分结果。"
+                    )
+                ],
             )
 
             if not response or not response.content:
@@ -1911,7 +2177,9 @@ class CafeRecommender(BaseTool):
                     place["_llm_score"] = llm_result.get("llm_score", 0)
                     place["_llm_reason"] = llm_result.get("reason", "")
                     # 综合得分 = 规则得分 * 0.4 + LLM 得分 * 0.6
-                    place["_final_score"] = place.get("_score", 0) * 0.4 + place["_llm_score"] * 0.6
+                    place["_final_score"] = (
+                        place.get("_score", 0) * 0.4 + place["_llm_score"] * 0.6
+                    )
                 else:
                     place["_llm_score"] = 0
                     place["_llm_reason"] = ""
@@ -1968,12 +2236,14 @@ class CafeRecommender(BaseTool):
             # 构建场所信息摘要
             places_info = []
             for i, place in enumerate(places[:5]):
-                places_info.append({
-                    "name": place.get("name", ""),
-                    "address": place.get("address", ""),
-                    "distance": place.get("_distance", 0),
-                    "type": place.get("type", "")
-                })
+                places_info.append(
+                    {
+                        "name": place.get("name", ""),
+                        "address": place.get("address", ""),
+                        "distance": place.get("_distance", 0),
+                        "type": place.get("type", ""),
+                    }
+                )
 
             if language == "en":
                 prompt = f"""You are a local mobility expert. Based on the information below, generate practical travel and parking suggestions.
@@ -2037,10 +2307,11 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 system_prompt = "你是一个本地出行专家，请直接返回 JSON 格式的交通建议。"
 
             from app.schema import Message
+
             response = await llm.ask(
                 messages=[Message.user_message(prompt)],
                 system_msgs=[Message.system_message(system_prompt)],
-                stream=False  # 使用非流式调用，更可靠
+                stream=False,  # 使用非流式调用，更可靠
             )
 
             if not response:
@@ -2073,7 +2344,9 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             logger.warning(f"LLM 生成交通建议失败: {e}")
             return self._generate_default_transport_tips(keywords, language=language)
 
-    def _generate_default_transport_tips(self, keywords: str, language: str = "zh") -> str:
+    def _generate_default_transport_tips(
+        self, keywords: str, language: str = "zh"
+    ) -> str:
         """生成默认交通建议（兜底逻辑）"""
         language = self._normalize_language(language)
         if language == "en":
@@ -2091,7 +2364,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         places: List[Dict],
         user_requirements: str,
         participant_locations: List[str],
-        keywords: str
+        keywords: str,
     ) -> Dict[str, str]:
         """LLM 批量生成场所推荐理由
 
@@ -2113,14 +2386,16 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         try:
             places_info = []
             for i, place in enumerate(places[:8]):
-                places_info.append({
-                    "id": i,
-                    "name": place.get("name", ""),
-                    "rating": place.get("_raw_rating", place.get("rating", 0)),
-                    "distance": round(place.get("_distance", 0)),
-                    "address": place.get("address", ""),
-                    "type": place.get("type", "")
-                })
+                places_info.append(
+                    {
+                        "id": i,
+                        "name": place.get("name", ""),
+                        "rating": place.get("_raw_rating", place.get("rating", 0)),
+                        "distance": round(place.get("_distance", 0)),
+                        "address": place.get("address", ""),
+                        "type": place.get("type", ""),
+                    }
+                )
 
             prompt = f"""你是一个本地生活推荐专家。为以下场所生成简洁的推荐理由。
 
@@ -2150,10 +2425,15 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
 """
 
             from app.schema import Message
+
             response = await llm.ask(
                 messages=[Message.user_message(prompt)],
-                system_msgs=[Message.system_message("你是一个本地生活推荐专家，请直接返回 JSON 格式的推荐理由。")],
-                stream=False  # 使用非流式调用，更可靠
+                system_msgs=[
+                    Message.system_message(
+                        "你是一个本地生活推荐专家，请直接返回 JSON 格式的推荐理由。"
+                    )
+                ],
+                stream=False,  # 使用非流式调用，更可靠
             )
 
             if not response:
@@ -2234,7 +2514,9 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                         # Fallback to separate fields
                         place_lng = float(p.get("lng", 0))
                         place_lat = float(p.get("lat", 0))
-                    dist = self._calculate_distance(center_point, (place_lng, place_lat))
+                    dist = self._calculate_distance(
+                        center_point, (place_lng, place_lat)
+                    )
                     if dist <= max_distance:
                         filtered_places.append(p)
                 except (ValueError, TypeError):
@@ -2246,7 +2528,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         price_weight_map = {
             "economy": ["¥", "人均20", "人均30", "人均40"],
             "mid": ["¥¥", "人均50", "人均60", "人均80", "人均100"],
-            "high": ["¥¥¥", "¥¥¥¥", "人均150", "人均200", "人均300"]
+            "high": ["¥¥¥", "¥¥¥¥", "人均150", "人均200", "人均300"],
         }
 
         if not places:
@@ -2259,24 +2541,38 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             place["_raw_rating"] = raw_rating
 
             # 2. 热度分 (满分20分)
-            popularity_score, review_count, photo_count = self._calculate_popularity_score(place)
+            popularity_score, review_count, photo_count = (
+                self._calculate_popularity_score(place)
+            )
             place["_review_count"] = review_count
             place["_photo_count"] = photo_count
 
             # 3. 距离分 (满分25分) - 非线性衰减
-            distance_score, distance = self._calculate_distance_score_v2(place, center_point)
+            distance_score, distance = self._calculate_distance_score_v2(
+                place, center_point
+            )
 
             # 4. 场景匹配分 (满分15分)
-            scenario_score, matched_scenario = self._calculate_scenario_match_score(place, keywords)
+            scenario_score, matched_scenario = self._calculate_scenario_match_score(
+                place, keywords
+            )
             place["_matched_scenario"] = matched_scenario
 
             # 5. 需求匹配分 (满分10分) - 三层匹配算法
-            requirement_score, matched_reqs, confidence_map = self._calculate_requirement_score(place, user_requirements)
+            requirement_score, matched_reqs, confidence_map = (
+                self._calculate_requirement_score(place, user_requirements)
+            )
             place["_matched_requirements"] = matched_reqs
             place["_requirement_confidence"] = confidence_map  # 置信度映射
 
             # 汇总得分
-            total_score = base_score + popularity_score + distance_score + scenario_score + requirement_score
+            total_score = (
+                base_score
+                + popularity_score
+                + distance_score
+                + scenario_score
+                + requirement_score
+            )
             place["_score"] = total_score
 
             # 记录评分明细用于调试
@@ -2285,7 +2581,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 "popularity": round(popularity_score, 1),
                 "distance": round(distance_score, 1),
                 "scenario": round(scenario_score, 1),
-                "requirement": round(requirement_score, 1)
+                "requirement": round(requirement_score, 1),
             }
 
             logger.debug(
@@ -2301,7 +2597,9 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         ranked_places = self._apply_diversity_adjustment(ranked_places)
 
         # 重新排序
-        ranked_places = sorted(ranked_places, key=lambda x: x.get("_score", 0), reverse=True)
+        ranked_places = sorted(
+            ranked_places, key=lambda x: x.get("_score", 0), reverse=True
+        )
 
         # 生成推荐理由（优先使用 LLM 生成的理由，否则使用规则生成）
         for place in ranked_places:
@@ -2316,19 +2614,21 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 )
 
         # 对于多场景搜索，确保每个场景都有代表性
-        if any(place.get('_source_keyword') for place in ranked_places):
+        if any(place.get("_source_keyword") for place in ranked_places):
             logger.info("应用多场景平衡策略")
             # 按场景类型分组
             by_keyword = {}
             for place in ranked_places:
-                keyword = place.get('_source_keyword', '未知')
+                keyword = place.get("_source_keyword", "未知")
                 if keyword not in by_keyword:
                     by_keyword[keyword] = []
                 by_keyword[keyword].append(place)
 
             # 从每个场景选择最佳的场所，确保多样性
             balanced_places = []
-            max_per_keyword = max(2, 8 // len(by_keyword))  # 每个场景至少2个，总共不超过8个
+            max_per_keyword = max(
+                2, 8 // len(by_keyword)
+            )  # 每个场景至少2个，总共不超过8个
 
             for keyword, keyword_places in by_keyword.items():
                 selected = keyword_places[:max_per_keyword]
@@ -2336,38 +2636,41 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 logger.info(f"从场景 '{keyword}' 选择了 {len(selected)} 个场所")
 
             # 按分数重新排序，但保持场景多样性
-            balanced_places = sorted(balanced_places, key=lambda x: x.get("_score", 0), reverse=True)
+            balanced_places = sorted(
+                balanced_places, key=lambda x: x.get("_score", 0), reverse=True
+            )
 
             # 记录最终推荐
             for i, p in enumerate(balanced_places[:8]):
-                logger.info(f"推荐#{i+1}: {p.get('name')} ({p.get('_score', 0):.1f}分) - {p.get('_recommendation_reason', '')}")
+                logger.info(
+                    f"推荐#{i + 1}: {p.get('name')} ({p.get('_score', 0):.1f}分) - {p.get('_recommendation_reason', '')}"
+                )
 
             return balanced_places[:8]  # 增加到8个推荐
         else:
             # 记录最终推荐
             for i, p in enumerate(ranked_places[:6]):
-                logger.info(f"推荐#{i+1}: {p.get('name')} ({p.get('_score', 0):.1f}分) - {p.get('_recommendation_reason', '')}")
+                logger.info(
+                    f"推荐#{i + 1}: {p.get('name')} ({p.get('_score', 0):.1f}分) - {p.get('_recommendation_reason', '')}"
+                )
 
             return ranked_places[:6]  # 单场景增加到6个
 
-
     def _calculate_distance(
-        self,
-        point1: Tuple[float, float],
-        point2: Tuple[float, float]
+        self, point1: Tuple[float, float], point2: Tuple[float, float]
     ) -> float:
         lng1, lat1 = point1
         lng2, lat2 = point2
-        x = (lng2 - lng1) * 85000 
-        y = (lat2 - lat1) * 111000 
-        return math.sqrt(x*x + y*y)
+        x = (lng2 - lng1) * 85000
+        y = (lat2 - lat1) * 111000
+        return math.sqrt(x * x + y * y)
 
     def _cleanup_old_html_files(self, directory: str, max_files: int = 50):
         """清理旧的 HTML 文件，保留最新的 max_files 个"""
         try:
             files = []
             for f in os.listdir(directory):
-                if f.endswith('.html') and f.startswith('place_recommendation_'):
+                if f.endswith(".html") and f.startswith("place_recommendation_"):
                     file_path = os.path.join(directory, f)
                     files.append((file_path, os.path.getmtime(file_path)))
 
@@ -2399,11 +2702,22 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
 
         # 提取参与者位置名称
         if participant_locations is None:
-            participant_locations = [loc.get("formatted_address", loc.get("address", "")) for loc in locations]
+            participant_locations = [
+                loc.get("formatted_address", loc.get("address", ""))
+                for loc in locations
+            ]
 
         html_content = await self._generate_html_content(
-            locations, places, center_point, user_requirements, keywords,
-            theme, fallback_used, fallback_keyword, participant_locations, language
+            locations,
+            places,
+            center_point,
+            user_requirements,
+            keywords,
+            theme,
+            fallback_used,
+            fallback_keyword,
+            participant_locations,
+            language,
         )
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
@@ -2417,7 +2731,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
 
         file_path = os.path.join(workspace_js_src_path, file_name)
 
-        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+        async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
             await f.write(html_content)
         return file_path
 
@@ -2439,22 +2753,22 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         if theme:
             # 主题映射：前端theme -> 后端配置key
             theme_mapping = {
-                'coffee': '咖啡馆',
-                'restaurant': '餐厅', 
-                'library': '图书馆',
-                'shopping': '商场',
-                'park': '公园',
-                'cinema': '电影院',
-                'gym': '健身房',
-                'ktv': 'KTV',
-                'museum': '博物馆',
-                'attraction': '景点',
-                'bar': '酒吧',
-                'teahouse': '茶楼',
-                'custom': 'default'
+                "coffee": "咖啡馆",
+                "restaurant": "餐厅",
+                "library": "图书馆",
+                "shopping": "商场",
+                "park": "公园",
+                "cinema": "电影院",
+                "gym": "健身房",
+                "ktv": "KTV",
+                "museum": "博物馆",
+                "attraction": "景点",
+                "bar": "酒吧",
+                "teahouse": "茶楼",
+                "custom": "default",
             }
-            config_key = theme_mapping.get(theme, 'default')
-            primary_keyword = config_key if config_key != 'default' else '场所'
+            config_key = theme_mapping.get(theme, "default")
+            primary_keyword = config_key if config_key != "default" else "场所"
         else:
             # 兼容旧逻辑：从关键词确定配置
             primary_keyword = self._get_primary_keyword(keywords)
@@ -2506,15 +2820,23 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             logger.warning(f"SEO meta fallback: {exc}")
             schema_graph = []
 
-        meta_title = html.escape(meta_tags.get("title", "")) or f"{city_name}聚会地点推荐 - MeetSpot"
+        meta_title = (
+            html.escape(meta_tags.get("title", ""))
+            or f"{city_name}聚会地点推荐 - MeetSpot"
+        )
         meta_description = html.escape(
             meta_tags.get("description", "MeetSpot帮助团队计算公平的会面地点。")
         )
-        meta_keywords = html.escape(meta_tags.get("keywords", f"{city_name},{primary_keyword}"))
+        meta_keywords = html.escape(
+            meta_tags.get("keywords", f"{city_name},{primary_keyword}")
+        )
         schema_block = ""
         if schema_graph:
             schema_block = json.dumps(
-                {"@context": "https://schema.org", "@graph": [g for g in schema_graph if g]},
+                {
+                    "@context": "https://schema.org",
+                    "@graph": [g for g in schema_graph if g],
+                },
                 ensure_ascii=False,
                 indent=2,
             )
@@ -2538,56 +2860,74 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
 
         location_markers = []
         for idx, loc in enumerate(locations):
-            location_markers.append({
-                "name": self._result_text(
-                    language,
-                    "result.map.participant_label",
-                    "Location {index}: {name}",
-                    index=idx + 1,
-                    name=loc["name"],
-                ) if language == "en" else f"地点{idx+1}: {loc['name']}",
-                "position": [loc["lng"], loc["lat"]],
-                "icon": "location"
-            })
+            location_markers.append(
+                {
+                    "name": self._result_text(
+                        language,
+                        "result.map.participant_label",
+                        "Location {index}: {name}",
+                        index=idx + 1,
+                        name=loc["name"],
+                    )
+                    if language == "en"
+                    else f"地点{idx + 1}: {loc['name']}",
+                    "position": [loc["lng"], loc["lat"]],
+                    "icon": "location",
+                }
+            )
 
-        place_markers = [] 
+        place_markers = []
         for place in places:
             lng_str, lat_str = place.get("location", ",").split(",")
             if lng_str and lat_str:
-                place_markers.append({
-                    "name": place["name"],
-                    "position": [float(lng_str), float(lat_str)],
-                    "icon": "place" 
-                })
+                place_markers.append(
+                    {
+                        "name": place["name"],
+                        "position": [float(lng_str), float(lat_str)],
+                        "icon": "place",
+                    }
+                )
 
         center_marker = {
-            "name": self._result_text(language, "result.map.best_point", "Best Meeting Point"),
+            "name": self._result_text(
+                language, "result.map.best_point", "Best Meeting Point"
+            ),
             "position": [center_point[0], center_point[1]],
-            "icon": "center"
+            "icon": "center",
         }
         all_markers = [center_marker] + location_markers + place_markers
 
         location_rows_html = ""
         for idx, loc in enumerate(locations):
-            location_rows_html += f"<tr><td>{idx+1}</td><td>{loc['name']}</td><td>{loc['formatted_address']}</td></tr>"
+            location_rows_html += f"<tr><td>{idx + 1}</td><td>{loc['name']}</td><td>{loc['formatted_address']}</td></tr>"
 
         location_distance_html = ""
         for loc in locations:
-            distance = self._calculate_distance(center_point, (loc['lng'], loc['lat'])) / 1000
-            distance_line = self._result_text(
-                language,
-                "result.transport.distance_item",
-                "<strong>{name}</strong>: about <span class='distance'>{distance:.1f} km</span> from the midpoint",
-                name=loc["name"],
-                distance=distance,
-            ) if language == "en" else (
-                f"<strong>{loc['name']}</strong>: 距离中心点约 <span class='distance'>{distance:.1f} 公里</span>"
+            distance = (
+                self._calculate_distance(center_point, (loc["lng"], loc["lat"])) / 1000
             )
-            location_distance_html += f"<li><i class='bx bx-map'></i>{distance_line}</li>"
+            distance_line = (
+                self._result_text(
+                    language,
+                    "result.transport.distance_item",
+                    "<strong>{name}</strong>: about <span class='distance'>{distance:.1f} km</span> from the midpoint",
+                    name=loc["name"],
+                    distance=distance,
+                )
+                if language == "en"
+                else (
+                    f"<strong>{loc['name']}</strong>: 距离中心点约 <span class='distance'>{distance:.1f} 公里</span>"
+                )
+            )
+            location_distance_html += (
+                f"<li><i class='bx bx-map'></i>{distance_line}</li>"
+            )
 
         # LLM 动态生成交通与停车建议 (带超时保护)
         if participant_locations is None:
-            participant_locations = [loc.get("name", loc.get("formatted_address", "")) for loc in locations]
+            participant_locations = [
+                loc.get("name", loc.get("formatted_address", "")) for loc in locations
+            ]
         try:
             transport_tips_html = await asyncio.wait_for(
                 self._llm_generate_transport_tips(
@@ -2597,40 +2937,62 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                     keywords,
                     language=language,
                 ),
-                timeout=15.0  # 15秒超时，避免Render 30秒请求超时
+                timeout=15.0,  # 15秒超时，避免Render 30秒请求超时
             )
         except asyncio.TimeoutError:
             logger.warning("LLM 交通建议生成超时，使用默认建议")
-            transport_tips_html = self._generate_default_transport_tips(keywords, language=language)
+            transport_tips_html = self._generate_default_transport_tips(
+                keywords, language=language
+            )
 
-        place_cards_html = "" 
+        place_cards_html = ""
         for place in places:
-            rating = place.get(
-                "biz_ext", {}
-            ).get(
+            rating = place.get("biz_ext", {}).get(
                 "rating",
-                self._result_text(language, "result.place.no_rating", "No rating yet") if language == "en" else "暂无评分",
+                self._result_text(language, "result.place.no_rating", "No rating yet")
+                if language == "en"
+                else "暂无评分",
             )
             address = place.get(
                 "address",
-                self._result_text(language, "result.place.unknown_address", "Address unavailable") if language == "en" else "地址未知",
+                self._result_text(
+                    language, "result.place.unknown_address", "Address unavailable"
+                )
+                if language == "en"
+                else "地址未知",
             )
             business_hours = place.get(
                 "business_hours",
-                self._result_text(language, "result.place.unknown_hours", "Hours unavailable") if language == "en" else "营业时间未知",
+                self._result_text(
+                    language, "result.place.unknown_hours", "Hours unavailable"
+                )
+                if language == "en"
+                else "营业时间未知",
             )
             if isinstance(business_hours, list) and business_hours:
                 business_hours = "; ".join(business_hours)
             tel = place.get(
                 "tel",
-                self._result_text(language, "result.place.unknown_phone", "Phone unavailable") if language == "en" else "电话未知",
+                self._result_text(
+                    language, "result.place.unknown_phone", "Phone unavailable"
+                )
+                if language == "en"
+                else "电话未知",
             )
-            
+
             tags = place.get("tag", [])
-            if isinstance(tags, str): tags = tags.split(";") if tags else []
-            elif not isinstance(tags, list): tags = []
-            
-            tags_html = "".join([f"<span class='cafe-tag'>{tg.strip()}</span>" for tg in tags if tg.strip()])
+            if isinstance(tags, str):
+                tags = tags.split(";") if tags else []
+            elif not isinstance(tags, list):
+                tags = []
+
+            tags_html = "".join(
+                [
+                    f"<span class='cafe-tag'>{tg.strip()}</span>"
+                    for tg in tags
+                    if tg.strip()
+                ]
+            )
             if not tags_html:
                 tags_html = f"<span class='cafe-tag'>{cfg['noun_singular']}</span>"
 
@@ -2645,40 +3007,72 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                     if confidence == "high":
                         icon = "bx-check-circle"
                         tag_class = "match-tag-high"
-                        tooltip = self._result_text(language, "result.match.verified", "Verified") if language == "en" else "已验证"
+                        tooltip = (
+                            self._result_text(
+                                language, "result.match.verified", "Verified"
+                            )
+                            if language == "en"
+                            else "已验证"
+                        )
                     elif confidence == "medium":
                         icon = "bx-check"
                         tag_class = "match-tag-medium"
-                        tooltip = self._result_text(language, "result.match.brand_signal", "Brand signal") if language == "en" else "品牌特征"
+                        tooltip = (
+                            self._result_text(
+                                language, "result.match.brand_signal", "Brand signal"
+                            )
+                            if language == "en"
+                            else "品牌特征"
+                        )
                     else:
                         icon = "bx-question-mark"
                         tag_class = "match-tag-low"
-                        tooltip = self._result_text(language, "result.match.confirm", "Suggested, please confirm") if language == "en" else "建议确认"
+                        tooltip = (
+                            self._result_text(
+                                language,
+                                "result.match.confirm",
+                                "Suggested, please confirm",
+                            )
+                            if language == "en"
+                            else "建议确认"
+                        )
                     label = self._translate_requirement_label(req, language)
-                    match_tags.append(f"<span class='match-tag {tag_class}' title='{tooltip}'><i class='bx {icon}'></i>{label}</span>")
-                requirement_match_html = f'''
+                    match_tags.append(
+                        f"<span class='match-tag {tag_class}' title='{tooltip}'><i class='bx {icon}'></i>{label}</span>"
+                    )
+                requirement_match_html = f"""
                         <div class="requirement-match">
                             {"".join(match_tags)}
-                        </div>'''
+                        </div>"""
 
-            lng_str, lat_str = place.get("location",",").split(",")
-            distance_text = self._result_text(language, "result.place.unknown_distance", "Distance unavailable") if language == "en" else "未知距离"
+            lng_str, lat_str = place.get("location", ",").split(",")
+            distance_text = (
+                self._result_text(
+                    language, "result.place.unknown_distance", "Distance unavailable"
+                )
+                if language == "en"
+                else "未知距离"
+            )
             map_link_coords = ""
             if lng_str and lat_str:
                 lng, lat = float(lng_str), float(lat_str)
                 distance = self._calculate_distance(center_point, (lng, lat))
-                distance_text = f"{distance/1000:.1f} km" if language == "en" else f"{distance/1000:.1f} 公里"
+                distance_text = (
+                    f"{distance / 1000:.1f} km"
+                    if language == "en"
+                    else f"{distance / 1000:.1f} 公里"
+                )
                 map_link_coords = f"{lng},{lat}"
 
             # 获取推荐理由
             recommendation_reason = place.get("_recommendation_reason", "")
             reason_html = ""
             if recommendation_reason:
-                reason_html = f'''
+                reason_html = f"""
                         <div class="cafe-reason">
                             <i class='bx bx-bulb'></i>
                             <span>{recommendation_reason}</span>
-                        </div>'''
+                        </div>"""
 
             # 获取评分明细用于tooltip（可选展示）
             score_breakdown = place.get("_score_breakdown", {})
@@ -2702,9 +3096,9 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 <div class="cafe-content">
                     <div class="cafe-header">
                         <div>
-                            <h3 class="cafe-name">{place['name']}</h3>
+                            <h3 class="cafe-name">{place["name"]}</h3>
                         </div>
-                        <span class="cafe-rating">{self._result_text(language, "result.place.rating_label", "Rating", ) if language == "en" else "评分"}: {rating}</span>
+                        <span class="cafe-rating">{self._result_text(language, "result.place.rating_label", "Rating") if language == "en" else "评分"}: {rating}</span>
                     </div>{reason_html}
                     <div class="cafe-details">
                         <div class="cafe-info">
@@ -2728,7 +3122,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                             <i class='bx bx-walk'></i> {distance_text}
                         </div>
                         <div class="cafe-actions">
-                            <a href="https://uri.amap.com/marker?position={map_link_coords}&name={place['name']}" target="_blank">
+                            <a href="https://uri.amap.com/marker?position={map_link_coords}&name={place["name"]}" target="_blank">
                                 <i class='bx bx-navigation'></i>{self._result_text(language, "result.place.navigate", "Navigate") if language == "en" else "导航"}
                             </a>
                         </div>
@@ -2738,7 +3132,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
 
         # 空状态设计：如果没有找到推荐结果
         if not places:
-            place_cards_html = f'''
+            place_cards_html = f"""
             <div class="empty-state">
                 <i class='bx bx-coffee empty-state-icon'></i>
                 <h3 class="empty-state-title">{self._result_text(language, "result.empty.title", "No recommended {venues} found", venues=cfg["noun_plural"]) if language == "en" else f"暂无推荐{cfg['noun_plural']}"}</h3>
@@ -2749,21 +3143,26 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 <a href="/public/meetspot_finder.html" class="btn-modern btn-primary-modern">
                     <i class='bx bx-redo'></i>{self._result_text(language, "result.nav.research", "Search Again") if language == "en" else "重新搜索"}
                 </a>
-            </div>'''
+            </div>"""
 
         markers_json = json.dumps(all_markers)
 
         amap_security_js_code = ""
-        if hasattr(config, 'amap') and hasattr(config.amap, 'security_js_code') and config.amap.security_js_code:
+        if (
+            hasattr(config, "amap")
+            and hasattr(config.amap, "security_js_code")
+            and config.amap.security_js_code
+        ):
             amap_security_js_code = config.amap.security_js_code
 
         # 读取设计token CSS内容，用于自包含HTML
         design_tokens_css = ""
         try:
             from pathlib import Path
+
             tokens_css_path = Path("static/css/design-tokens.css")
             if tokens_css_path.exists():
-                design_tokens_css = tokens_css_path.read_text(encoding='utf-8')
+                design_tokens_css = tokens_css_path.read_text(encoding="utf-8")
         except Exception as e:
             logger.warning(f"无法读取design-tokens.css: {e}")
 
@@ -3256,10 +3655,24 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
 </head>
 <body>
     <nav style="background:#001524;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1000;">
-        <a href="{'/en/' if language == 'en' else '/'}" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;">MeetSpot</a>
+        <a href="{
+            "/en/" if language == "en" else "/"
+        }" style="color:white;text-decoration:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;">MeetSpot</a>
         <div style="display:flex;gap:16px;align-items:center;">
-            <a href="/public/meetspot_finder.html" style="color:#06D6A0;text-decoration:none;font-size:0.9rem;">{self._result_text(language, "result.nav.research", "Search Again") if language == "en" else "重新搜索"}</a>
-            <button onclick="navigator.clipboard.writeText(location.href).then(function(){{this.textContent='{self._result_text(language, 'result.nav.copied', 'Copied!') if language == 'en' else '已复制!'}'}}.bind(this))" data-track="result_share" data-track-label="copy_link" style="background:#FF6B35;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;">{self._result_text(language, "result.nav.copy_link", "Copy Link") if language == "en" else "复制链接"}</button>
+            <a href="/public/meetspot_finder.html" style="color:#06D6A0;text-decoration:none;font-size:0.9rem;">{
+            self._result_text(language, "result.nav.research", "Search Again")
+            if language == "en"
+            else "重新搜索"
+        }</a>
+            <button onclick="navigator.clipboard.writeText(location.href).then(function(){{this.textContent='{
+            self._result_text(language, "result.nav.copied", "Copied!")
+            if language == "en"
+            else "已复制!"
+        }'}}.bind(this))" data-track="result_share" data-track-label="copy_link" style="background:#FF6B35;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;">{
+            self._result_text(language, "result.nav.copy_link", "Copy Link")
+            if language == "en"
+            else "复制链接"
+        }</button>
         </div>
     </nav>
     <header>
@@ -3267,83 +3680,233 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             <div class="header-logo">
                 <i class='bx {cfg["icon_header"]} coffee-icon'></i>{cfg["topic"]}
             </div>
-            <div class="header-subtitle">{self._result_text(language, "result.header.subtitle", "Best meeting {venues} selected for your group", venues=cfg["noun_plural"]) if language == "en" else f"为您找到的最佳会面{cfg['noun_plural']}"}</div>
+            <div class="header-subtitle">{
+            self._result_text(
+                language,
+                "result.header.subtitle",
+                "Best meeting {venues} selected for your group",
+                venues=cfg["noun_plural"],
+            )
+            if language == "en"
+            else f"为您找到的最佳会面{cfg['noun_plural']}"
+        }</div>
         </div>
     </header>
 
-    {f'''<div class="fallback-notice">
+    {
+            f'''<div class="fallback-notice">
         <i class="bx bx-info-circle"></i>
         <span class="fallback-notice-text">
             {self._result_text(language, "result.fallback.message", 'We could not find "{keyword}", so we recommended nearby <span class="fallback-notice-keyword">{fallback}</span> instead.', keyword=self._translate_keyword_label(keywords, language), fallback=self._translate_keyword_label(fallback_keyword, language)) if language == "en" else f'未找到「{keywords}」相关场所，已为您推荐附近的「<span class="fallback-notice-keyword">{fallback_keyword}</span>」'}
         </span>
-    </div>''' if fallback_used and fallback_keyword else ''}
+    </div>'''
+            if fallback_used and fallback_keyword
+            else ""
+        }
 
     <div class="container main-content">
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-info-circle'></i>{self._result_text(language, "result.summary.title", "Recommendation Summary") if language == "en" else "推荐摘要"}</h2>
+            <h2 class="section-title"><i class='bx bx-info-circle'></i>{
+            self._result_text(
+                language, "result.summary.title", "Recommendation Summary"
+            )
+            if language == "en"
+            else "推荐摘要"
+        }</h2>
             <div class="summary-card">
                 <div class="summary-item">
-                    <div class="summary-label">{self._result_text(language, "result.summary.participants", "Participants") if language == "en" else "参与地点数"}</div>
-                    <div class="summary-value">{self._result_text(language, "result.summary.participants_value", "{count} locations", count=len(locations)) if language == "en" else f"{len(locations)} 个地点"}</div>
+                    <div class="summary-label">{
+            self._result_text(language, "result.summary.participants", "Participants")
+            if language == "en"
+            else "参与地点数"
+        }</div>
+                    <div class="summary-value">{
+            self._result_text(
+                language,
+                "result.summary.participants_value",
+                "{count} locations",
+                count=len(locations),
+            )
+            if language == "en"
+            else f"{len(locations)} 个地点"
+        }</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">{self._result_text(language, "result.summary.recommendations", "Recommended {venues}", venues=cfg["noun_plural"]) if language == "en" else f"推荐{cfg['noun_plural']}数"}</div>
-                    <div class="summary-value">{self._result_text(language, "result.summary.recommendations_value", "{count} {venues}", count=len(places), venues=cfg["noun_plural"]) if language == "en" else f"{len(places)} 家{cfg['noun_plural']}"}</div>
+                    <div class="summary-label">{
+            self._result_text(
+                language,
+                "result.summary.recommendations",
+                "Recommended {venues}",
+                venues=cfg["noun_plural"],
+            )
+            if language == "en"
+            else f"推荐{cfg['noun_plural']}数"
+        }</div>
+                    <div class="summary-value">{
+            self._result_text(
+                language,
+                "result.summary.recommendations_value",
+                "{count} {venues}",
+                count=len(places),
+                venues=cfg["noun_plural"],
+            )
+            if language == "en"
+            else f"{len(places)} 家{cfg['noun_plural']}"
+        }</div>
                 </div>
                 <div class="summary-item">
-                    <div class="summary-label">{self._result_text(language, "result.summary.requirements", "Special Requirements") if language == "en" else "特殊需求"}</div>
-                    <div class="summary-value">{user_requirements or (self._result_text(language, "result.summary.none", "No special requirements") if language == "en" else "无特殊需求")}</div>
+                    <div class="summary-label">{
+            self._result_text(
+                language, "result.summary.requirements", "Special Requirements"
+            )
+            if language == "en"
+            else "特殊需求"
+        }</div>
+                    <div class="summary-value">{
+            user_requirements
+            or (
+                self._result_text(
+                    language, "result.summary.none", "No special requirements"
+                )
+                if language == "en"
+                else "无特殊需求"
+            )
+        }</div>
                 </div>
             </div>
         </div>
         {search_process_html}
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-map-pin'></i>{self._result_text(language, "result.section.locations", "Participant Locations") if language == "en" else "地点信息"}</h2>
+            <h2 class="section-title"><i class='bx bx-map-pin'></i>{
+            self._result_text(
+                language, "result.section.locations", "Participant Locations"
+            )
+            if language == "en"
+            else "地点信息"
+        }</h2>
             <table class="location-table">
-                <thead><tr><th>{self._result_text(language, "result.table.index", "#") if language == "en" else "序号"}</th><th>{self._result_text(language, "result.table.name", "Location") if language == "en" else "地点名称"}</th><th>{self._result_text(language, "result.table.address", "Address") if language == "en" else "详细地址"}</th></tr></thead>
+                <thead><tr><th>{
+            self._result_text(language, "result.table.index", "#")
+            if language == "en"
+            else "序号"
+        }</th><th>{
+            self._result_text(language, "result.table.name", "Location")
+            if language == "en"
+            else "地点名称"
+        }</th><th>{
+            self._result_text(language, "result.table.address", "Address")
+            if language == "en"
+            else "详细地址"
+        }</th></tr></thead>
                 <tbody>{location_rows_html}</tbody>
             </table>
         </div>
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-map-alt'></i>{self._result_text(language, "result.section.map", "Map Overview") if language == "en" else "地图展示"}</h2>
+            <h2 class="section-title"><i class='bx bx-map-alt'></i>{
+            self._result_text(language, "result.section.map", "Map Overview")
+            if language == "en"
+            else "地图展示"
+        }</h2>
             <div class="map-container">
                 <div id="map"></div>
                 <div class="map-legend">
-                    <div class="legend-item"><div class="legend-color legend-center"></div><span>{self._result_text(language, "result.map.best_point", "Best Meeting Point") if language == "en" else "最佳会面点"}</span></div>
-                    <div class="legend-item"><div class="legend-color legend-location"></div><span>{self._result_text(language, "result.map.locations", "Participant Locations") if language == "en" else "所在地点"}</span></div>
-                    <div class="legend-item"><div class="legend-color legend-place"></div><span>{cfg["map_legend"]}</span></div>
+                    <div class="legend-item"><div class="legend-color legend-center"></div><span>{
+            self._result_text(language, "result.map.best_point", "Best Meeting Point")
+            if language == "en"
+            else "最佳会面点"
+        }</span></div>
+                    <div class="legend-item"><div class="legend-color legend-location"></div><span>{
+            self._result_text(language, "result.map.locations", "Participant Locations")
+            if language == "en"
+            else "所在地点"
+        }</span></div>
+                    <div class="legend-item"><div class="legend-color legend-place"></div><span>{
+            cfg["map_legend"]
+        }</span></div>
                 </div>
             </div>
         </div>
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx {cfg["icon_section"]}'></i>{self._result_text(language, "result.section.venues", "Recommended {venues}", venues=cfg["noun_plural"]) if language == "en" else f"推荐{cfg['noun_plural']}"}</h2>
+            <h2 class="section-title"><i class='bx {cfg["icon_section"]}'></i>{
+            self._result_text(
+                language,
+                "result.section.venues",
+                "Recommended {venues}",
+                venues=cfg["noun_plural"],
+            )
+            if language == "en"
+            else f"推荐{cfg['noun_plural']}"
+        }</h2>
             <div class="cafe-grid">
                 {place_cards_html}
             </div>
         </div>
         <div class="card glass-card">
-            <h2 class="section-title"><i class='bx bx-car'></i>{self._result_text(language, "result.transport.title", "Travel & Parking Tips") if language == "en" else "交通与停车建议"}</h2>
+            <h2 class="section-title"><i class='bx bx-car'></i>{
+            self._result_text(
+                language, "result.transport.title", "Travel & Parking Tips"
+            )
+            if language == "en"
+            else "交通与停车建议"
+        }</h2>
             <div class="transportation-info">
                 <div class="transport-card">
-                    <h3 class="transport-title"><i class='bx bx-trip'></i>{self._result_text(language, "result.transport.routes", "Getting There") if language == "en" else "前往方式"}</h3>
-                    <p>{self._result_text(language, "result.transport.center_near", 'The midpoint is near <span class="center-coords">{lng:.6f}, {lat:.6f}</span>.', lng=center_point[0], lat=center_point[1]) if language == "en" else f'最佳会面点位于<span class="center-coords">{center_point[0]:.6f}, {center_point[1]:.6f}</span>附近'}</p>
+                    <h3 class="transport-title"><i class='bx bx-trip'></i>{
+            self._result_text(language, "result.transport.routes", "Getting There")
+            if language == "en"
+            else "前往方式"
+        }</h3>
+                    <p>{
+            self._result_text(
+                language,
+                "result.transport.center_near",
+                'The midpoint is near <span class="center-coords">{lng:.6f}, {lat:.6f}</span>.',
+                lng=center_point[0],
+                lat=center_point[1],
+            )
+            if language == "en"
+            else f'最佳会面点位于<span class="center-coords">{center_point[0]:.6f}, {center_point[1]:.6f}</span>附近'
+        }</p>
                     <ul class="transport-list">{location_distance_html}</ul>
                 </div>
                 <div class="transport-card">
-                    <h3 class="transport-title"><i class='bx bxs-car-garage'></i>{self._result_text(language, "result.transport.smart", "Smart Travel Suggestions") if language == "en" else "智能出行建议"}</h3>
+                    <h3 class="transport-title"><i class='bx bxs-car-garage'></i>{
+            self._result_text(
+                language, "result.transport.smart", "Smart Travel Suggestions"
+            )
+            if language == "en"
+            else "智能出行建议"
+        }</h3>
                     <ul class="transport-list">
                         {transport_tips_html}
                     </ul>
                 </div>
             </div>
-            <a href="{'/en/' if language == 'en' else '/'}" class="btn-modern btn-primary-modern">
-                <i class='bx bx-left-arrow-alt'></i>{self._result_text(language, "result.nav.home", "Back to Home") if language == "en" else "返回首页"}
+            <a href="{
+            "/en/" if language == "en" else "/"
+        }" class="btn-modern btn-primary-modern">
+                <i class='bx bx-left-arrow-alt'></i>{
+            self._result_text(language, "result.nav.home", "Back to Home")
+            if language == "en"
+            else "返回首页"
+        }
             </a>
         </div>
     </div>
     <footer class="footer">
         <div class="container">
-            <p>{self._result_text(language, "result.footer.text", "© {year} {topic} - Smart {noun} recommendation service | Powered by Amap", year=datetime.now().year, topic=cfg["topic"], noun=cfg["noun_singular"]) if language == "en" else f"© {datetime.now().year} {cfg['topic']} - 智能{cfg['noun_singular']}推荐服务 | 数据来源：高德地图"}</p>
+            <p>{
+            self._result_text(
+                language,
+                "result.footer.text",
+                "© {year} {topic} - Smart {noun} recommendation service | Powered by Amap",
+                year=datetime.now().year,
+                topic=cfg["topic"],
+                noun=cfg["noun_singular"],
+            )
+            if language == "en"
+            else f"© {datetime.now().year} {cfg['topic']} - 智能{cfg['noun_singular']}推荐服务 | 数据来源：高德地图"
+        }</p>
         </div>
     </footer>
     <script type="text/javascript">
@@ -3361,7 +3924,11 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                     AMapUI: {{ version: "1.1", plugins: ["overlay/SimpleMarker"] }}
                 }})
                 .then(function(AMap) {{ initMap(AMap); }})
-                .catch(function(e) {{ console.error('{self._result_text(language, "result.map.load_error", "Map failed to load") if language == "en" else "地图加载失败"}:', e); }});
+                .catch(function(e) {{ console.error('{
+            self._result_text(language, "result.map.load_error", "Map failed to load")
+            if language == "en"
+            else "地图加载失败"
+        }:', e); }});
             }};
             document.body.appendChild(script);
             animateCafeCards(); 
@@ -3379,7 +3946,11 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 var labelText = '';
                 if (item.icon === 'center') {{
                     color = '#2ecc71';
-                    labelText = '{self._result_text(language, "result.map.best_point", "Best Meeting Point") if language == "en" else "最佳会面点"}';
+                    labelText = '{
+            self._result_text(language, "result.map.best_point", "Best Meeting Point")
+            if language == "en"
+            else "最佳会面点"
+        }';
                 }} else if (item.icon === 'location') {{
                     color = '#3498db';
                     // Extract location name from "地点N: XXX" format
@@ -3506,7 +4077,9 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                     f'> Note: "{self._translate_keyword_label(keywords, language)}" was not found, so nearby "{self._translate_keyword_label(fallback_keyword, language)}" venues were recommended instead.'
                 )
             else:
-                result.append(f"> 提示：未找到「{keywords}」相关场所，已为您推荐附近的「{fallback_keyword}」")
+                result.append(
+                    f"> 提示：未找到「{keywords}」相关场所，已为您推荐附近的「{fallback_keyword}」"
+                )
             result.append("")
 
         result.append(
@@ -3515,20 +4088,22 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             else f"### 推荐{cfg['noun_plural']}:"
         )
         for i, place in enumerate(places):
-            rating = place.get("biz_ext", {}).get("rating", "No rating yet" if language == "en" else "暂无评分")
-            address = place.get("address", "Address unavailable" if language == "en" else "地址未知")
-            result.append(
-                f"{i+1}. **{place['name']}** (Rating: {rating})"
-                if language == "en"
-                else f"{i+1}. **{place['name']}** (评分: {rating})"
+            rating = place.get("biz_ext", {}).get(
+                "rating", "No rating yet" if language == "en" else "暂无评分"
+            )
+            address = place.get(
+                "address", "Address unavailable" if language == "en" else "地址未知"
             )
             result.append(
-                f"   Address: {address}"
+                f"{i + 1}. **{place['name']}** (Rating: {rating})"
                 if language == "en"
-                else f"   地址: {address}"
+                else f"{i + 1}. **{place['name']}** (评分: {rating})"
+            )
+            result.append(
+                f"   Address: {address}" if language == "en" else f"   地址: {address}"
             )
             result.append("")
-        
+
         html_file_basename = os.path.basename(html_path)
         result.append(
             f"HTML page: {html_file_basename}"
@@ -3561,32 +4136,40 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         # Step 1: 位置分析 - 显示坐标信息
         location_analysis = "<div class='ai-location-list'>"
         for idx, loc in enumerate(locations):
-            lng, lat = loc.get('lng', 0), loc.get('lat', 0)
+            lng, lat = loc.get("lng", 0), loc.get("lat", 0)
             location_analysis += f"""
             <div class='ai-location-item'>
-                <span class='ai-loc-num'>{idx+1}</span>
+                <span class='ai-loc-num'>{idx + 1}</span>
                 <div class='ai-loc-info'>
-                    <strong>{loc['name']}</strong>
+                    <strong>{loc["name"]}</strong>
                     <span class='ai-coords'>({lat:.4f}°N, {lng:.4f}°E)</span>
                 </div>
             </div>"""
         location_analysis += "</div>"
-        search_steps.append({
-            "icon": "bx-map-pin",
-            "title": "Step 1: Address Parsing & Geocoding" if language == "en" else "Step 1: 位置解析与地理编码",
-            "content": (
-                f"<p>Resolved coordinates for <span class='highlight-text'>{len(locations)}</span> participant locations. Preparing midpoint calculation...</p>{location_analysis}"
+        search_steps.append(
+            {
+                "icon": "bx-map-pin",
+                "title": "Step 1: Address Parsing & Geocoding"
                 if language == "en"
-                else f"<p>成功解析 <span class='highlight-text'>{len(locations)}</span> 个地点坐标，准备计算最优会面点...</p>{location_analysis}"
-            ),
-        })
+                else "Step 1: 位置解析与地理编码",
+                "content": (
+                    f"<p>Resolved coordinates for <span class='highlight-text'>{len(locations)}</span> participant locations. Preparing midpoint calculation...</p>{location_analysis}"
+                    if language == "en"
+                    else f"<p>成功解析 <span class='highlight-text'>{len(locations)}</span> 个地点坐标，准备计算最优会面点...</p>{location_analysis}"
+                ),
+            }
+        )
 
         # Step 2: 智能中点计算 - 显示球面几何算法
         center_lat, center_lng = center_point[1], center_point[0]
         algo_type = (
-            "spherical midpoint algorithm" if len(locations) == 2 else "multi-point centroid algorithm"
-        ) if language == "en" else (
-            "球面几何中点算法" if len(locations) == 2 else "多点质心算法"
+            (
+                "spherical midpoint algorithm"
+                if len(locations) == 2
+                else "multi-point centroid algorithm"
+            )
+            if language == "en"
+            else ("球面几何中点算法" if len(locations) == 2 else "多点质心算法")
         )
         step2_note = (
             "Uses spherical geometry to find the true great-circle midpoint, which is fairer than simple averaging."
@@ -3601,16 +4184,19 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 )
             )
         )
-        search_steps.append({
-            "icon": "bx-math",
-            "title": "Step 2: Midpoint Calculation" if language == "en" else "Step 2: 智能中点计算",
-            "content": f"""
-            <p>{'Using' if language == 'en' else '使用'} <span class='highlight-text'>{algo_type}</span> {'to calculate the best shared meeting point:' if language == 'en' else '计算最优会面点：'}</p>
+        search_steps.append(
+            {
+                "icon": "bx-math",
+                "title": "Step 2: Midpoint Calculation"
+                if language == "en"
+                else "Step 2: 智能中点计算",
+                "content": f"""
+            <p>{"Using" if language == "en" else "使用"} <span class='highlight-text'>{algo_type}</span> {"to calculate the best shared meeting point:" if language == "en" else "计算最优会面点："}</p>
             <div class="ai-algo-box">
                 <div class="ai-algo-formula">
                     <i class='bx bx-target-lock'></i>
                     <div>
-                        <span class="ai-algo-label">{'Midpoint coordinates' if language == 'en' else '最佳会面点坐标'}</span>
+                        <span class="ai-algo-label">{"Midpoint coordinates" if language == "en" else "最佳会面点坐标"}</span>
                         <span class="ai-algo-value">{center_lat:.6f}°N, {center_lng:.6f}°E</span>
                     </div>
                 </div>
@@ -3620,38 +4206,63 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             </div>
             <div class="map-operation-animation">
                 <div class="map-bg"></div> <div class="map-cursor"></div> <div class="map-search-indicator"></div>
-            </div>"""
-        })
+            </div>""",
+            }
+        )
 
         # Step 3: 需求解析 - 显示三层匹配机制
         requirement_analysis = ""
         if user_requirements:
             requirement_keywords_map = {
-                "停车": ["停车", "车位", "停车场"], "安静": ["安静", "环境好", "氛围"],
-                "商务": ["商务", "会议", "办公"], "交通": ["交通", "地铁", "公交"],
-                "WiFi": ["wifi", "无线", "网络"], "包间": ["包间", "私密", "独立"]
+                "停车": ["停车", "车位", "停车场"],
+                "安静": ["安静", "环境好", "氛围"],
+                "商务": ["商务", "会议", "办公"],
+                "交通": ["交通", "地铁", "公交"],
+                "WiFi": ["wifi", "无线", "网络"],
+                "包间": ["包间", "私密", "独立"],
             }
-            detected_requirements = [key for key, kw_list in requirement_keywords_map.items() if any(kw.lower() in user_requirements.lower() for kw in kw_list)]
+            detected_requirements = [
+                key
+                for key, kw_list in requirement_keywords_map.items()
+                if any(kw.lower() in user_requirements.lower() for kw in kw_list)
+            ]
             if detected_requirements:
-                req_tags = "".join([
-                    f"<span class='ai-req-tag'>{self._translate_requirement_label(req, language)}</span>"
-                    for req in detected_requirements
-                ])
+                req_tags = "".join(
+                    [
+                        f"<span class='ai-req-tag'>{self._translate_requirement_label(req, language)}</span>"
+                        for req in detected_requirements
+                    ]
+                )
+                q = "&quot;"
+                if language == "en":
+                    req_intro = f"From your request {q}<em>{user_requirements}</em>{q}, MeetSpot detected:"
+                else:
+                    req_intro = (
+                        f"从您的需求 {q}<em>{user_requirements}</em>{q} 中识别到："
+                    )
+                l1_name = "POI tag match" if language == "en" else "POI标签匹配"
+                l1_conf = "high confidence" if language == "en" else "高置信度"
+                l2_name = (
+                    "brand knowledge match" if language == "en" else "品牌知识库匹配"
+                )
+                l2_conf = "medium confidence" if language == "en" else "中置信度"
+                l3_name = "venue-type inference" if language == "en" else "场所类型推断"
+                l3_conf = "low confidence" if language == "en" else "低置信度"
                 requirement_analysis = f"""
-                <p>{f'From your request \"<em>{user_requirements}</em>\", MeetSpot detected:' if language == 'en' else f'从您的需求 \"<em>{user_requirements}</em>\" 中识别到：'}</p>
+                <p>{req_intro}</p>
                 <div class="ai-req-detected">{req_tags}</div>
                 <div class="ai-matching-layers">
                     <div class="ai-layer">
                         <span class="ai-layer-badge high">Layer 1</span>
-                        <span>{'POI tag match' if language == 'en' else 'POI标签匹配'} <span class="ai-layer-conf">{'high confidence' if language == 'en' else '高置信度'}</span></span>
+                        <span>{l1_name} <span class="ai-layer-conf">{l1_conf}</span></span>
                     </div>
                     <div class="ai-layer">
                         <span class="ai-layer-badge medium">Layer 2</span>
-                        <span>{'brand knowledge match' if language == 'en' else '品牌知识库匹配'} <span class="ai-layer-conf">{'medium confidence' if language == 'en' else '中置信度'}</span></span>
+                        <span>{l2_name} <span class="ai-layer-conf">{l2_conf}</span></span>
                     </div>
                     <div class="ai-layer">
                         <span class="ai-layer-badge low">Layer 3</span>
-                        <span>{'venue-type inference' if language == 'en' else '场所类型推断'} <span class="ai-layer-conf">{'low confidence' if language == 'en' else '低置信度'}</span></span>
+                        <span>{l3_name} <span class="ai-layer-conf">{l3_conf}</span></span>
                     </div>
                 </div>"""
             else:
@@ -3666,98 +4277,110 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                 if language == "en"
                 else f"<p>未提供特殊需求，将使用多维度评分系统推荐{cfg['noun_plural']}。</p>"
             )
-        search_steps.append({
-            "icon": "bx-brain",
-            "title": "Step 3: Requirement Analysis" if language == "en" else "Step 3: 需求语义解析",
-            "content": requirement_analysis,
-        })
+        search_steps.append(
+            {
+                "icon": "bx-brain",
+                "title": "Step 3: Requirement Analysis"
+                if language == "en"
+                else "Step 3: 需求语义解析",
+                "content": requirement_analysis,
+            }
+        )
 
         # Step 4: 场所检索
         search_places_explanation = f"""
-        <p>{f'Searching for {keyword_label} within a <span class=\"highlight-text\">2 km</span> radius around the midpoint...' if language == 'en' else f'以最佳会面点为圆心，在 <span class=\"highlight-text\">2公里</span> 范围内检索 \"{primary_keyword}\" 相关场所...'}</p>
+        <p>{f'Searching for {keyword_label} within a <span class="highlight-text">2 km</span> radius around the midpoint...' if language == "en" else f'以最佳会面点为圆心，在 <span class="highlight-text">2公里</span> 范围内检索 "{primary_keyword}" 相关场所...'}</p>
         <div class="search-animation">
             <div class="radar-circle"></div> <div class="radar-circle"></div> <div class="radar-circle"></div>
             <div class="center-point"></div>
         </div>"""
-        search_steps.append({
-            "icon": "bx-search-alt",
-            "title": "Step 4: POI Search" if language == "en" else "Step 4: POI检索",
-            "content": search_places_explanation,
-        })
+        search_steps.append(
+            {
+                "icon": "bx-search-alt",
+                "title": "Step 4: POI Search"
+                if language == "en"
+                else "Step 4: POI检索",
+                "content": search_places_explanation,
+            }
+        )
 
         # Step 5: 智能评分 - 显示评分维度
         ranking_explanation = f"""
-        <p>{'Using the <span class=\"highlight-text\">V2 multi-factor scoring system</span> to rank candidate venues:' if language == 'en' else '使用 <span class=\"highlight-text\">V2 多维度评分系统</span> 对候选场所进行智能排序：'}</p>
+        <p>{'Using the <span class="highlight-text">V2 multi-factor scoring system</span> to rank candidate venues:' if language == "en" else '使用 <span class="highlight-text">V2 多维度评分系统</span> 对候选场所进行智能排序：'}</p>
         <div class="ai-score-dimensions">
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">{'Base score' if language == 'en' else '基础分'}</span>
-                    <span class="ai-dim-max">{'30 pts' if language == 'en' else '30分'}</span>
+                    <span class="ai-dim-name">{"Base score" if language == "en" else "基础分"}</span>
+                    <span class="ai-dim-max">{"30 pts" if language == "en" else "30分"}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 100%;"></div></div>
-                <span class="ai-dim-desc">{'venue rating × 6' if language == 'en' else '商家评分 × 6'}</span>
+                <span class="ai-dim-desc">{"venue rating × 6" if language == "en" else "商家评分 × 6"}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">{'Distance score' if language == 'en' else '距离分'}</span>
-                    <span class="ai-dim-max">{'25 pts' if language == 'en' else '25分'}</span>
+                    <span class="ai-dim-name">{"Distance score" if language == "en" else "距离分"}</span>
+                    <span class="ai-dim-max">{"25 pts" if language == "en" else "25分"}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 83%;"></div></div>
-                <span class="ai-dim-desc">{'non-linear decay, full score within 500m' if language == 'en' else '非线性衰减，500m内满分'}</span>
+                <span class="ai-dim-desc">{"non-linear decay, full score within 500m" if language == "en" else "非线性衰减，500m内满分"}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">{'Popularity score' if language == 'en' else '热度分'}</span>
-                    <span class="ai-dim-max">{'20 pts' if language == 'en' else '20分'}</span>
+                    <span class="ai-dim-name">{"Popularity score" if language == "en" else "热度分"}</span>
+                    <span class="ai-dim-max">{"20 pts" if language == "en" else "20分"}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 67%;"></div></div>
-                <span class="ai-dim-desc">{'review volume (log) + photo count' if language == 'en' else '评论数(log) + 图片数'}</span>
+                <span class="ai-dim-desc">{"review volume (log) + photo count" if language == "en" else "评论数(log) + 图片数"}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">{'Scenario score' if language == 'en' else '场景分'}</span>
-                    <span class="ai-dim-max">{'15 pts' if language == 'en' else '15分'}</span>
+                    <span class="ai-dim-name">{"Scenario score" if language == "en" else "场景分"}</span>
+                    <span class="ai-dim-max">{"15 pts" if language == "en" else "15分"}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 50%;"></div></div>
-                <span class="ai-dim-desc">{'keyword relevance' if language == 'en' else '关键词匹配度'}</span>
+                <span class="ai-dim-desc">{"keyword relevance" if language == "en" else "关键词匹配度"}</span>
             </div>
             <div class="ai-dim">
                 <div class="ai-dim-header">
-                    <span class="ai-dim-name">{'Requirement score' if language == 'en' else '需求分'}</span>
-                    <span class="ai-dim-max">{'10 pts' if language == 'en' else '10分'}</span>
+                    <span class="ai-dim-name">{"Requirement score" if language == "en" else "需求分"}</span>
+                    <span class="ai-dim-max">{"10 pts" if language == "en" else "10分"}</span>
                 </div>
                 <div class="ai-dim-bar"><div class="ai-dim-fill" style="width: 33%;"></div></div>
-                <span class="ai-dim-desc">{'three-layer matching engine' if language == 'en' else '三层匹配算法'}</span>
+                <span class="ai-dim-desc">{"three-layer matching engine" if language == "en" else "三层匹配算法"}</span>
             </div>
         </div>"""
-        search_steps.append({
-            "icon": "bx-calculator",
-            "title": "Step 5: Multi-factor Scoring" if language == "en" else "Step 5: 多维度智能评分",
-            "content": ranking_explanation,
-        })
+        search_steps.append(
+            {
+                "icon": "bx-calculator",
+                "title": "Step 5: Multi-factor Scoring"
+                if language == "en"
+                else "Step 5: 多维度智能评分",
+                "content": ranking_explanation,
+            }
+        )
 
         # Step 6: 评分结果 - 显示Top 3场所的评分详情
         if places and len(places) > 0:
             top_places_html = "<div class='ai-top-results'>"
             for idx, place in enumerate(places[:3]):
-                name = place.get('name', '未知')
-                total_score = place.get('_score', 0)
-                breakdown = place.get('_score_breakdown', {})
-                matched_reqs = place.get('_matched_requirements', [])
-                confidence_map = place.get('_requirement_confidence', {})
+                name = place.get("name", "未知")
+                total_score = place.get("_score", 0)
+                breakdown = place.get("_score_breakdown", {})
+                matched_reqs = place.get("_matched_requirements", [])
+                confidence_map = place.get("_requirement_confidence", {})
 
                 # 评分详情
-                base = breakdown.get('base_score', 0)
-                dist = breakdown.get('distance_score', 0)
-                pop = breakdown.get('popularity_score', 0)
-                scene = breakdown.get('scenario_score', 0)
-                req = breakdown.get('requirement_score', 0)
+                base = breakdown.get("base_score", 0)
+                dist = breakdown.get("distance_score", 0)
+                pop = breakdown.get("popularity_score", 0)
+                scene = breakdown.get("scenario_score", 0)
+                req = breakdown.get("requirement_score", 0)
 
                 # 需求匹配标签
                 req_badges = ""
                 if matched_reqs:
                     for r in matched_reqs[:3]:
-                        conf = confidence_map.get(r, 'low')
+                        conf = confidence_map.get(r, "low")
                         req_badges += f"<span class='ai-conf-badge {conf}'>{self._translate_requirement_label(r, language)}</span>"
 
                 medal = ["🥇", "🥈", "🥉"][idx]
@@ -3771,40 +4394,48 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                         </div>
                     </div>
                     <div class="ai-place-breakdown">
-                        <span title="{'Base score' if language == 'en' else '基础分'}">⭐{base:.0f}</span>
-                        <span title="{'Distance score' if language == 'en' else '距离分'}">📍{dist:.0f}</span>
-                        <span title="{'Popularity score' if language == 'en' else '热度分'}">🔥{pop:.0f}</span>
-                        <span title="{'Scenario score' if language == 'en' else '场景分'}">🎯{scene:.0f}</span>
-                        <span title="{'Requirement score' if language == 'en' else '需求分'}">✓{req:.0f}</span>
+                        <span title="{"Base score" if language == "en" else "基础分"}">⭐{base:.0f}</span>
+                        <span title="{"Distance score" if language == "en" else "距离分"}">📍{dist:.0f}</span>
+                        <span title="{"Popularity score" if language == "en" else "热度分"}">🔥{pop:.0f}</span>
+                        <span title="{"Scenario score" if language == "en" else "场景分"}">🎯{scene:.0f}</span>
+                        <span title="{"Requirement score" if language == "en" else "需求分"}">✓{req:.0f}</span>
                     </div>
-                    {f'<div class="ai-place-reqs">{req_badges}</div>' if req_badges else ''}
+                    {f'<div class="ai-place-reqs">{req_badges}</div>' if req_badges else ""}
                 </div>"""
             top_places_html += "</div>"
-            search_steps.append({
-                "icon": "bx-trophy",
-                "title": "Step 6: Final Recommendations" if language == "en" else "Step 6: 推荐结果",
-                "content": (
-                    f"<p>After scoring all candidates, MeetSpot recommends these top meeting options:</p>{top_places_html}"
+            search_steps.append(
+                {
+                    "icon": "bx-trophy",
+                    "title": "Step 6: Final Recommendations"
                     if language == "en"
-                    else f"<p>经过智能评分，为您推荐以下最佳会面地点：</p>{top_places_html}"
-                ),
-            })
+                    else "Step 6: 推荐结果",
+                    "content": (
+                        f"<p>After scoring all candidates, MeetSpot recommends these top meeting options:</p>{top_places_html}"
+                        if language == "en"
+                        else f"<p>经过智能评分，为您推荐以下最佳会面地点：</p>{top_places_html}"
+                    ),
+                }
+            )
         else:
-            search_steps.append({
-                "icon": "bx-trophy",
-                "title": "Step 6: Final Recommendations" if language == "en" else "Step 6: 推荐结果",
-                "content": (
-                    f"<p>Generating {cfg['noun_plural']} recommendations...</p>"
+            search_steps.append(
+                {
+                    "icon": "bx-trophy",
+                    "title": "Step 6: Final Recommendations"
                     if language == "en"
-                    else f"<p>正在生成{cfg['noun_plural']}推荐结果...</p>"
-                ),
-            }) 
+                    else "Step 6: 推荐结果",
+                    "content": (
+                        f"<p>Generating {cfg['noun_plural']} recommendations...</p>"
+                        if language == "en"
+                        else f"<p>正在生成{cfg['noun_plural']}推荐结果...</p>"
+                    ),
+                }
+            )
 
         search_process_html = ""
         for idx, step in enumerate(search_steps):
             search_process_html += f"""
-            <div class="process-step" data-step="{idx+1}">
-                <div class="step-icon"><i class='bx {step["icon"]}'></i><div class="step-number">{idx+1}</div></div>
+            <div class="process-step" data-step="{idx + 1}">
+                <div class="step-icon"><i class='bx {step["icon"]}'></i><div class="step-number">{idx + 1}</div></div>
                 <div class="step-content"><h3 class="step-title">{step["title"]}</h3><div class="step-details">{step["content"]}</div></div>
             </div>"""
 
@@ -3832,14 +4463,14 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                     </div>
                     <div class="ai-thinking-content">
                         <div class="ai-thinking-header">
-                            <span class="ai-thinking-title">{'AI Search Process' if language == 'en' else 'AI 搜索过程'}</span>
+                            <span class="ai-thinking-title">{"AI Search Process" if language == "en" else "AI 搜索过程"}</span>
                             <span class="ai-thinking-badge">Explainable</span>
                         </div>
-                        <span class="ai-thinking-hint">{'Expand to inspect the agent reasoning flow' if language == 'en' else '点击展开 Agent 思维链可视化'}</span>
+                        <span class="ai-thinking-hint">{"Expand to inspect the agent reasoning flow" if language == "en" else "点击展开 Agent 思维链可视化"}</span>
                     </div>
                     <div class="ai-thinking-expand">
-                        <span class="expand-text">{'Expand' if language == 'en' else '展开'}</span>
-                        <span class="collapse-text">{'Collapse' if language == 'en' else '收起'}</span>
+                        <span class="expand-text">{"Expand" if language == "en" else "展开"}</span>
+                        <span class="collapse-text">{"Collapse" if language == "en" else "收起"}</span>
                         <i class='bx bx-chevron-down ai-thinking-arrow'></i>
                     </div>
                 </summary>
