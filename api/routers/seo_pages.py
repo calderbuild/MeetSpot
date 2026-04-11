@@ -579,7 +579,6 @@ async def sitemap():
         media_type="application/xml",
         headers={
             "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-            "X-Robots-Tag": "noindex",
         },
     )
 

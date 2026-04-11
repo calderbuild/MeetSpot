@@ -143,20 +143,22 @@ class SEOContentGenerator:
             }
         if page_type == "local_business":
             venue = data
+            if not venue.get("name") or not venue.get("lat") or not venue.get("lng"):
+                return {}
             return {
                 "@context": "https://schema.org",
                 "@type": "LocalBusiness",
-                "name": venue.get("name"),
+                "name": venue["name"],
                 "address": {
                     "@type": "PostalAddress",
-                    "streetAddress": venue.get("address"),
-                    "addressLocality": venue.get("city"),
+                    "streetAddress": venue.get("address", ""),
+                    "addressLocality": venue.get("city", ""),
                     "addressCountry": "CN",
                 },
                 "geo": {
                     "@type": "GeoCoordinates",
-                    "latitude": venue.get("lat"),
-                    "longitude": venue.get("lng"),
+                    "latitude": venue["lat"],
+                    "longitude": venue["lng"],
                 },
             }
         if page_type == "faq":
@@ -269,7 +271,8 @@ class SEOContentGenerator:
             coords = data.get("coordinates", {})
             return {
                 "@context": "https://schema.org",
-                "@type": "City",
+                "@type": "Place",
+                "additionalType": "City",
                 "name": city_name,
                 "alternateName": city_en,
                 "geo": {

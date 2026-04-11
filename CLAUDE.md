@@ -7,8 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MeetSpot is an **AI Agent** for multi-person meeting point recommendations. Users provide locations and requirements; the Agent calculates the geographic center and recommends optimal venues. Built with FastAPI and Python 3.11+, uses Amap (Gaode Map) API for geocoding/POI search, and DeepSeek/GPT-4o-mini for semantic scoring.
 
 **Live Demo**: https://meetspot-irq2.onrender.com
-**Video Demo**: https://www.bilibili.com/video/BV1aUK7zNEvo/
-**Contact**: Johnrobertdestiny@gmail.com | [Blog](http://calderbuild.github.io/) | [@CalderBuild](https://twitter.com/CalderBuild)
 
 ## Quick Reference
 
@@ -45,7 +43,6 @@ python tools/postmortem_check.py         # Check for known issue patterns
 ## Repo Rules
 
 - Follow `AGENTS.md` for repo-local guidelines (style, structure, what not to commit). In particular: runtime-generated files under `workspace/js_src/` must not be committed.
-- There are no Cursor/Copilot rule files in this repo (no `.cursorrules`, no `.cursor/rules/`, no `.github/copilot-instructions.md`).
 
 ## Environment Setup
 
@@ -75,7 +72,7 @@ Rule+LLM Mode (Agent mode disabled for memory savings on free tier)
 5-Step Pipeline: Geocode → Center Calc → POI Search → Ranking → HTML Gen
 ```
 
-Complexity scoring: +10/location, +15 for complex keywords, +10 for special requirements. Currently all requests use Rule+LLM mode since Agent mode is disabled (`agent_available = False` in `api/index.py`).
+Complexity scoring: +10/location, +15 for complex keywords, +10 for special requirements. Currently all requests use Rule+LLM mode (see Concurrency & Memory Budget).
 
 ### Entry Points
 - `web_server.py` - Main entry, auto-detects production vs development
@@ -117,7 +114,6 @@ When Agent Mode is enabled, final venue scores blend rule-based and LLM semantic
 ```
 Final Score = Rule Score * 0.4 + LLM Score * 0.6
 ```
-Agent Mode is currently disabled (`agent_available = False`) to conserve memory on free hosting tiers.
 
 ### Token Counting
 
@@ -171,6 +167,9 @@ Two-stage distance handling in `meetspot_recommender.py`:
 ### Adding Venue Themes
 Add entry to `PLACE_TYPE_CONFIG` with: Chinese name, Boxicons icons, 6 color values.
 
+### Sitemap lastmod
+`seo_pages.py` sitemap 用静态 `CONTENT_DATES` 字典，不要用 `datetime.now()`。Google 会忽略不可靠的 lastmod 信号。内容实际更新时手动修改日期。
+
 ## Postmortem System
 
 Automated regression prevention system that tracks historical fixes and warns when code changes might reintroduce past bugs.
@@ -204,15 +203,12 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 | `未找到AMAP_API_KEY` | Set environment variable |
 | Import errors in production | Check MinimalConfig fallback |
 | Wrong city geocoding | Add to `_enhance_address()` alias dict with city prefix |
-| Empty POI results | Fallback mechanism handles this automatically |
-| SSR 页面 env var 读取为空 | 勿用 `templates.env.globals["key"] = os.getenv(...)` (模块导入时求值)；改用 `TemplateResponse` context 字典在每次请求时动态传入 (见 `_common_context()` in `api/routers/seo_pages.py`) |
+| SSR 页面 env var 读取为空 | 勿用 `templates.env.globals["key"] = os.getenv(...)`（模块导入时求值）；改用 `TemplateResponse` context 字典在每次请求时动态传入（见 `_common_context()` in `api/routers/seo_pages.py`） |
 | Render OOM (512MB) | Heavy deps removed (jieba/tiktoken); caches reduced (30/15 limits); Agent mode disabled. If OOM recurs, check `pip list` for new heavy imports |
-| Render service down | Trigger redeploy: `git commit --allow-empty -m "trigger redeploy" && git push` |
-| Amap API quota exceeded | Free tier: 5000 calls/day. Check usage at https://console.amap.com/dev/flow/manage |
-| Frontend map not loading | Verify `AMAP_SECURITY_JS_CODE` is set for JS API security verification |
 | asyncpg + pgbouncer errors | `app/db/database.py` disables prepared statement cache and uses dynamic statement names. If adding raw SQL, avoid named prepared statements |
-| Render API PUT /env-vars 覆盖所有变量 | PUT 是全量替换，不是追加。必须先 GET 现有变量，合并后再 PUT。操作生产环境变量前必须确认 API 语义 |
-| HEAD 请求返回 405 | FastAPI 自定义路由不自动处理 HEAD。已通过 `head_method_support` 中间件修复（`api/index.py`）。注意用 `request.scope` 不是 `request._scope` |
+| `meetspot_finder.html` 缺全局功能 | 独立静态页不继承 `base.html`，新增全局功能（GA4、schema、trackEvent）需单独在该文件处理 |
+| flake8 E999 f-string 反斜杠 | Python 3.11 不允许 f-string 表达式含反斜杠（`\"`），需先提取为变量再插值 |
+| `git push` 被 postmortem CI 自动 commit reject | push 前先 `git pull --rebase origin main` |
 
 **Logging**: Uses loguru via `app/logger.py`. `/health` endpoint shows config status.
 
@@ -245,13 +241,6 @@ git commit --allow-empty -m "chore: trigger redeploy" && git push origin main
 | `lighthouse-ci.yml` | On demand | Performance metrics |
 | `update-badges.yml` | On demand | Update repo badges |
 | `auto-merge-clean.yml` | Dependabot PRs | Auto-merge dependency updates |
-
-## Code Style
-
-- Python: 4-space indent, type hints, `snake_case` functions, `PascalCase` classes, `SCREAMING_SNAKE_CASE` constants. Keep functions under ~50 lines; prefer dataclasses for structured payloads.
-- Logging: Use structured messages via `app/logger.py` (loguru): `logger.info("geo_center_calculated", extra={...})`
-- CSS: BEM-like (`meetspot-header__title`), colors from `design_tokens.py`
-- Commits: Conventional Commits (`feat:`, `fix:`, `docs:`) with small scopes (e.g., `feat(tokens): add WCAG palette`)
 
 ## Gitignore Gotchas
 
