@@ -79,7 +79,7 @@ jobs:
 
       - name: Comment on PR
         if: github.event_name == 'pull_request' && steps.check.outputs.has_blocking == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         continue-on-error: true
         with:
           script: |
