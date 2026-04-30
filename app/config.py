@@ -41,14 +41,23 @@ class SearchSettings(BaseModel):
 
 class AMapSettings(BaseModel):
     """高德地图API配置"""
+
     api_key: str = Field(..., description="高德地图API密钥")
     js_api_key: Optional[str] = Field(None, description="高德地图JavaScript API密钥")
-    security_js_code: Optional[str] = Field(None, description="高德地图JavaScript API安全密钥")
+    security_js_code: Optional[str] = Field(
+        None, description="高德地图JavaScript API安全密钥"
+    )
 
     @property
     def web_api_key(self) -> Optional[str]:
         """兼容历史字段名。"""
         return self.js_api_key
+
+
+class GoogleMapsSettings(BaseModel):
+    """Google Maps API 配置 -- 用于国际场景 POI 搜索与地理编码"""
+
+    api_key: str = Field("", description="Google Maps Platform API key")
 
 
 class BrowserSettings(BaseModel):
@@ -101,8 +110,9 @@ class AppConfig(BaseModel):
     search_config: Optional[SearchSettings] = Field(
         None, description="Search configuration"
     )
-    amap: Optional[AMapSettings] = Field(
-        None, description="高德地图API配置"
+    amap: Optional[AMapSettings] = Field(None, description="高德地图API配置")
+    google_maps: Optional[GoogleMapsSettings] = Field(
+        None, description="Google Maps API 配置（国际场景）"
     )
 
     class Config:
@@ -154,23 +164,14 @@ class Config:
                         "max_tokens": 4096,
                         "temperature": 1.0,
                         "api_type": "",
-                        "api_version": ""
+                        "api_version": "",
                     },
-                    "amap": {
-                        "api_key": "",
-                        "security_js_code": ""
-                    },
-                    "log": {
-                        "level": "info",
-                        "file": "logs/meetspot.log"
-                    },
-                    "server": {
-                        "host": "0.0.0.0",
-                        "port": 8000
-                    }
+                    "amap": {"api_key": "", "security_js_code": ""},
+                    "log": {"level": "info", "file": "logs/meetspot.log"},
+                    "server": {"host": "0.0.0.0", "port": 8000},
                 }
                 return default_config
-            
+
             with config_path.open("rb") as f:
                 return tomllib.load(f)
         except Exception as e:
@@ -184,20 +185,22 @@ class Config:
                     "max_tokens": 4096,
                     "temperature": 1.0,
                     "api_type": "",
-                    "api_version": ""
+                    "api_version": "",
                 }
             }
 
     def _load_initial_config(self):
         raw_config = self._load_config()
         base_llm = raw_config.get("llm", {})
-        
+
         # 从环境变量读取敏感信息
         import os
+
         openai_api_key = os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", "")
         amap_api_key = os.getenv("AMAP_API_KEY", "")
         amap_js_api_key = os.getenv("AMAP_JS_API_KEY", "")
         amap_security_js_code = os.getenv("AMAP_SECURITY_JS_CODE", "")
+        google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
         # 支持 Render 部署的环境变量配置
         llm_base_url = os.getenv("LLM_API_BASE", "") or base_llm.get("base_url", "")
         llm_model = os.getenv("LLM_MODEL", "") or base_llm.get("model", "gpt-3.5-turbo")
@@ -272,7 +275,8 @@ class Config:
                     or amap_config.get("js_api_key", "")
                     or amap_config.get("web_api_key", "")
                 ),
-                security_js_code=amap_security_js_code or amap_config.get("security_js_code", ""),
+                security_js_code=amap_security_js_code
+                or amap_config.get("security_js_code", ""),
             )
         elif amap_config and amap_config.get("api_key"):
             amap_settings = AMapSettings(
@@ -282,8 +286,18 @@ class Config:
                     or amap_config.get("js_api_key", "")
                     or amap_config.get("web_api_key", "")
                 ),
-                security_js_code=amap_security_js_code or amap_config.get("security_js_code", ""),
+                security_js_code=amap_security_js_code
+                or amap_config.get("security_js_code", ""),
             )
+
+        # 处理 Google Maps API 配置（国际场景）
+        google_config = raw_config.get("google", {}) or raw_config.get(
+            "google_maps", {}
+        )
+        google_settings = None
+        resolved_google_key = google_maps_api_key or google_config.get("api_key", "")
+        if resolved_google_key:
+            google_settings = GoogleMapsSettings(api_key=resolved_google_key)
 
         config_dict = {
             "llm": {
@@ -297,6 +311,7 @@ class Config:
             "browser_config": browser_settings,
             "search_config": search_settings,
             "amap": amap_settings,
+            "google_maps": google_settings,
         }
 
         self._config = AppConfig(**config_dict)
@@ -321,6 +336,11 @@ class Config:
     def amap(self) -> Optional[AMapSettings]:
         """获取高德地图API配置"""
         return self._config.amap
+
+    @property
+    def google_maps(self) -> Optional[GoogleMapsSettings]:
+        """获取 Google Maps API 配置（国际场景）"""
+        return self._config.google_maps
 
     @property
     def workspace_root(self) -> Path:

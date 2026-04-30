@@ -43,6 +43,7 @@ python tools/postmortem_check.py         # Check for known issue patterns
 ## Repo Rules
 
 - Follow `AGENTS.md` for repo-local guidelines (style, structure, what not to commit). In particular: runtime-generated files under `workspace/js_src/` must not be committed.
+- Active feature plans live in `docs/plans/` (Markdown with YAML frontmatter, date-prefixed). Check there before implementing new features to avoid conflicting with planned work.
 
 ## Environment Setup
 
@@ -101,12 +102,19 @@ app/tool/meetspot_recommender.py    # Main recommendation engine (CafeRecommende
 
 data/address_aliases.json           # 48 university + 5 landmark abbreviation mappings
 app/design_tokens.py                # WCAG AA color palette, CSS generation
-api/routers/seo_pages.py            # SEO landing pages
+api/routers/seo_pages.py            # SEO landing pages + /compare page
+api/services/seo_content.py         # SEOContentGenerator: meta tags, JSON-LD schema, city page snippets
 ```
 
 ### Frontend Address Input
 
 `public/meetspot_finder.html` uses AMap Autocomplete API for real-time address suggestions. When users select from dropdown, coordinates are pre-resolved client-side, bypassing backend geocoding. Falls back to backend geocoding when manual text is entered.
+
+### AI Chat
+
+`/api/ai_chat` (POST) — bilingual conversational interface. Accepts `message`, `language`, and `conversation_history`. Returns streaming or full response using the configured LLM backend (DeepSeek/OpenAI/OpenRouter). System prompts: `MEETSPOT_SYSTEM_PROMPT` (zh) and `MEETSPOT_SYSTEM_PROMPT_EN` (en) defined in `api/index.py`.
+
+`/api/ai_chat/preset_questions` (GET) — returns language-specific suggested questions for the chat UI.
 
 ### LLM Scoring (Agent Mode)
 
@@ -115,17 +123,34 @@ When Agent Mode is enabled, final venue scores blend rule-based and LLM semantic
 Final Score = Rule Score * 0.4 + LLM Score * 0.6
 ```
 
+**Current status**: `agent_available = False` in `api/index.py` (line 59) — hardcoded off for memory reasons. `/api/find_meetspot_agent` endpoint exists but returns disabled error. Re-enabling requires bumping Render tier.
+
 ### Token Counting
 
 `app/llm.py` uses UTF-8 byte length estimation (`len(text.encode("utf-8")) // 3`) instead of tiktoken. This avoids loading tiktoken's ~80MB model data. Precision is sufficient for internal token limit checks -- not used for billing or exact truncation.
 
 ### i18n System
 
-Lightweight JSON-based translations in `app/i18n.py`. Supported languages: `zh` (default), `en`. Translation files: `locales/{lang}.json`.
+Lightweight JSON-based translations in `app/i18n.py`. Supported languages: `en` (default), `zh`. Translation files: `locales/{lang}.json`.
 
-Language detection priority in `detect_language()`: URL prefix (`/en/`) > Cookie (`lang`) > `Accept-Language` header > default `zh`.
+Language detection priority in `detect_language()`: URL prefix (`/en/` or `/zh/`) > Cookie (`lang`) > `Accept-Language` header > default `en` (国际化优先)。
 
-To add a new language: create `locales/{lang}.json` with all keys from `locales/zh.json`, then add the lang code to `SUPPORTED_LANGS` in `app/i18n.py`.
+**`/` 路由特殊**：`api/routers/seo_pages.py` 的根路径硬默认英文（仅 cookie `lang=zh` 时才返回中文），不依赖 Accept-Language。中文用户走 `/zh/` 显式路径或点击导航中文按钮（设置 cookie）。
+
+Both `locales/zh.json` and `locales/en.json` are complete and in sync. To add a new language: create `locales/{lang}.json` with all keys from `locales/en.json`, then add the lang code to `SUPPORTED_LANGS` in `app/i18n.py`.
+
+### 地图 Provider 双轨架构
+
+`app/tool/meetspot_recommender.py` 的 `CafeRecommender` 根据 `language` 参数自动切换地图 provider：
+
+| 路径 | provider | 客户端 | 前端 |
+|------|---------|--------|------|
+| `/` (默认) / `/en/*` | google | `app/tool/google_maps_client.py` (Places API New v1) | Google Maps JS API + `places.Autocomplete` |
+| `/zh/*` 或 cookie/Header zh | amap | 内联高德 REST 调用 | 高德 JS API + `AMap.AutoComplete` |
+
+切换点：`execute()` 入口设置 `self.map_provider`；`_geocode` 和 `_search_pois` 内部按字段分发；`_generate_html_content` 中 `map_script_block` 变量在 `if self.map_provider == "google"` 分支构造对应 JS 模板。Google client 输出严格归一化为高德 POI 格式（`location="lng,lat"` 字符串、`biz_ext.rating` 字符串），让 `_rank_places` 逻辑无需感知 provider 差异。
+
+**Key 配置**：`AMAP_API_KEY` + `GOOGLE_MAPS_API_KEY` 环境变量，仅有高德时只走国内路径（向后兼容）。前端通过 `/api/config/amap` 和 `/api/config/google_maps` 获取 key。
 
 ### Concurrency & Memory Budget
 
@@ -137,9 +162,10 @@ Database layer (`app/db/`, `app/models/`) is optional -- core recommendation wor
 
 Payment integration: 302.ai checkout via `api/routers/payment.py`. Config: `PAY302_APP_ID`, `PAY302_SECRET`, `PAY302_API_URL` env vars. Free daily limit (`FREE_DAILY_LIMIT`, default 1) + credit purchase system (`CREDIT_PRICE_CENTS`, `CREDITS_PER_PURCHASE`). Signature verification in `app/payment/signature.py`.
 
-API routers: `api/routers/auth.py` (authentication), `api/routers/payment.py` (payments), `api/routers/seo_pages.py` (SEO landing pages).
-
-Experimental agent endpoint (`/api/find_meetspot_agent`) requires OpenManus framework -- **not production-ready**.
+API routers:
+- `api/routers/auth.py` — SMS auth: `POST /api/auth/send_code`, `POST /api/auth/verify_code`, `GET /api/auth/me`
+- `api/routers/payment.py` — 302.ai checkout: `/create`, `/webhook`, `/success`, `/status/{id}`, `/balance`, `/free-remaining`
+- `api/routers/seo_pages.py` — SEO pages including `/compare` and `/en/compare`
 
 ## Key Patterns
 

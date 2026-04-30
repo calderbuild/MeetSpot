@@ -89,12 +89,21 @@ except ImportError as e:
             def __init__(self, api_key):
                 self.api_key = api_key
 
+        class GoogleMapsSettings:
+            def __init__(self, api_key):
+                self.api_key = api_key
+
         def __init__(self):
             amap_key = os.getenv("AMAP_API_KEY", "")
             if amap_key:
                 self.amap = self.AMapSettings(amap_key)
             else:
                 self.amap = None
+            google_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
+            if google_key:
+                self.google_maps = self.GoogleMapsSettings(google_key)
+            else:
+                self.google_maps = None
 
     if os.getenv("AMAP_API_KEY"):
         config = MinimalConfig()
@@ -359,6 +368,9 @@ PRESET_QUESTIONS_EN = [
 AMAP_API_KEY = os.getenv("AMAP_API_KEY", "")
 AMAP_JS_API_KEY = os.getenv("AMAP_JS_API_KEY", "")  # JS API key for frontend map
 AMAP_SECURITY_JS_CODE = os.getenv("AMAP_SECURITY_JS_CODE", "")
+
+# Google Maps 国际场景（/en/ 路径下使用）
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
 # 免费次数限制
 FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
@@ -1214,6 +1226,19 @@ async def get_amap_config():
         js_api_key = AMAP_API_KEY
 
     return {"api_key": js_api_key, "security_js_code": security_js_code}
+
+
+@app.get("/api/config/google_maps")
+async def get_google_maps_config():
+    """返回 Google Maps 配置（用于 /en/ 国际场景前端地图加载）
+
+    与高德 key 不同的是，Google Maps JS API 的 key 限制由 referer / IP 在 GCP 控制台配置，
+    这里直接返回；前端在没有 key 时应优雅降级（不渲染地图，仅显示列表）
+    """
+    api_key = GOOGLE_MAPS_API_KEY
+    if not api_key and config and hasattr(config, "google_maps") and config.google_maps:
+        api_key = getattr(config.google_maps, "api_key", "")
+    return {"api_key": api_key}
 
 
 @app.get("/api/config/analytics")

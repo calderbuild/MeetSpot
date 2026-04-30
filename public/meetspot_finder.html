@@ -2839,7 +2839,20 @@
       let AMap = null; // Will be set after AMap loads
       let autocompleteInstances = {}; // Store Autocomplete instances for cleanup
 
-      // ========== AMap Loader ==========
+      // ========== Map Provider Detection ==========
+      // /en/ 路径前缀 或 ?lang=en 查询参数 → Google Maps；其他 → 高德
+      // 三层检测保持与后端 detect_language 一致：path / query / Accept-Language
+      const _urlParams = new URLSearchParams(window.location.search);
+      const _navLang = (navigator.language || "").toLowerCase();
+      const IS_INTERNATIONAL =
+        window.location.pathname.toLowerCase().startsWith("/en") ||
+        _urlParams.get("lang") === "en" ||
+        (!_urlParams.get("lang") &&
+          !window.location.pathname.toLowerCase().startsWith("/zh") &&
+          !_navLang.startsWith("zh"));
+      let GooglePlacesService = null; // For Google Places Autocomplete
+
+      // ========== AMap Loader (国内 / 默认) ==========
       function loadAMapAPI() {
         return new Promise((resolve, reject) => {
           // Set security config
@@ -2885,6 +2898,84 @@
           script.onerror = reject;
           document.head.appendChild(script);
         });
+      }
+
+      // ========== Google Maps Loader (国际场景 /en/) ==========
+      function loadGoogleMapsAPI() {
+        return new Promise((resolve) => {
+          fetch("/api/config/google_maps")
+            .then((r) => r.json())
+            .then((cfg) => {
+              if (!cfg.api_key) {
+                console.warn(
+                  "Google Maps API key not configured -- autocomplete disabled",
+                );
+                resolve(null);
+                return;
+              }
+              // 全局 callback 用于 Google Maps JS SDK
+              window._meetspotGoogleMapsLoaded = function () {
+                console.log("Google Maps loaded successfully");
+                if (
+                  window.google &&
+                  window.google.maps &&
+                  window.google.maps.places
+                ) {
+                  GooglePlacesService = window.google.maps.places;
+                  initAllGoogleAutocomplete();
+                }
+                resolve(window.google);
+              };
+              const script = document.createElement("script");
+              script.src =
+                "https://maps.googleapis.com/maps/api/js?key=" +
+                encodeURIComponent(cfg.api_key) +
+                "&libraries=places&loading=async&callback=_meetspotGoogleMapsLoaded";
+              script.async = true;
+              script.onerror = function () {
+                console.error("Google Maps SDK failed to load");
+                resolve(null);
+              };
+              document.head.appendChild(script);
+            })
+            .catch((err) => {
+              console.warn("Failed to fetch Google Maps config:", err);
+              resolve(null);
+            });
+        });
+      }
+
+      // 初始化所有现有 input 的 Google Places Autocomplete
+      function initAllGoogleAutocomplete() {
+        const inputs = document.querySelectorAll(".location-input input");
+        inputs.forEach((input) => {
+          if (input.dataset.gpacAttached === "1") return;
+          attachGoogleAutocomplete(input);
+        });
+      }
+
+      function attachGoogleAutocomplete(input) {
+        if (!GooglePlacesService || !input) return;
+        try {
+          const ac = new GooglePlacesService.Autocomplete(input, {
+            fields: ["place_id", "geometry", "name", "formatted_address"],
+          });
+          ac.addListener("place_changed", function () {
+            const place = ac.getPlace();
+            if (!place || !place.geometry || !place.geometry.location) return;
+            locationCoords[input.id] = {
+              name: place.name || place.formatted_address,
+              address: place.formatted_address || place.name,
+              lng: place.geometry.location.lng(),
+              lat: place.geometry.location.lat(),
+              city: "",
+            };
+            console.log("Selected place:", locationCoords[input.id]);
+          });
+          input.dataset.gpacAttached = "1";
+        } catch (e) {
+          console.warn("Google Autocomplete attach failed:", e);
+        }
       }
 
       // Initialize autocomplete for a single input
@@ -3796,10 +3887,15 @@
           cafeType.click();
         }
 
-        // Load AMap API for autocomplete
-        loadAMapAPI()
+        // 根据语言加载对应地图 SDK：/en/ 用 Google Maps，否则用高德
+        const _mapLoader = IS_INTERNATIONAL ? loadGoogleMapsAPI : loadAMapAPI;
+        _mapLoader()
           .then(() => {
-            console.log("Address autocomplete ready");
+            console.log(
+              "Address autocomplete ready (provider:",
+              IS_INTERNATIONAL ? "google" : "amap",
+              ")",
+            );
           })
           .catch((err) => {
             console.warn("Address autocomplete not available:", err);

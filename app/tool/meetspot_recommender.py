@@ -16,6 +16,10 @@ from app.logger import logger
 from app.i18n import get_translations
 from app.tool.base import BaseTool, ToolResult
 from app.config import config
+from app.tool.google_maps_client import (
+    google_geocode as _google_geocode,
+    google_search_pois as _google_search_pois,
+)
 
 # LLM 智能评分（延迟导入以避免循环依赖）
 _llm_instance = None
@@ -88,6 +92,9 @@ class CafeRecommender(BaseTool):
 
     # 高德地图API密钥
     api_key: str = Field(default="")
+    google_api_key: str = Field(default="")
+    # 地图服务 provider：amap（默认，国内）或 google（/en/ 路径国际场景）
+    map_provider: str = Field(default="amap")
 
     # 缓存请求结果以减少API调用（路演模式：极限压缩防止OOM）
     geocode_cache: Dict[str, Dict] = Field(default_factory=dict)
@@ -676,7 +683,30 @@ class CafeRecommender(BaseTool):
         language: str = "zh",
     ) -> ToolResult:
         language = self._normalize_language(language)
-        # 尝试从多个来源获取API key
+        # 根据语言切换地图 provider：英文走 Google Maps，中文走高德
+        # 仅当 GOOGLE_MAPS_API_KEY 已配置时才启用 Google 路径，否则降级到高德保持向后兼容
+        import os as _os
+
+        google_key_env = _os.getenv("GOOGLE_MAPS_API_KEY", "")
+        if not self.google_api_key:
+            if (
+                hasattr(config, "google_maps")
+                and config.google_maps
+                and hasattr(config.google_maps, "api_key")
+            ):
+                self.google_api_key = config.google_maps.api_key
+            elif google_key_env:
+                self.google_api_key = google_key_env
+        if language == "en" and self.google_api_key:
+            self.map_provider = "google"
+        else:
+            self.map_provider = "amap"
+        logger.info(
+            f"地图 provider: {self.map_provider} (language={language}, "
+            f"google_key_configured={bool(self.google_api_key)})"
+        )
+
+        # 尝试从多个来源获取API key（高德 -- 国内场景必需）
         if not self.api_key:
             # 首先尝试从config对象获取
             if (
@@ -687,11 +717,10 @@ class CafeRecommender(BaseTool):
                 self.api_key = config.amap.api_key
             # 如果config不可用，尝试从环境变量获取
             elif not self.api_key:
-                import os
+                self.api_key = _os.getenv("AMAP_API_KEY", "")
 
-                self.api_key = os.getenv("AMAP_API_KEY", "")
-
-        if not self.api_key:
+        # 高德 key 校验：Google 路径下高德 key 仅作为 fallback，不强制
+        if not self.api_key and self.map_provider == "amap":
             logger.error(
                 "高德地图API密钥未配置。请在config.toml中设置 amap.api_key 或设置环境变量 AMAP_API_KEY。"
             )
@@ -1229,6 +1258,18 @@ class CafeRecommender(BaseTool):
         if address in self.geocode_cache:
             return self.geocode_cache[address]
 
+        # /en/ 国际场景：走 Google Geocoding
+        if self.map_provider == "google":
+            result = await _google_geocode(address, api_key=self.google_api_key)
+            if result:
+                if len(self.geocode_cache) >= self.GEOCODE_CACHE_MAX:
+                    oldest_key = next(iter(self.geocode_cache))
+                    del self.geocode_cache[oldest_key]
+                self.geocode_cache[address] = result
+                return result
+            logger.warning(f"Google Geocoding 失败，地址: {address}")
+            return None
+
         # 确保API密钥已设置
         if not self.api_key:
             if (
@@ -1657,9 +1698,26 @@ class CafeRecommender(BaseTool):
         types: str = "",
         offset: int = 20,
     ) -> List[Dict]:
-        cache_key = f"{location}_{keywords}_{radius}_{types}"
+        cache_key = f"{self.map_provider}_{location}_{keywords}_{radius}_{types}"
         if cache_key in self.poi_cache:
             return self.poi_cache[cache_key]
+
+        # /en/ 国际场景：走 Google Places API（结果已归一化为高德 POI 格式）
+        if self.map_provider == "google":
+            pois = await _google_search_pois(
+                location=location,
+                keywords=keywords,
+                radius=radius,
+                types=types,
+                offset=offset,
+                api_key=self.google_api_key,
+            )
+            if len(self.poi_cache) >= self.POI_CACHE_MAX:
+                oldest_key = next(iter(self.poi_cache))
+                del self.poi_cache[oldest_key]
+            self.poi_cache[cache_key] = pois
+            return pois
+
         url = "https://restapi.amap.com/v3/place/around"
         params = {
             "key": self.api_key,
@@ -3196,6 +3254,280 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             --venue-icon-bg: {cfg.get("theme_primary", "#0A4D68")};
         }}"""
 
+        # 地图初始化脚本：根据 provider 切换 Amap / Google Maps
+        _map_load_error_text = (
+            self._result_text(language, "result.map.load_error", "Map failed to load")
+            if language == "en"
+            else "地图加载失败"
+        )
+        _best_point_text = (
+            self._result_text(language, "result.map.best_point", "Best Meeting Point")
+            if language == "en"
+            else "最佳会面点"
+        )
+        _center_lng = center_point[0]
+        _center_lat = center_point[1]
+
+        if self.map_provider == "google":
+            # Google Maps JS API：用经典 API（v3）+ AdvancedMarker 兜底使用普通 Marker
+            # markersData 中 position 仍为 [lng, lat]，需在 JS 中转 {lat, lng}
+            map_script_block = (
+                """
+    <script type="text/javascript">
+        var markersData = __MARKERS__;
+        var GOOGLE_MAPS_API_KEY = "__GOOGLE_KEY__";
+        var BEST_POINT_LABEL = "__BEST_LABEL__";
+        var MAP_LOAD_ERROR = "__LOAD_ERROR__";
+        var CENTER_LAT = __CENTER_LAT__;
+        var CENTER_LNG = __CENTER_LNG__;
+
+        function initGoogleMap() {
+            if (!window.google || !window.google.maps) {
+                console.error(MAP_LOAD_ERROR + ': google.maps not loaded');
+                return;
+            }
+            var map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: { lat: CENTER_LAT, lng: CENTER_LNG },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true
+            });
+            var bounds = new google.maps.LatLngBounds();
+            var pathCoords = [];
+            markersData.forEach(function (item) {
+                var lng = item.position[0];
+                var lat = item.position[1];
+                var color = '#e74c3c';
+                var labelText = '';
+                if (item.icon === 'center') {
+                    color = '#06D6A0';
+                    labelText = BEST_POINT_LABEL;
+                } else if (item.icon === 'location') {
+                    color = '#0A4D68';
+                    labelText = item.name.indexOf(': ') !== -1 ? item.name.split(': ')[1] : item.name;
+                } else {
+                    color = '#FF6B35';
+                }
+                var marker = new google.maps.Marker({
+                    position: { lat: lat, lng: lng },
+                    map: map,
+                    title: item.name,
+                    label: labelText ? {
+                        text: labelText,
+                        color: '#0F172A',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                    } : undefined,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: color,
+                        fillOpacity: 0.95,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 3,
+                        scale: item.icon === 'place' ? 10 : 13
+                    }
+                });
+                var info = new google.maps.InfoWindow({
+                    content: '<div style="padding:8px 12px;font-size:14px;font-weight:500;">' + item.name + '</div>'
+                });
+                marker.addListener('click', function () { info.open(map, marker); });
+                bounds.extend({ lat: lat, lng: lng });
+                if (item.icon !== 'place') {
+                    pathCoords.push({ lat: lat, lng: lng });
+                }
+            });
+            if (pathCoords.length > 1) {
+                new google.maps.Polyline({
+                    path: pathCoords,
+                    strokeColor: '#0A4D68',
+                    strokeOpacity: 0.85,
+                    strokeWeight: 3,
+                    icons: [{
+                        icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 },
+                        offset: '0',
+                        repeat: '12px'
+                    }],
+                    map: map
+                });
+            }
+            if (markersData.length > 1) {
+                map.fitBounds(bounds, 60);
+            }
+        }
+        window._meetspotInitGoogleMap = initGoogleMap;
+
+        window.onload = function () {
+            if (!GOOGLE_MAPS_API_KEY) {
+                console.warn('Google Maps API key not configured -- map will not render');
+                animateCafeCards();
+                return;
+            }
+            var script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=' + GOOGLE_MAPS_API_KEY + '&loading=async&callback=_meetspotInitGoogleMap';
+            script.async = true;
+            script.onerror = function () { console.error(MAP_LOAD_ERROR); };
+            document.head.appendChild(script);
+            animateCafeCards();
+        };
+
+        function animateCafeCards() {
+            const cards = document.querySelectorAll('.cafe-card');
+            if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.style.opacity = 1;
+                            entry.target.style.transform = 'translateY(0)';
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+                cards.forEach((card, index) => {
+                    card.style.opacity = 0; card.style.transform = 'translateY(30px)';
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.transitionDelay = (index * 0.1) + 's';
+                    observer.observe(card);
+                });
+            } else {
+                cards.forEach((card, index) => {
+                    card.style.opacity = 0; card.style.transform = 'translateY(30px)';
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    setTimeout(() => { card.style.opacity = 1; card.style.transform = 'translateY(0)'; }, 300 + (index * 100));
+                });
+            }
+        }
+    </script>""".replace("__MARKERS__", markers_json)
+                .replace("__GOOGLE_KEY__", str(self.google_api_key or ""))
+                .replace("__BEST_LABEL__", _best_point_text.replace('"', '\\"'))
+                .replace("__LOAD_ERROR__", _map_load_error_text.replace('"', '\\"'))
+                .replace("__CENTER_LAT__", str(_center_lat))
+                .replace("__CENTER_LNG__", str(_center_lng))
+            )
+        else:
+            # 高德分支：从原 inline 模板抽出来，做相同 placeholder 替换
+            _amap_security = (
+                config.amap.security_js_code
+                if (
+                    hasattr(config, "amap")
+                    and config.amap
+                    and hasattr(config.amap, "security_js_code")
+                    and config.amap.security_js_code
+                )
+                else os.getenv("AMAP_SECURITY_JS_CODE", "")
+            )
+            map_script_block = (
+                """
+    <script type="text/javascript">
+        var markersData = __MARKERS__;
+        window._AMapSecurityConfig = { securityJsCode: "__AMAP_SECURITY__" };
+        window.onload = function() {
+            var script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://webapi.amap.com/loader.js';
+            script.onload = function() {
+                AMapLoader.load({
+                    key: "__AMAP_KEY__",
+                    version: "2.0",
+                    plugins: ["AMap.Scale", "AMap.ToolBar"],
+                    AMapUI: { version: "1.1", plugins: ["overlay/SimpleMarker"] }
+                })
+                .then(function(AMap) { initMap(AMap); })
+                .catch(function(e) { console.error('__LOAD_ERROR__:', e); });
+            };
+            document.body.appendChild(script);
+            animateCafeCards();
+        };
+        function initMap(AMap) {
+            var map = new AMap.Map('map', {
+                zoom: 12, center: [__CENTER_LNG__, __CENTER_LAT__],
+                resizeEnable: true, viewMode: '3D'
+            });
+            map.addControl(new AMap.ToolBar()); map.addControl(new AMap.Scale());
+            var mapMarkers = [];
+            markersData.forEach(function(item) {
+                var markerContent, position = new AMap.LngLat(item.position[0], item.position[1]);
+                var color = '#e74c3c';
+                var labelText = '';
+                if (item.icon === 'center') {
+                    color = '#06D6A0';
+                    labelText = '__BEST_LABEL__';
+                } else if (item.icon === 'location') {
+                    color = '#0A4D68';
+                    labelText = item.name.includes(': ') ? item.name.split(': ')[1] : item.name;
+                }
+                if (item.icon === 'center' || item.icon === 'location') {
+                    markerContent = `<div style="display:flex;flex-direction:column;align-items:center;">
+                        <div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>
+                        <div style="background: white; padding: 4px 8px; border-radius: 4px; margin-top: 4px; font-size: 12px; font-weight: bold; color: #333; box-shadow: 0 2px 6px rgba(0,0,0,0.15); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${labelText}</div>
+                    </div>`;
+                } else {
+                    markerContent = `<div style="background-color: #FF6B35; width: 24px; height: 24px; border-radius: 12px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`;
+                }
+                var marker = new AMap.Marker({
+                    position: position, content: markerContent,
+                    title: item.name, anchor: 'center', offset: new AMap.Pixel(0, item.icon === 'place' ? 0 : -20)
+                });
+                var infoWindow = new AMap.InfoWindow({
+                    content: '<div style="padding:10px;font-size:14px;">' + item.name + '</div>',
+                    offset: new AMap.Pixel(0, -12)
+                });
+                marker.on('click', function() { infoWindow.open(map, marker.getPosition()); });
+                mapMarkers.push(marker);
+                marker.setMap(map);
+            });
+            if (markersData.length > 1) {
+                var pathCoordinates = [];
+                markersData.filter(item => item.icon !== 'place').forEach(function(item) {
+                    pathCoordinates.push(new AMap.LngLat(item.position[0], item.position[1]));
+                });
+                if (pathCoordinates.length > 1) {
+                    var polyline = new AMap.Polyline({
+                        path: pathCoordinates, strokeColor: '#0A4D68', strokeWeight: 4,
+                        strokeStyle: 'dashed', strokeDasharray: [5, 5], lineJoin: 'round'
+                    });
+                    polyline.setMap(map);
+                }
+            }
+            if (mapMarkers.length > 0) {
+                 map.setFitView(mapMarkers);
+            }
+        }
+        function animateCafeCards() {
+            const cards = document.querySelectorAll('.cafe-card');
+            if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.style.opacity = 1;
+                            entry.target.style.transform = 'translateY(0)';
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+                cards.forEach((card, index) => {
+                    card.style.opacity = 0; card.style.transform = 'translateY(30px)';
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.transitionDelay = (index * 0.1) + 's';
+                    observer.observe(card);
+                });
+            } else {
+                cards.forEach((card, index) => {
+                    card.style.opacity = 0; card.style.transform = 'translateY(30px)';
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    setTimeout(() => { card.style.opacity = 1; card.style.transform = 'translateY(0)'; }, 300 + (index * 100));
+                });
+            }
+        }
+    </script>""".replace("__MARKERS__", markers_json)
+                .replace("__AMAP_SECURITY__", _amap_security.replace('"', '\\"'))
+                .replace("__AMAP_KEY__", str(self.api_key or "").replace('"', '\\"'))
+                .replace("__BEST_LABEL__", _best_point_text.replace('"', '\\"'))
+                .replace("__LOAD_ERROR__", _map_load_error_text.replace('"', '\\"'))
+                .replace("__CENTER_LAT__", str(_center_lat))
+                .replace("__CENTER_LNG__", str(_center_lng))
+            )
+
         baidu_tongji_id = os.getenv("BAIDU_TONGJI_ID", "")
         analytics_script = ""
         if baidu_tongji_id:
@@ -3909,120 +4241,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         }</p>
         </div>
     </footer>
-    <script type="text/javascript">
-        var markersData = {markers_json};
-        window._AMapSecurityConfig = {{ securityJsCode: "{amap_security_js_code}" }};
-        window.onload = function() {{
-            var script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src = 'https://webapi.amap.com/loader.js';
-            script.onload = function() {{
-                AMapLoader.load({{
-                    key: "{self.api_key}", 
-                    version: "2.0",
-                    plugins: ["AMap.Scale", "AMap.ToolBar"],
-                    AMapUI: {{ version: "1.1", plugins: ["overlay/SimpleMarker"] }}
-                }})
-                .then(function(AMap) {{ initMap(AMap); }})
-                .catch(function(e) {{ console.error('{
-            self._result_text(language, "result.map.load_error", "Map failed to load")
-            if language == "en"
-            else "地图加载失败"
-        }:', e); }});
-            }};
-            document.body.appendChild(script);
-            animateCafeCards(); 
-        }};
-        function initMap(AMap) {{
-            var map = new AMap.Map('map', {{
-                zoom: 12, center: [{center_point[0]}, {center_point[1]}],
-                resizeEnable: true, viewMode: '3D'
-            }});
-            map.addControl(new AMap.ToolBar()); map.addControl(new AMap.Scale());
-            var mapMarkers = []; 
-            markersData.forEach(function(item) {{
-                var markerContent, position = new AMap.LngLat(item.position[0], item.position[1]);
-                var color = '#e74c3c';
-                var labelText = '';
-                if (item.icon === 'center') {{
-                    color = '#2ecc71';
-                    labelText = '{
-            self._result_text(language, "result.map.best_point", "Best Meeting Point")
-            if language == "en"
-            else "最佳会面点"
-        }';
-                }} else if (item.icon === 'location') {{
-                    color = '#3498db';
-                    // Extract location name from "地点N: XXX" format
-                    labelText = item.name.includes(': ') ? item.name.split(': ')[1] : item.name;
-                }}
-
-                // For center and location markers, show label with name
-                if (item.icon === 'center' || item.icon === 'location') {{
-                    markerContent = `<div style="display:flex;flex-direction:column;align-items:center;">
-                        <div style="background-color: ${{color}}; width: 28px; height: 28px; border-radius: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>
-                        <div style="background: white; padding: 4px 8px; border-radius: 4px; margin-top: 4px; font-size: 12px; font-weight: bold; color: #333; box-shadow: 0 2px 6px rgba(0,0,0,0.15); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${{labelText}}</div>
-                    </div>`;
-                }} else {{
-                    markerContent = `<div style="background-color: ${{color}}; width: 24px; height: 24px; border-radius: 12px; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`;
-                }}
-
-                var marker = new AMap.Marker({{
-                    position: position, content: markerContent,
-                    title: item.name, anchor: 'center', offset: new AMap.Pixel(0, item.icon === 'place' ? 0 : -20)
-                }});
-                var infoWindow = new AMap.InfoWindow({{
-                    content: '<div style="padding:10px;font-size:14px;">' + item.name + '</div>',
-                    offset: new AMap.Pixel(0, -12)
-                }});
-                marker.on('click', function() {{ infoWindow.open(map, marker.getPosition()); }});
-                mapMarkers.push(marker);
-                marker.setMap(map);
-            }});
-            if (markersData.length > 1) {{
-                var pathCoordinates = [];
-                markersData.filter(item => item.icon !== 'place').forEach(function(item) {{ 
-                    pathCoordinates.push(new AMap.LngLat(item.position[0], item.position[1]));
-                }});
-                if (pathCoordinates.length > 1) {{ 
-                    var polyline = new AMap.Polyline({{
-                        path: pathCoordinates, strokeColor: '#3498db', strokeWeight: 4,
-                        strokeStyle: 'dashed', strokeDasharray: [5, 5], lineJoin: 'round'
-                    }});
-                    polyline.setMap(map);
-                }}
-            }}
-            if (mapMarkers.length > 0) {{ 
-                 map.setFitView(mapMarkers);
-            }}
-        }}
-        function animateCafeCards() {{
-            const cards = document.querySelectorAll('.cafe-card');
-            if ('IntersectionObserver' in window) {{
-                const observer = new IntersectionObserver((entries) => {{
-                    entries.forEach(entry => {{
-                        if (entry.isIntersecting) {{
-                            entry.target.style.opacity = 1;
-                            entry.target.style.transform = 'translateY(0)';
-                            observer.unobserve(entry.target);
-                        }}
-                    }});
-                }}, {{ threshold: 0.1 }});
-                cards.forEach((card, index) => {{
-                    card.style.opacity = 0; card.style.transform = 'translateY(30px)';
-                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    card.style.transitionDelay = (index * 0.1) + 's';
-                    observer.observe(card);
-                }});
-            }} else {{
-                cards.forEach((card, index) => {{
-                    card.style.opacity = 0; card.style.transform = 'translateY(30px)';
-                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    setTimeout(() => {{ card.style.opacity = 1; card.style.transform = 'translateY(0)'; }}, 300 + (index * 100));
-                }});
-            }}
-        }}
-    </script>
+    {map_script_block}
 
     <!-- Modern Toast Notification System -->
     <script src="/public/js/toast.js"></script>

@@ -61,6 +61,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# API key 文件（开发期临时存放，禁止提交）
+Googlemapkey.md
+*mapkey*
+*api_key*
+stripe_backup_code.txt
+
 # IDE
 .vscode/
 .idea/

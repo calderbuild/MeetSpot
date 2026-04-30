@@ -139,7 +139,11 @@ def _render_homepage(request: Request, lang: str):
 @router.get("/", response_class=HTMLResponse)
 @limiter.limit("60/minute")
 async def homepage(request: Request):
-    return _render_homepage(request, "zh")
+    # 默认英文（国际化优先）。中文用户点击导航 中文 切到 /zh/，不依赖 Accept-Language
+    # 仅 cookie lang=zh 时尊重用户上次选择，让回访的中文用户保持中文体验
+    if request.cookies.get("lang") == "zh":
+        return _render_homepage(request, "zh")
+    return _render_homepage(request, "en")
 
 
 @router.get("/en/", response_class=HTMLResponse)
@@ -147,6 +151,13 @@ async def homepage(request: Request):
 @limiter.limit("60/minute")
 async def homepage_en(request: Request):
     return _render_homepage(request, "en")
+
+
+@router.get("/zh/", response_class=HTMLResponse)
+@router.get("/zh", response_class=HTMLResponse)
+@limiter.limit("60/minute")
+async def homepage_zh(request: Request):
+    return _render_homepage(request, "zh")
 
 
 # ---------------------------------------------------------------------------
