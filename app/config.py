@@ -202,8 +202,17 @@ class Config:
         amap_security_js_code = os.getenv("AMAP_SECURITY_JS_CODE", "")
         google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
         # 支持 Render 部署的环境变量配置
-        llm_base_url = os.getenv("LLM_API_BASE", "") or base_llm.get("base_url", "")
-        llm_model = os.getenv("LLM_MODEL", "") or base_llm.get("model", "gpt-3.5-turbo")
+        # 默认走 OpenRouter（统一 API 网关，支持多家模型）+ openai/gpt-4o-mini（便宜快速）
+        llm_base_url = (
+            os.getenv("LLM_API_BASE", "")
+            or base_llm.get("base_url", "")
+            or "https://openrouter.ai/api/v1"
+        )
+        llm_model = (
+            os.getenv("LLM_MODEL", "")
+            or base_llm.get("model", "")
+            or "openai/gpt-4o-mini"
+        )
 
         llm_overrides = {
             k: v for k, v in raw_config.get("llm", {}).items() if isinstance(v, dict)

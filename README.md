@@ -198,8 +198,8 @@ Open http://127.0.0.1:8000
 |-------|--------------|
 | **Backend** | FastAPI, Pydantic, aiohttp, SQLAlchemy 2.0, asyncio |
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript, Boxicons |
-| **Maps** | Amap (Gaode) - Geocoding, POI Search, JS API |
-| **AI** | DeepSeek / GPT-4o-mini for semantic analysis |
+| **Maps** | Amap (Gaode) for China + Google Maps Platform for international (auto-routed by language) |
+| **AI** | OpenRouter (default `openai/gpt-4o-mini`) for semantic analysis |
 | **Deploy** | Render, Railway, Docker, Vercel |
 
 ---

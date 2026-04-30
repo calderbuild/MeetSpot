@@ -687,8 +687,8 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
 
         # 获取LLM API配置
         llm_api_key = os.getenv("LLM_API_KEY", "")
-        llm_api_base = os.getenv("LLM_API_BASE", "https://newapi.deepwisdom.ai/v1")
-        llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
+        llm_api_base = os.getenv("LLM_API_BASE", "https://openrouter.ai/api/v1")
+        llm_model = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
 
         if not llm_api_key:
             print("LLM_API_KEY not configured")

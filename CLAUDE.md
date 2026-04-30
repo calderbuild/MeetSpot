@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MeetSpot is an **AI Agent** for multi-person meeting point recommendations. Users provide locations and requirements; the Agent calculates the geographic center and recommends optimal venues. Built with FastAPI and Python 3.11+, uses Amap (Gaode Map) API for geocoding/POI search, and DeepSeek/GPT-4o-mini for semantic scoring.
+MeetSpot is an **AI Agent** for multi-person meeting point recommendations. Users provide locations and requirements; the Agent calculates the geographic center and recommends optimal venues. Built with FastAPI and Python 3.11+, uses Amap (Gaode Map) for 国内场景 + Google Maps Platform for 国际场景, and OpenRouter (default `openai/gpt-4o-mini`) for semantic scoring + AI chat.
 
 **Live Demo**: https://meetspot-irq2.onrender.com
 
@@ -53,9 +53,10 @@ python tools/postmortem_check.py         # Check for known issue patterns
 **Required Environment Variables**:
 - `AMAP_API_KEY` - Gaode Map API key (required)
 - `AMAP_SECURITY_JS_CODE` - JS security code for frontend map
-- `LLM_API_KEY` - DeepSeek/OpenAI API key (for AI chat and LLM scoring)
-- `LLM_API_BASE` - API base URL (default: `https://newapi.deepwisdom.ai/v1`)
-- `LLM_MODEL` - Model name (default: `deepseek-chat`)
+- `LLM_API_KEY` - OpenRouter / OpenAI / 兼容服务的 API key（生产用 OpenRouter `sk-or-v1-...` 形式）
+- `LLM_API_BASE` - API base URL (default: `https://openrouter.ai/api/v1`)
+- `LLM_MODEL` - Model name (default: `openai/gpt-4o-mini`，OpenRouter slug 格式，可换 `google/gemini-2.5-flash` / `anthropic/claude-haiku-4-5` 等)
+- `GOOGLE_MAPS_API_KEY` - Google Maps Platform key（国际场景必需，缺失时 /en/ 路径地图静默降级）
 
 **Local Config**: Copy `config/config.toml.example` to `config/config.toml` and fill in API keys. Alternatively, create a `.env` file with the environment variables above.
 
