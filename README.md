@@ -179,7 +179,8 @@ Open http://127.0.0.1:8000
 
 <table>
 <tr>
-<td colspan="2" align="center"><img src="docs/result-summary-en.png" alt="Full Results Page" width="80%"/><p align="center"><b>Full Results Page (NYC example)</b></p></td>
+<td width="60%" align="center"><img src="docs/result-summary-en.png" alt="Full Results Page"/><p align="center"><b>Full Results Page (NYC example)</b></p></td>
+<td width="40%" align="center"><img src="docs/ai-chat-en.png" alt="AI Chat"/><p align="center"><b>AI Assistant Chat</b></p></td>
 </tr>
 </table>
 
