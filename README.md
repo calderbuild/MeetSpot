@@ -34,7 +34,7 @@ Most location tools return results near *you*. MeetSpot calculates the **geograp
 | No reasoning | Explainable AI with chain-of-thought |
 
 <div align="center">
-<img src="docs/show1.jpg" alt="MeetSpot Interface" width="85%"/>
+<img src="docs/show1-en.png" alt="MeetSpot Interface" width="85%"/>
 </div>
 
 ---
@@ -165,12 +165,12 @@ Open http://127.0.0.1:8000
 
 <table>
 <tr>
-<td width="50%"><img src="docs/agent-thinking.jpg" alt="Agent Reasoning"/><p align="center"><b>Agent Chain-of-Thought</b></p></td>
-<td width="50%"><img src="docs/result-map.jpg" alt="Interactive Map"/><p align="center"><b>Interactive Map View</b></p></td>
+<td width="50%"><img src="docs/agent-thinking-en.png" alt="Agent Reasoning"/><p align="center"><b>Agent Chain-of-Thought</b></p></td>
+<td width="50%"><img src="docs/result-map-en.png" alt="Interactive Map"/><p align="center"><b>Interactive Map View</b></p></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/多维度智能评分show4.jpg" alt="AI Scoring"/><p align="center"><b>Multi-Factor AI Scoring</b></p></td>
-<td width="50%"><img src="docs/show5推荐地点.jpg" alt="Venue Cards"/><p align="center"><b>Venue Recommendation Cards</b></p></td>
+<td width="50%"><img src="docs/homepage-en.png" alt="Homepage"/><p align="center"><b>Homepage</b></p></td>
+<td width="50%"><img src="docs/finder-input-en.png" alt="Input Interface"/><p align="center"><b>Meeting Point Finder</b></p></td>
 </tr>
 </table>
 
@@ -179,12 +179,7 @@ Open http://127.0.0.1:8000
 
 <table>
 <tr>
-<td width="50%"><img src="docs/homepage.jpg" alt="Homepage"/><p align="center"><b>Homepage</b></p></td>
-<td width="50%"><img src="docs/finder-input.jpg" alt="Input Interface"/><p align="center"><b>Meeting Point Finder</b></p></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/result-summary.jpg" alt="Results"/><p align="center"><b>Results Summary</b></p></td>
-<td width="50%"><img src="docs/AI客服.jpg" alt="AI Chat"/><p align="center"><b>AI Customer Service</b></p></td>
+<td colspan="2" align="center"><img src="docs/result-summary-en.png" alt="Full Results Page" width="80%"/><p align="center"><b>Full Results Page (NYC example)</b></p></td>
 </tr>
 </table>
 
