@@ -683,7 +683,7 @@ Content-Type: application/json
 ## Contact
 
 - GitHub: https://github.com/calderbuild/MeetSpot
-- Author: Jason Robert (https://jasonrobert.me/)
+- Author: Calder (https://calderbuild.github.io/)
 - Email: Johnrobertdestiny@gmail.com
 """
     return Response(

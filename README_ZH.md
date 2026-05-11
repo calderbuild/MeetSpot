@@ -257,7 +257,7 @@ black . && ruff check . && mypy app/
 
 **GitHub：** [Issues](https://github.com/calderbuild/MeetSpot/issues)
 
-**博客：** [jasonrobert.me](https://jasonrobert.me/)
+**博客：** [calderbuild.github.io](https://calderbuild.github.io/)
 
 </td>
 <td align="center">
@@ -281,7 +281,7 @@ black . && ruff check . && mypy app/
 
 ## 致谢
 
-特别感谢 [AIGC Link](https://aigc.cn/) 在小红书的推广支持。
+特别感谢 [AIGC Link](https://xhslink.com/m/80ngts127cA) 在小红书的推广支持。
 
 ---
 

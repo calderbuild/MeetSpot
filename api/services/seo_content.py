@@ -138,7 +138,7 @@ class SEOContentGenerator:
                 ],
                 "sameAs": [
                     "https://github.com/calderbuild/MeetSpot",
-                    "https://jasonrobert.me/",
+                    "https://calderbuild.github.io/",
                 ],
             }
         if page_type == "local_business":

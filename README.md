@@ -259,7 +259,7 @@ Contributions are welcome! Please:
 
 **GitHub:** [Issues](https://github.com/calderbuild/MeetSpot/issues)
 
-**Blog:** [jasonrobert.me](https://jasonrobert.me/)
+**Blog:** [calderbuild.github.io](https://calderbuild.github.io/)
 
 </td>
 <td align="center">
@@ -283,7 +283,7 @@ Contributions are welcome! Please:
 
 ## Acknowledgements
 
-Special thanks to [AIGC Link](https://aigc.cn/) for the promotions on XiaoHongShu (小红书).
+Special thanks to [AIGC Link](https://xhslink.com/m/80ngts127cA) for the promotions on XiaoHongShu.
 
 ---
 
