@@ -279,6 +279,12 @@ black . && ruff check . && mypy app/
 
 ---
 
+## 致谢
+
+特别感谢 [AIGC Link](https://aigc.cn/) 在小红书的推广支持。
+
+---
+
 ## 许可证
 
 MIT License - 详见 [LICENSE](LICENSE)

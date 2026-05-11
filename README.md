@@ -281,6 +281,12 @@ Contributions are welcome! Please:
 
 ---
 
+## Acknowledgements
+
+Special thanks to [AIGC Link](https://aigc.cn/) for the promotions on XiaoHongShu (小红书).
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
