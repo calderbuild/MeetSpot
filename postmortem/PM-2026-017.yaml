@@ -1,0 +1,32 @@
+id: PM-2026-017
+created_at: '2026-05-19T05:18:47.151953+00:00'
+source_commit: 28e015a
+severity: medium
+title: use new TemplateResponse(request, name, ctx) signa
+description: 'Starlette dropped the legacy positional `(name, context)` form in the
+  version pulled in by fastapi 0.136 (dependabot #73, merged 2026-05-18), so all 6
+  SEO pages were 500ing with `TypeError: unhashable type: ''dict''` from jinja2 cache
+  lookup because the context dict was being passed as the template na'
+root_cause: See commit body for details
+triggers:
+  files:
+  - api/routers/seo_pages.py
+  functions:
+  - _render_compare
+  - _render_faq
+  - _render_homepage
+  - _render_how_it_works
+  - _render_city_page
+  patterns: []
+  keywords: &id001
+  - seo
+fix_pattern:
+  approach: use new TemplateResponse(request, name, ctx) signature
+  key_changes:
+  - use new TemplateResponse(request, name, ctx) signature
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - api/routers/seo_pages.py
+tags: *id001
