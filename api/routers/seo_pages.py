@@ -121,6 +121,7 @@ def _render_homepage(request: Request, lang: str):
     )
     canonical = f"{BASE_URL}{prefix}/" if lang == "en" else f"{BASE_URL}/"
     return templates.TemplateResponse(
+        request,
         "pages/home.html",
         {
             **_common_context(request, lang),
@@ -197,6 +198,7 @@ def _render_city_page(request: Request, city_slug: str, lang: str):
     city_content = seo_generator.generate_city_content(city, lang=lang)
     path = f"/meetspot/{city_slug}"
     return templates.TemplateResponse(
+        request,
         "pages/city.html",
         {
             **_common_context(request, lang),
@@ -248,6 +250,7 @@ def _render_about(request: Request, lang: str):
     )
     path = "/about"
     return templates.TemplateResponse(
+        request,
         "pages/about.html",
         {
             **_common_context(request, lang),
@@ -338,6 +341,7 @@ def _render_how_it_works(request: Request, lang: str):
     )
     path = "/how-it-works"
     return templates.TemplateResponse(
+        request,
         "pages/how_it_works.html",
         {
             **_common_context(request, lang),
@@ -390,6 +394,7 @@ def _render_faq(request: Request, lang: str):
     )
     path = "/faq"
     return templates.TemplateResponse(
+        request,
         "pages/faq.html",
         {
             **_common_context(request, lang),
@@ -469,6 +474,7 @@ def _render_compare(request: Request, lang: str):
     )
     path = "/compare"
     return templates.TemplateResponse(
+        request,
         "pages/compare.html",
         {
             **_common_context(request, lang),
