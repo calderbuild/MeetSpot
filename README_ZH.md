@@ -200,6 +200,12 @@ python web_server.py
 | **AI** | DeepSeek / GPT-4o-mini 语义分析 |
 | **部署** | Render, Railway, Docker, Vercel |
 
+### Docker Compose 快速开始
+
+1. 复制环境变量模板并填入 key：`cp .env.example .env`
+2. 启动应用：`docker compose up --build`
+3. 打开 http://localhost:8000，健康检查地址 http://localhost:8000/health
+
 ---
 
 ## 项目结构
@@ -282,6 +288,14 @@ black . && ruff check . && mypy app/
 ## 致谢
 
 特别感谢 [AIGC Link](https://xhslink.com/m/80ngts127cA) 在小红书的推广支持。
+
+---
+
+## GOAI 2026 参赛路线图
+
+- 初赛（8 月 16 日前）：500 字作品简介与 12 页方案 PPT，定位为本地生活服务的多人线下协作决策智能体
+- 复赛（8 月 25 日至 9 月 3 日）：稳定性修复、Agent 闭环升级（意图分类、工具调用记录、置信度与质量门）、企业会议规划模式、评测基准
+- 决赛（9 月 22 日）：现场 Demo、可解释推理展示、开源生态叙事
 
 ---
 

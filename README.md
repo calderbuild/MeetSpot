@@ -195,8 +195,14 @@ Open http://127.0.0.1:8000
 | **Backend** | FastAPI, Pydantic, aiohttp, SQLAlchemy 2.0, asyncio |
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript, Boxicons |
 | **Maps** | Amap (Gaode) for China + Google Maps Platform for international (auto-routed by language) |
-| **AI** | OpenRouter (default `openai/gpt-4o-mini`) for semantic analysis |
+| **AI** | DeepSeek (default `deepseek-v4-flash`) via OpenAI-compatible API |
 | **Deploy** | Render, Railway, Docker, Vercel |
+
+### Docker Compose Quick Start
+
+1. Copy the environment template and fill in your keys: `cp .env.example .env`
+2. Start the app: `docker compose up --build`
+3. Open http://localhost:8000 and check http://localhost:8000/health
 
 ---
 
@@ -280,6 +286,14 @@ Contributions are welcome! Please:
 ## Acknowledgements
 
 Special thanks to [AIGC Link](https://xhslink.com/m/80ngts127cA) for the promotions on XiaoHongShu.
+
+---
+
+## GOAI 2026 Roadmap
+
+- Preliminary (by Aug 16): 500-word intro and a 12-page deck, positioned as a multi-person offline collaboration decision agent in local life services
+- Semi-finals (Aug 25 - Sep 3): stability fixes, Agent loop upgrades (intent classification, tool traces, confidence and quality gates), enterprise meeting planning mode, and a benchmark suite
+- Finals (Sep 22): live demo, explainable reasoning showcase, and open-source ecosystem narrative
 
 ---
 
