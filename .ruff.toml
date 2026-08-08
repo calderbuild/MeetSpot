@@ -1,0 +1,3 @@
+[lint.per-file-ignores]
+# 环境变量加载先于模块导入，E402 属有意为之
+"api/index.py" = ["E402"]
