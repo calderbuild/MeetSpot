@@ -198,3 +198,6 @@ Agent-EN_cv.pdf
 
 # Local plan docs
 docs/plans/
+
+# Session handoff snapshots (local scratch, not project docs)
+docs/handoffs/
