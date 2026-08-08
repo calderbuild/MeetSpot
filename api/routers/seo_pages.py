@@ -14,7 +14,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from api.services.seo_content import seo_content_generator as seo_generator
-from app.i18n import get_translations, detect_language, DEFAULT_LANG
+from app.i18n import get_translations
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")

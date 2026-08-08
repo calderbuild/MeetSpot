@@ -23,7 +23,7 @@ def main():
     """Main entry point for development and production server"""
     try:
         # Import the FastAPI app from api/index.py
-        from api.index import app
+        from api.index import app  # noqa: F401
         import uvicorn
         
         # Get port from environment variable (Railway sets PORT automatically)

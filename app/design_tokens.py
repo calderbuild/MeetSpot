@@ -12,8 +12,8 @@ WCAG 2.1 AA级对比度标准:
 - 大文字: ≥ 3.0:1
 """
 
-from typing import Dict, Any
 from functools import lru_cache
+from typing import Dict
 
 
 class DesignTokens:

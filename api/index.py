@@ -3,7 +3,6 @@ import os
 import time
 import asyncio
 import re
-import json
 import gc
 from typing import List, Optional
 
@@ -21,7 +20,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from slowapi.errors import RateLimitExceeded
@@ -55,28 +54,23 @@ except ImportError as e:
         logger.warning("Database module not available, skipping init")
 
 
-# 导入 Agent 模块（高内存消耗，暂时禁用以保证稳定性）
-agent_available = False  # 禁用 Agent 模式，节省内存
-# try:
-#     from app.agent import MeetSpotAgent, create_meetspot_agent
-#     agent_available = True
-#     print("✅ 成功导入 Agent 模块")
-# except ImportError as e:
-#     print(f"⚠️ Agent 模块导入失败: {e}")
-print("ℹ️ Agent 模块已禁用（节省内存）")
+# 导入 Agent 模块。Agent 模式下复杂请求走 ReAct 工具链，
+# 执行超时或失败时自动降级到规则模式，不影响主流程。
+agent_available = False
+try:
+    from app.agent import create_meetspot_agent
 
-
-def create_meetspot_agent():
-    """Stub function - Agent模式已禁用，此函数不应被调用"""
-    raise RuntimeError("Agent模式已禁用，请使用规则模式")
+    agent_available = True
+except ImportError as e:
+    print(f"Agent 模块导入失败，Agent 模式不可用: {e}")
 
 
 # 导入 LLM 模块
 llm_available = False
 llm_instance = None
 try:
-    from app.llm import LLM
-    from app.schema import Message
+    from app.llm import LLM  # noqa: F401
+    from app.schema import Message  # noqa: F401
 
     llm_available = True
     print("✅ 成功导入 LLM 模块")
@@ -117,8 +111,6 @@ if not config_available and os.getenv("AMAP_API_KEY"):
     try:
         # 创建最小化推荐器
         import asyncio
-        import httpx
-        import json
         import hashlib
         import time
         from datetime import datetime
@@ -557,7 +549,13 @@ async def health_check():
         "timestamp": time.time(),
         "config": {
             "amap_configured": bool(
-                AMAP_API_KEY or (config and hasattr(config, "amap") and config.amap)
+                AMAP_API_KEY
+                or (
+                    config
+                    and hasattr(config, "amap")
+                    and config.amap
+                    and getattr(config.amap, "api_key", "")
+                )
             ),
             "full_features": config_available,
             "minimal_mode": not config_available and bool(AMAP_API_KEY),
@@ -929,11 +927,11 @@ async def _process_meetspot_request(
 
         # ========== 智能路由：根据复杂度选择模式 ==========
         if complexity["use_agent"]:
-            print(f"🤖 [Agent模式] 复杂请求，启用Agent智能分析...")
+            print("🤖 [Agent模式] 复杂请求，启用Agent智能分析...")
             try:
                 agent = create_meetspot_agent()
                 # 添加15秒超时，确保Agent模式不会无限等待
-                AGENT_TIMEOUT = 15  # 秒
+                AGENT_TIMEOUT = 25  # 秒
                 agent_result = await asyncio.wait_for(
                     agent.recommend(
                         locations=request.locations,
@@ -1178,7 +1176,7 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             fallback_result["mode"] = "rule_fallback"
             fallback_result["agent_error"] = str(e)
             return fallback_result
-        except Exception as fallback_error:
+        except Exception:
             return {
                 "success": False,
                 "mode": "agent",
@@ -1215,16 +1213,12 @@ async def get_amap_config():
     # 从 config.toml 获取（如果存在）
     if config and hasattr(config, "amap") and config.amap:
         if not js_api_key:
-            js_api_key = getattr(config.amap, "js_api_key", "") or getattr(
-                config.amap, "api_key", ""
-            )
+            js_api_key = getattr(config.amap, "js_api_key", "")
         if not security_js_code:
             security_js_code = getattr(config.amap, "security_js_code", "")
 
-    # 最后回退到 Web服务 key（不推荐，可能无法加载地图）
-    if not js_api_key:
-        js_api_key = AMAP_API_KEY
-
+    # 不把后端 Web 服务 key 当 JS key 返回，避免密钥泄露；
+    # 未配置 JS key 时前端地图优雅降级
     return {"api_key": js_api_key, "security_js_code": security_js_code}
 
 

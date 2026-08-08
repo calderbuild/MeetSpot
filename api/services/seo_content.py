@@ -6,8 +6,7 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
-from typing import Dict, List
+from typing import Dict
 
 
 class SEOContentGenerator:

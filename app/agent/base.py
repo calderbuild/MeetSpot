@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -140,7 +140,7 @@ class BaseAgent(BaseModel, ABC):
         """处理卡住状态"""
         stuck_prompt = "检测到重复响应。请考虑新策略，避免重复已尝试过的无效路径。"
         self.next_step_prompt = f"{stuck_prompt}\n{self.next_step_prompt or ''}"
-        logger.warning(f"Agent 检测到卡住状态，已添加提示")
+        logger.warning("Agent 检测到卡住状态，已添加提示")
 
     def is_stuck(self) -> bool:
         """检测是否陷入循环"""

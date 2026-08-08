@@ -492,12 +492,12 @@ def main():
             print(f"\n[{level}] {pm_id} ({confidence:.0%} confidence)")
             print(f"  Title: {pm.get('title', 'N/A')}")
             print(f"  Severity: {pm.get('severity', 'N/A')}")
-            print(f"  Reasons:")
+            print("  Reasons:")
             for reason in agg.reasons[:5]:  # 最多显示5个原因
                 print(f"    - {reason}")
 
             if pm.get("verification"):
-                print(f"  Verification checklist:")
+                print("  Verification checklist:")
                 for check in pm["verification"]:
                     print(f"    [ ] {check}")
 

@@ -1,9 +1,6 @@
 """MeetSpot Agent 工具集 - 封装推荐系统的核心功能"""
 
-import json
-from typing import Any, Dict, List, Optional
-
-from pydantic import Field
+from typing import Dict, List
 
 from app.tool.base import BaseTool, ToolResult
 from app.logger import logger
@@ -275,7 +272,7 @@ class SearchPOITool(BaseTool):
 
             # 简化返回数据
             simplified = []
-            for p in places[:15]:  # 最多返回15个
+            for p in places[:10]:  # 最多返回10个，控制 LLM 上下文长度
                 biz_ext = p.get("biz_ext", {}) or {}
                 location = p.get("location", "")
                 lng, lat = location.split(",") if location else (0, 0)

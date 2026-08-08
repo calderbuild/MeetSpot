@@ -3,6 +3,7 @@ import html
 import json
 import math
 import os
+import re
 import uuid
 from datetime import datetime
 from functools import lru_cache
@@ -730,6 +731,7 @@ class CafeRecommender(BaseTool):
             coordinates = []
             location_info = []
             geocode_results = []  # 存储原始 geocode 结果用于后续分析
+            failed_locations: List[str] = []
 
             # 检查是否有预解析坐标（来自前端 Autocomplete 选择）
             if pre_resolved_coords and len(pre_resolved_coords) == len(locations):
@@ -786,21 +788,18 @@ class CafeRecommender(BaseTool):
                         result = None
 
                     if not result:
-                        # 检查是否为大学简称但地理编码失败
-                        enhanced_address = self._enhance_address(location)
-                        if enhanced_address != location:
-                            return ToolResult(
-                                output=f"无法找到地点: {location}\n\n识别为大学简称\n您输入的 '{location}' 可能是大学简称，但未能成功解析。\n\n建议尝试：\n完整名称：'{enhanced_address}'\n添加城市：'北京 {location}'、'上海 {location}'\n具体地址：'北京市海淀区{enhanced_address}'\n校区信息：如 '{location}本部'、'{location}新校区'"
-                            )
-                        else:
-                            # 提供更详细的地址输入指导
-                            suggestions = self._get_address_suggestions(location)
-                            return ToolResult(
-                                output=f"无法找到地点: {location}\n\n地址解析失败\n系统无法识别您输入的地址，请检查以下几点：\n\n具体建议：\n{suggestions}\n\n标准地址格式示例：\n完整地址：'北京市海淀区中关村大街27号'\n知名地标：'北京大学'、'天安门广场'、'上海外滩'\n商圈区域：'三里屯'、'王府井'、'南京路步行街'\n交通枢纽：'北京南站'、'上海虹桥机场'\n\n常见错误避免：\n避免过于简短：'大学' -> '北京大学'\n避免拼写错误：'北大' -> '北京大学'\n避免模糊描述：'那个商场' -> '王府井百货大楼'\n\n如果仍有问题：\n检查网络连接是否正常\n尝试使用地址的官方全称\n确认地点确实存在且对外开放"
-                            )
+                        # 单个地址失败不中止整个请求，先记录，继续解析其余地址
+                        failed_locations.append(location)
+                        logger.warning(f"地址解析失败: {location}")
+                        continue
 
                     geocode_results.append(
                         {"original_location": location, "result": result}
+                    )
+
+                if failed_locations and geocode_results:
+                    logger.warning(
+                        f"部分地址解析失败，基于其余 {len(geocode_results)} 个地点继续推荐: {failed_locations}"
                     )
 
                 # 智能城市推断：检测是否有地点被解析到完全不同的城市
@@ -834,6 +833,9 @@ class CafeRecommender(BaseTool):
                 error_msg += "🔍 **解析失败的地址：**\n"
                 for location in locations:
                     error_msg += f"• {location}\n"
+                    enhanced_address = self._enhance_address(location)
+                    if enhanced_address != location:
+                        error_msg += f"  💡 识别为简称/别名，可尝试完整名称：{enhanced_address}\n"
                     suggestions = self._get_address_suggestions(location)
                     if suggestions:
                         error_msg += f"  💡 建议：{suggestions}\n"
@@ -855,13 +857,13 @@ class CafeRecommender(BaseTool):
                 error_msg += "• **方式一**：在不同输入框中分别填写，如第一个框填'北京大学'，第二个框填'中关村'\n"
                 error_msg += "• **方式二**：在一个输入框中用空格分隔，如'北京大学 中关村'（系统会自动拆分）\n"
                 error_msg += "• **注意**：完整地址（包含'市'、'区'、'县'）不会被拆分，如'北京市海淀区'\n"
+                error_msg += "\n⚠️ 若地址与网络均正常，请检查高德 API 配额是否耗尽或被限流。\n"
                 return ToolResult(output=error_msg)
 
             center_point = self._calculate_center_point(coordinates)
 
             # 处理多个关键词的搜索
             keywords_list = [kw.strip() for kw in keywords.split() if kw.strip()]
-            primary_keyword = keywords_list[0] if keywords_list else "咖啡馆"
 
             searched_places = []
 
@@ -977,9 +979,10 @@ class CafeRecommender(BaseTool):
             # 如果所有尝试都失败，返回错误（极端情况）
             if not searched_places:
                 center_lng, center_lat = center_point
-                error_msg = f"在该区域未能找到任何推荐场所。\n\n"
+                error_msg = "在该区域未能找到任何推荐场所。\n\n"
                 error_msg += f"搜索中心点：({center_lng:.4f}, {center_lat:.4f})\n"
-                error_msg += "该区域可能较为偏远，建议选择更靠近市中心的地点。"
+                error_msg += "该区域可能较为偏远，建议选择更靠近市中心的地点。\n"
+                error_msg += "若地址与网络均正常，请检查高德 API 配额是否耗尽或被限流。"
                 return ToolResult(output=error_msg)
 
             recommended_places = self._rank_places(
@@ -993,6 +996,24 @@ class CafeRecommender(BaseTool):
                 language=language,
             )
 
+            skipped_notice = ""
+            if failed_locations:
+                skipped_text = "、".join(failed_locations)
+                if language == "en":
+                    skipped_notice = (
+                        '<div class="fallback-notice"><i class="bx bx-info-circle"></i>'
+                        '<span class="fallback-notice-text">Note: '
+                        f"{len(failed_locations)} address(es) could not be parsed and were skipped: "
+                        f"{skipped_text}</span></div>"
+                    )
+                else:
+                    skipped_notice = (
+                        '<div class="fallback-notice"><i class="bx bx-info-circle"></i>'
+                        '<span class="fallback-notice-text">注意：'
+                        f"{len(failed_locations)} 个地址解析失败，已跳过："
+                        f"{skipped_text}</span></div>"
+                    )
+
             html_path = await self._generate_html_page(
                 location_info,
                 recommended_places,
@@ -1002,6 +1023,7 @@ class CafeRecommender(BaseTool):
                 theme,
                 fallback_used,
                 fallback_keyword,
+                skipped_notice=skipped_notice,
                 language=language,
             )
             result_text = self._format_result_text(
@@ -1011,6 +1033,7 @@ class CafeRecommender(BaseTool):
                 keywords,
                 fallback_used,
                 fallback_keyword,
+                skipped_locations=failed_locations,
                 language=language,
             )
             return ToolResult(output=result_text)
@@ -1533,8 +1556,9 @@ class CafeRecommender(BaseTool):
         logger.info(f"几何中心: {geo_center}")
 
         # 2. 生成候选点网格（在几何中心周围 1.5km 范围内）
+        # grid_size=1 即 3x3 网格，减少候选数，避免高德 QPS 超限
         candidates = self._generate_candidate_points(
-            geo_center, radius_km=1.5, grid_size=3
+            geo_center, radius_km=1.5, grid_size=1
         )
         candidates.insert(0, geo_center)  # 几何中心作为第一个候选
 
@@ -1753,6 +1777,12 @@ class CafeRecommender(BaseTool):
                 return pois
 
     # ========== V2 多维度评分系统 ==========
+
+    @staticmethod
+    def _extract_price_number(cost: str) -> Optional[float]:
+        """从价格文本提取数字，如 '¥30'、'人均50元'、'¥50-80'。"""
+        match = re.search(r"\d+(?:\.\d+)?", cost or "")
+        return float(match.group()) if match else None
 
     def _calculate_base_score(self, place: Dict) -> Tuple[float, float]:
         """计算基础评分 (满分30分)
@@ -2158,7 +2188,7 @@ class CafeRecommender(BaseTool):
 
         # 准备场所摘要信息
         places_summary = []
-        for i, place in enumerate(places[:15]):  # 最多分析15个
+        for i, place in enumerate(places[:10]):  # 最多分析10个
             summary = {
                 "id": i,
                 "name": place.get("name", ""),
@@ -2211,14 +2241,15 @@ class CafeRecommender(BaseTool):
                         "你是一个专业的地点推荐助手，请直接返回 JSON 格式的评分结果。"
                     )
                 ],
+                stream=False,
             )
 
-            if not response or not response.content:
+            if not response:
                 logger.warning("LLM 返回空响应")
                 return places[:top_n]
 
             # 解析 LLM 返回的 JSON
-            content = response.content.strip()
+            content = response.strip() if isinstance(response, str) else response.content.strip()
             # 提取 JSON 部分
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
@@ -2229,7 +2260,7 @@ class CafeRecommender(BaseTool):
 
             # 应用 LLM 评分
             id_to_llm_result = {r["id"]: r for r in llm_rankings}
-            for i, place in enumerate(places[:15]):
+            for i, place in enumerate(places[:10]):
                 if i in id_to_llm_result:
                     llm_result = id_to_llm_result[i]
                     place["_llm_score"] = llm_result.get("llm_score", 0)
@@ -2244,8 +2275,8 @@ class CafeRecommender(BaseTool):
                     place["_final_score"] = place.get("_score", 0) * 0.4
 
             # 按最终得分重排序
-            places_with_llm = [p for p in places[:15] if p.get("_llm_score", 0) > 0]
-            places_without_llm = [p for p in places[:15] if p.get("_llm_score", 0) == 0]
+            places_with_llm = [p for p in places[:10] if p.get("_llm_score", 0) > 0]
+            places_without_llm = [p for p in places[:10] if p.get("_llm_score", 0) == 0]
 
             # LLM 评分的排前面
             places_with_llm.sort(key=lambda x: x.get("_final_score", 0), reverse=True)
@@ -2293,76 +2324,44 @@ class CafeRecommender(BaseTool):
         try:
             # 构建场所信息摘要
             places_info = []
-            for i, place in enumerate(places[:5]):
+            for i, place in enumerate(places[:3]):
                 places_info.append(
                     {
                         "name": place.get("name", ""),
                         "address": place.get("address", ""),
-                        "distance": place.get("_distance", 0),
-                        "type": place.get("type", ""),
                     }
                 )
 
             if language == "en":
                 prompt = f"""You are a local mobility expert. Based on the information below, generate practical travel and parking suggestions.
 
-**Participant starting points**:
+Participants:
 {chr(10).join([f"- {loc}" for loc in participant_locations])}
 
-**Recommended venues**:
-{json.dumps(places_info, ensure_ascii=False, indent=2)}
+Venues:
+{json.dumps(places_info, ensure_ascii=False)}
 
-**Midpoint coordinates**: {center_point[0]:.6f}, {center_point[1]:.6f}
+Midpoint: {center_point[0]:.6f}, {center_point[1]:.6f}
+Venue type: {self._translate_keyword_label(keywords, language)}
 
-**Venue type**: {self._translate_keyword_label(keywords, language)}
-
-Generate 4-5 practical travel suggestions:
-1. Recommend the best transport mode (metro, bus, taxi, driving)
-2. Consider nearby parking conditions
-3. Include time-planning advice
-4. Add special notes for universities or busy districts
-
-Return a JSON array directly, where each item contains icon and text:
-```json
-[
-  {{"icon": "bx-train", "text": "Suggestion text"}},
-  {{"icon": "bxs-car-garage", "text": "Parking advice"}}
-]
-```
-
-Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage (parking), bx-time (time), bx-info-circle (tip)
+Return exactly 3 travel and parking suggestions as a JSON array:
+[{{"icon": "bx-train", "text": "Suggestion"}}]
 """
-                system_prompt = "You are a local mobility expert. Return only JSON-formatted travel suggestions."
+                system_prompt = "You are a local mobility expert. Return only compact JSON."
             else:
-                prompt = f"""你是一个本地出行专家。根据以下信息，生成个性化的交通与停车建议。
-
-**参与者出发地**：
+                prompt = f"""参与者：
 {chr(10).join([f"- {loc}" for loc in participant_locations])}
 
-**推荐场所**：
-{json.dumps(places_info, ensure_ascii=False, indent=2)}
+推荐场所：
+{json.dumps(places_info, ensure_ascii=False)}
 
-**中心点坐标**：{center_point[0]:.6f}, {center_point[1]:.6f}
+中心点：{center_point[0]:.6f}, {center_point[1]:.6f}
+场所类型：{keywords}
 
-**场所类型**：{keywords}
-
-请生成 4-5 条实用的交通与停车建议，要求：
-1. 根据参与者的实际出发地，建议最佳交通方式（地铁、公交、打车、自驾）
-2. 考虑场所周边的实际停车情况
-3. 给出具体的时间规划建议
-4. 如果是大学或商圈，提供特别提示
-
-直接返回 JSON 数组，每条建议包含 icon 和 text 字段：
-```json
-[
-  {{"icon": "bx-train", "text": "建议内容"}},
-  {{"icon": "bxs-car-garage", "text": "停车建议"}}
-]
-```
-
-可用图标：bx-train（地铁）、bx-bus（公交）、bx-taxi（打车）、bxs-car-garage（停车）、bx-time（时间）、bx-info-circle（提示）
+返回 3 条交通与停车建议，JSON 数组格式：
+[{{"icon": "bx-train", "text": "建议"}}]
 """
-                system_prompt = "你是一个本地出行专家，请直接返回 JSON 格式的交通建议。"
+                system_prompt = "你是本地出行专家，只返回紧凑 JSON。"
 
             from app.schema import Message
 
@@ -2582,12 +2581,25 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             places = filtered_places
             logger.info(f"距离筛选(<={max_distance}米): 剩余{len(places)}个")
 
-        # 3. 价格区间筛选（软筛选，作为排序权重）
-        price_weight_map = {
-            "economy": ["¥", "人均20", "人均30", "人均40"],
-            "mid": ["¥¥", "人均50", "人均60", "人均80", "人均100"],
-            "high": ["¥¥¥", "¥¥¥¥", "人均150", "人均200", "人均300"],
-        }
+        # 3. 价格区间软筛选（无价格信息的不拦截，避免结果为空）
+        if price_range:
+            price_buckets = {
+                "economy": (0, 50),
+                "mid": (50, 100),
+                "high": (100, 10**9),
+            }
+            price_lo, price_hi = price_buckets.get(price_range, (0, 10**9))
+            price_kept = []
+            for p in places:
+                cost = ((p.get("biz_ext") or {}).get("cost") or "").strip()
+                price_num = self._extract_price_number(cost)
+                if price_num is None or price_lo <= price_num < price_hi:
+                    price_kept.append(p)
+            if price_kept:
+                places = price_kept
+                logger.info(f"价格筛选({price_range}): 剩余{len(places)}个")
+            else:
+                logger.warning(f"价格区间({price_range})无匹配结果，保留原始候选")
 
         if not places:
             logger.warning("筛选后无符合条件的场所")
@@ -2753,6 +2765,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         theme: str = "",
         fallback_used: bool = False,
         fallback_keyword: Optional[str] = None,
+        skipped_notice: str = "",
         participant_locations: Optional[List[str]] = None,
         language: str = "zh",
     ) -> str:
@@ -2774,6 +2787,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             theme,
             fallback_used,
             fallback_keyword,
+            skipped_notice,
             participant_locations,
             language,
         )
@@ -2803,6 +2817,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         theme: str = "",
         fallback_used: bool = False,
         fallback_keyword: Optional[str] = None,
+        skipped_notice: str = "",
         participant_locations: Optional[List[str]] = None,
         language: str = "zh",
     ) -> str:
@@ -2995,7 +3010,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                     keywords,
                     language=language,
                 ),
-                timeout=15.0,  # 15秒超时，避免Render 30秒请求超时
+                timeout=20.0,  # 20秒超时，配合瘦身后的提示，避免Render 30秒请求超时
             )
         except asyncio.TimeoutError:
             logger.warning("LLM 交通建议生成超时，使用默认建议")
@@ -3132,8 +3147,6 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
                             <span>{recommendation_reason}</span>
                         </div>"""
 
-            # 获取评分明细用于tooltip（可选展示）
-            score_breakdown = place.get("_score_breakdown", {})
             total_score = place.get("_score", 0)
             score_title = (
                 self._result_text(
@@ -3204,14 +3217,6 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             </div>"""
 
         markers_json = json.dumps(all_markers)
-
-        amap_security_js_code = ""
-        if (
-            hasattr(config, "amap")
-            and hasattr(config.amap, "security_js_code")
-            and config.amap.security_js_code
-        ):
-            amap_security_js_code = config.amap.security_js_code
 
         # 读取设计token CSS内容，用于自包含HTML
         design_tokens_css = ""
@@ -4036,6 +4041,8 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             else ""
         }
 
+    {skipped_notice}
+
     <div class="container main-content">
         <div class="card glass-card">
             <h2 class="section-title"><i class='bx bx-info-circle'></i>{
@@ -4271,6 +4278,7 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
         keywords: str,
         fallback_used: bool = False,
         fallback_keyword: str = None,
+        skipped_locations: Optional[List[str]] = None,
         language: str = "zh",
     ) -> str:
         language = self._normalize_language(language)
@@ -4298,6 +4306,19 @@ Available icons: bx-train (metro), bx-bus (bus), bx-taxi (taxi), bxs-car-garage 
             else:
                 result.append(
                     f"> 提示：未找到「{keywords}」相关场所，已为您推荐附近的「{fallback_keyword}」"
+                )
+            result.append("")
+
+        # 添加地址解析失败的提示
+        if skipped_locations:
+            skipped_text = "、".join(skipped_locations)
+            if language == "en":
+                result.append(
+                    f"> Note: {len(skipped_locations)} address(es) could not be parsed and were skipped: {skipped_text}"
+                )
+            else:
+                result.append(
+                    f"> 注意：{len(skipped_locations)} 个地址解析失败，已跳过：{skipped_text}"
                 )
             result.append("")
 
