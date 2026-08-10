@@ -26,5 +26,5 @@ passlib[bcrypt]==1.7.4
 python-dotenv==1.2.2
 
 # LLM/AI Dependencies
-openai>=1.0.0
+openai>=2.53.0
 tenacity>=8.2.0
