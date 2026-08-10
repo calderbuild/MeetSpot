@@ -23,7 +23,7 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
 # Environment
-python-dotenv==1.2.1
+python-dotenv==1.2.2
 
 # LLM/AI Dependencies
 openai>=1.0.0
