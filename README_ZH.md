@@ -295,6 +295,6 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 **觉得有用？请给个 Star 支持一下！**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=calderbuild/MeetSpot&type=Date)](https://star-history.com/#calderbuild/MeetSpot&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=calderbuild/MeetSpot&type=Date)](https://star-history.dera.page/#calderbuild/MeetSpot&type=date)
 
 </div>
