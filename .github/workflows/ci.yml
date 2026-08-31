@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt pytest ruff pyyaml
+        pip install -r requirements.txt pytest "ruff==0.15.1" pyyaml
 
     - name: Test application import
       run: |
