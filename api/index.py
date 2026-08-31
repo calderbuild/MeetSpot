@@ -243,6 +243,10 @@ class MeetSpotRequest(BaseModel):
     # 预解析坐标（可选，由前端 Autocomplete 提供）
     location_coords: Optional[List[LocationCoord]] = None
     language: Optional[str] = ""
+    # 每人最大可接受通勤分钟数（可选，与 locations 平行索引；元素为 None 表示该参与者不设限）。
+    # 目前仅 Google 路径（language="en"）生效，未提供时行为与之前完全一致
+    commute_budgets: Optional[List[Optional[int]]] = None
+    transport_mode: Optional[str] = "TRANSIT"  # Routes API travelMode
 
 
 class AIChatRequest(BaseModel):
@@ -1000,6 +1004,8 @@ async def _process_meetspot_request(
                 price_range=request.price_range or "",
                 pre_resolved_coords=pre_resolved_coords,
                 language=lang,
+                commute_budgets=request.commute_budgets,
+                transport_mode=request.transport_mode or "TRANSIT",
             )
 
             processing_time = time.time() - start_time

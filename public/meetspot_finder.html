@@ -821,6 +821,44 @@
         color: #ef4444;
       }
 
+      /* Real-commute-time fairness check: per-participant "max commute" budget.
+         Hidden by default -- only the international/Google path has a routing API
+         behind it (see IS_INTERNATIONAL), enabled by adding .commute-enabled to <html>. */
+      .commute-input-wrap {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        margin: -6px 0 12px 12px;
+        padding: 4px 12px;
+        position: relative;
+      }
+
+      html.commute-enabled .commute-input-wrap {
+        display: flex;
+      }
+
+      .commute-input-wrap > i {
+        color: var(--slate-400);
+        font-size: 1rem;
+      }
+
+      .commute-input-wrap input {
+        width: 140px;
+        padding: 8px 12px;
+        border: 1.5px solid var(--slate-200);
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: white;
+      }
+
+      .commute-input-wrap input:focus {
+        outline: none;
+        border-color: var(--coral-500);
+        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+      }
+
       .location-hint {
         text-align: center;
         padding: 10px 16px;
@@ -2266,6 +2304,17 @@
                 />
                 <span class="coord-indicator"><i class="bx bx-check"></i></span>
               </div>
+              <div class="commute-input-wrap" data-for="location-0">
+                <i class="bx bx-time-five"></i>
+                <input
+                  type="number"
+                  class="commute-budget-input"
+                  data-for="location-0"
+                  min="1"
+                  max="180"
+                  placeholder="Max commute (min)"
+                />
+              </div>
               <div class="location-input" data-index="1">
                 <i class="bx bxs-location-plus"></i>
                 <input
@@ -2277,6 +2326,17 @@
                   required
                 />
                 <span class="coord-indicator"><i class="bx bx-check"></i></span>
+              </div>
+              <div class="commute-input-wrap" data-for="location-1">
+                <i class="bx bx-time-five"></i>
+                <input
+                  type="number"
+                  class="commute-budget-input"
+                  data-for="location-1"
+                  min="1"
+                  max="180"
+                  placeholder="Max commute (min)"
+                />
               </div>
             </div>
 
@@ -2850,6 +2910,11 @@
         (!_urlParams.get("lang") &&
           !window.location.pathname.toLowerCase().startsWith("/zh") &&
           !_navLang.startsWith("zh"));
+      // 通勤时间公平性核验（真实 Google Routes API）目前只在国际/Google 路径提供，
+      // 高德路径没有对应能力；输入框默认隐藏（见 .commute-input-wrap CSS），这里显式打开
+      if (IS_INTERNATIONAL) {
+        document.documentElement.classList.add("commute-enabled");
+      }
       let GooglePlacesService = null; // For Google Places Autocomplete
 
       // ========== AMap Loader (国内 / 默认) ==========
@@ -3205,6 +3270,16 @@
                 </button>
             `;
         container.appendChild(newLocationDiv);
+
+        const newCommuteWrap = document.createElement("div");
+        newCommuteWrap.className = "commute-input-wrap";
+        newCommuteWrap.setAttribute("data-for", inputId);
+        newCommuteWrap.innerHTML = `
+                <i class='bx bx-time-five'></i>
+                <input type="number" class="commute-budget-input" data-for="${inputId}" min="1" max="180" placeholder="Max commute (min)">
+            `;
+        container.appendChild(newCommuteWrap);
+
         updateLocationCountHint();
 
         // Initialize autocomplete for the new input
@@ -3256,6 +3331,12 @@
             delete autocompleteInstances[input.id];
             delete locationCoords[input.id];
           }
+          const commuteWrap = input
+            ? container.querySelector(
+                `.commute-input-wrap[data-for="${input.id}"]`,
+              )
+            : null;
+          if (commuteWrap) commuteWrap.remove();
           locationInput.style.animation = "slideInUp 0.3s ease-out reverse";
           setTimeout(() => {
             locationInput.remove();
@@ -3413,6 +3494,7 @@
           );
           let locations = [];
           let coordsArray = []; // Collect pre-resolved coordinates
+          let commuteBudgetsArray = []; // Parallel to coordsArray: max commute minutes per participant
 
           // Collect locations and their coordinates
           Array.from(locationInputs).forEach((input) => {
@@ -3420,6 +3502,14 @@
             if (value) {
               // Check if this input has pre-resolved coordinates
               const inputId = input.id;
+              const commuteInput = inputId
+                ? document.querySelector(
+                    `.commute-budget-input[data-for="${inputId}"]`,
+                  )
+                : null;
+              const commuteMinutes = commuteInput
+                ? parseInt(commuteInput.value, 10) || null
+                : null;
               if (
                 inputId &&
                 locationCoords[inputId] &&
@@ -3428,23 +3518,27 @@
                 // Use the pre-resolved coordinate
                 locations.push(value);
                 coordsArray.push(locationCoords[inputId]);
+                commuteBudgetsArray.push(commuteMinutes);
               } else if (
                 value.includes(" ") &&
                 !value.includes("区") &&
                 !value.includes("市") &&
                 !value.includes("县")
               ) {
-                // Split space-separated locations (no coords for these)
+                // Split space-separated locations (no coords for these, and a single
+                // budget value can't be attributed to multiple split addresses)
                 const splitLocs = value
                   .split(/\s+/)
                   .filter((loc) => loc.trim());
                 splitLocs.forEach((loc) => {
                   locations.push(loc);
                   coordsArray.push(null); // No pre-resolved coord
+                  commuteBudgetsArray.push(null);
                 });
               } else {
                 locations.push(value);
                 coordsArray.push(null); // No pre-resolved coord
+                commuteBudgetsArray.push(commuteMinutes);
               }
             }
           });
@@ -3537,6 +3631,15 @@
             // Add pre-resolved coordinates if available
             if (location_coords) {
               requestBody.location_coords = location_coords;
+            }
+
+            // Add commute budgets only if at least one participant set one --
+            // omitting the field entirely keeps behavior identical to before this feature existed
+            if (
+              commuteBudgetsArray.length === locations.length &&
+              commuteBudgetsArray.some((b) => b)
+            ) {
+              requestBody.commute_budgets = commuteBudgetsArray;
             }
 
             trackEvent("tool_submit", {

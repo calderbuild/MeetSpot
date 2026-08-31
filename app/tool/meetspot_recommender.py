@@ -682,6 +682,10 @@ class CafeRecommender(BaseTool):
         price_range: str = "",  # 价格区间筛选
         pre_resolved_coords: List[dict] = None,  # 预解析坐标（来自前端 Autocomplete）
         language: str = "zh",
+        commute_budgets: Optional[
+            List[Optional[int]]
+        ] = None,  # 每人最大可接受通勤分钟数
+        transport_mode: str = "TRANSIT",  # Routes API travelMode，仅 Google 路径下生效
     ) -> ToolResult:
         language = self._normalize_language(language)
         # 根据语言切换地图 provider：英文走 Google Maps，中文走高德
@@ -857,10 +861,33 @@ class CafeRecommender(BaseTool):
                 error_msg += "• **方式一**：在不同输入框中分别填写，如第一个框填'北京大学'，第二个框填'中关村'\n"
                 error_msg += "• **方式二**：在一个输入框中用空格分隔，如'北京大学 中关村'（系统会自动拆分）\n"
                 error_msg += "• **注意**：完整地址（包含'市'、'区'、'县'）不会被拆分，如'北京市海淀区'\n"
-                error_msg += "\n⚠️ 若地址与网络均正常，请检查高德 API 配额是否耗尽或被限流。\n"
+                error_msg += (
+                    "\n⚠️ 若地址与网络均正常，请检查高德 API 配额是否耗尽或被限流。\n"
+                )
                 return ToolResult(output=error_msg)
 
-            center_point = self._calculate_center_point(coordinates)
+            # 默认走既有的纯几何中点（快、无额外 API 调用，行为与之前完全一致）；
+            # 仅当调用方提供了至少一个参与者的通勤预算、且当前是 Google 路径时，才切到
+            # 会追加真实通勤时间核验的智能中心点算法（见 _calculate_smart_center）。真实
+            # 通勤校验只支持 Google Routes API，高德路径下 _verify_commute_fairness 本身
+            # 也会短路返回 None，但这里提前按 provider 拦截，避免高德请求白白多打一轮
+            # 3x3 网格候选的 POI 搜索（曾在联调时触发高德 QPS 限流）
+            center_evaluation: Optional[Dict] = None
+            if (
+                commute_budgets
+                and any(b for b in commute_budgets if b)
+                and self.map_provider == "google"
+            ):
+                participant_names = [loc.get("name", "") for loc in location_info]
+                center_point, center_evaluation = await self._calculate_smart_center(
+                    coordinates,
+                    keywords=keywords,
+                    commute_budgets=commute_budgets,
+                    transport_mode=transport_mode,
+                    participant_names=participant_names,
+                )
+            else:
+                center_point = self._calculate_center_point(coordinates)
 
             # 处理多个关键词的搜索
             keywords_list = [kw.strip() for kw in keywords.split() if kw.strip()]
@@ -1025,6 +1052,7 @@ class CafeRecommender(BaseTool):
                 fallback_keyword,
                 skipped_notice=skipped_notice,
                 language=language,
+                commute_check=(center_evaluation or {}).get("commute_check"),
             )
             result_text = self._format_result_text(
                 location_info,
@@ -1536,7 +1564,12 @@ class CafeRecommender(BaseTool):
         return (avg_lng, avg_lat)
 
     async def _calculate_smart_center(
-        self, coordinates: List[Tuple[float, float]], keywords: str = "咖啡馆"
+        self,
+        coordinates: List[Tuple[float, float]],
+        keywords: str = "咖啡馆",
+        commute_budgets: Optional[List[Optional[int]]] = None,
+        transport_mode: str = "TRANSIT",
+        participant_names: Optional[List[str]] = None,
     ) -> Tuple[Tuple[float, float], Dict]:
         """智能中心点算法 - 考虑 POI 密度、交通便利性和公平性
 
@@ -1544,10 +1577,19 @@ class CafeRecommender(BaseTool):
         1. 计算几何中心作为基准点
         2. 在基准点周围生成候选点网格
         3. 评估每个候选点：POI 密度 + 交通便利性 + 公平性
-        4. 返回最优中心点
+        4. 若提供 commute_budgets，对评分最高的 top 3 候选追加一轮真实通勤时间核验
+           （见 _verify_commute_fairness），用查到的真实通勤时间而非直线距离做最终裁决
+        5. 返回最优中心点
+
+        Args:
+            commute_budgets: 与 coordinates 平行的每人最大可接受通勤分钟数列表，元素为 None
+                表示该参与者不设限；整体为 None 或全 None 时跳过通勤核验，行为与之前完全一致
+            transport_mode: Routes API travelMode，默认 "TRANSIT"
+            participant_names: 与 coordinates 平行的参与者名称（用于推理链展示，可选）
 
         Returns:
-            (最优中心点坐标, 评估详情)
+            (最优中心点坐标, 评估详情)；提供了 commute_budgets 时，评估详情里多一个
+            "commute_check" 键，记录每个候选被接受/拒绝的真实通勤时间与原因
         """
         logger.info("使用智能中心点算法")
 
@@ -1564,7 +1606,7 @@ class CafeRecommender(BaseTool):
 
         logger.info(f"生成了 {len(candidates)} 个候选中心点")
 
-        # 3. 评估每个候选点
+        # 3. 评估每个候选点（POI 密度 + 交通便利性 + 直线距离公平性，不涉及真实通勤时间）
         best_candidate = geo_center
         best_score = -1
         evaluation_results = []
@@ -1584,13 +1626,140 @@ class CafeRecommender(BaseTool):
         # 排序结果
         evaluation_results.sort(key=lambda x: x["score"], reverse=True)
 
+        # 4. 可选：用真实通勤时间核验评分最高的 top 3 候选，一次批量调用覆盖全部组合
+        commute_check = None
+        if (
+            commute_budgets
+            and any(b for b in commute_budgets if b)
+            and len(coordinates) == len(commute_budgets)
+        ):
+            top_candidates = [r["point"] for r in evaluation_results[:3]]
+            commute_check = await self._verify_commute_fairness(
+                top_candidates=top_candidates,
+                participant_coords=coordinates,
+                commute_budgets=commute_budgets,
+                transport_mode=transport_mode,
+                participant_names=participant_names or [],
+            )
+            if commute_check and commute_check.get("winner_point"):
+                best_candidate = commute_check["winner_point"]
+                best_score = next(
+                    (
+                        r["score"]
+                        for r in evaluation_results
+                        if r["point"] == best_candidate
+                    ),
+                    best_score,
+                )
+
         logger.info(f"最优中心点: {best_candidate}, 评分: {best_score:.1f}")
 
-        return best_candidate, {
+        result_details = {
             "geo_center": geo_center,
             "best_candidate": best_candidate,
             "best_score": best_score,
             "all_candidates": evaluation_results[:5],  # 返回前5个
+        }
+        if commute_check:
+            result_details["commute_check"] = commute_check
+        return best_candidate, result_details
+
+    async def _verify_commute_fairness(
+        self,
+        top_candidates: List[Tuple[float, float]],
+        participant_coords: List[Tuple[float, float]],
+        commute_budgets: List[Optional[int]],
+        transport_mode: str,
+        participant_names: List[str],
+    ) -> Optional[Dict]:
+        """用真实通勤时间核验候选中心点，替代 _evaluate_center_candidate 里的直线距离代理。
+
+        只在 Google 路径下生效（self.map_provider == "google"，即 GOOGLE_MAPS_API_KEY 已配置且
+        language="en"），一次 computeRouteMatrix 调用覆盖 len(participant_coords) x len(top_candidates)
+        全部组合。任何失败（key 未配置、API 报错、超出批量上限）都静默返回 None，上游据此保留
+        原有 POI/直线距离评分选出的候选，不阻断主流程——这是"核验不到就不核验"，不是"核验失败就报错"。
+
+        Returns:
+            None（跳过核验）或 {"transport_mode", "attempts": [...], "winner_point", "winner_index"}，
+            attempts 里每个候选记录 accepted / durations / violations，供推理链 HTML 展示。
+        """
+        if self.map_provider != "google":
+            return None
+
+        from app.tool.google_directions_client import google_route_matrix
+
+        matrix = await google_route_matrix(
+            origins=participant_coords,
+            destinations=top_candidates,
+            mode=transport_mode,
+        )
+        if not matrix:
+            return None
+
+        def _label(idx: int) -> str:
+            if idx < len(participant_names) and participant_names[idx]:
+                return participant_names[idx]
+            return f"Participant {idx + 1}"
+
+        attempts = []
+        winner_point = None
+        winner_index = None
+        least_violations: Optional[Tuple[int, int]] = None
+
+        for cand_idx, candidate in enumerate(top_candidates):
+            durations = []
+            violations = []
+            for elem in matrix:
+                if elem.get("destination_index") != cand_idx:
+                    continue
+                p_idx = elem.get("origin_index", 0)
+                budget = (
+                    commute_budgets[p_idx] if p_idx < len(commute_budgets) else None
+                )
+                duration_minutes = (
+                    round(elem["duration_seconds"] / 60, 1)
+                    if elem.get("ok") and elem.get("duration_seconds") is not None
+                    else None
+                )
+                durations.append(
+                    {"participant": _label(p_idx), "duration_minutes": duration_minutes}
+                )
+                if budget and (duration_minutes is None or duration_minutes > budget):
+                    violations.append(
+                        {
+                            "participant": _label(p_idx),
+                            "duration_minutes": duration_minutes,
+                            "budget_minutes": budget,
+                        }
+                    )
+
+            attempts.append(
+                {
+                    "label": f"Candidate {cand_idx + 1}"
+                    + (" (geometric center)" if cand_idx == 0 else ""),
+                    "accepted": len(violations) == 0,
+                    "durations": durations,
+                    "violations": violations,
+                }
+            )
+
+            if not violations and winner_point is None:
+                winner_point = candidate
+                winner_index = cand_idx
+            if least_violations is None or len(violations) < least_violations[1]:
+                least_violations = (cand_idx, len(violations))
+
+        if winner_point is None and least_violations is not None:
+            # 没有候选完全满足所有人预算，退而求其次选违规最少的那个，
+            # attempts 里如实记录了它仍违反了谁的预算，不是静默妥协
+            winner_index = least_violations[0]
+            winner_point = top_candidates[winner_index]
+
+        return {
+            "transport_mode": transport_mode,
+            "attempts": attempts,
+            "winner_point": winner_point,
+            "winner_index": winner_index,
         }
 
     def _generate_candidate_points(
@@ -2249,7 +2418,11 @@ class CafeRecommender(BaseTool):
                 return places[:top_n]
 
             # 解析 LLM 返回的 JSON
-            content = response.strip() if isinstance(response, str) else response.content.strip()
+            content = (
+                response.strip()
+                if isinstance(response, str)
+                else response.content.strip()
+            )
             # 提取 JSON 部分
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
@@ -2347,7 +2520,9 @@ Venue type: {self._translate_keyword_label(keywords, language)}
 Return exactly 3 travel and parking suggestions as a JSON array:
 [{{"icon": "bx-train", "text": "Suggestion"}}]
 """
-                system_prompt = "You are a local mobility expert. Return only compact JSON."
+                system_prompt = (
+                    "You are a local mobility expert. Return only compact JSON."
+                )
             else:
                 prompt = f"""参与者：
 {chr(10).join([f"- {loc}" for loc in participant_locations])}
@@ -2768,6 +2943,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         skipped_notice: str = "",
         participant_locations: Optional[List[str]] = None,
         language: str = "zh",
+        commute_check: Optional[Dict] = None,
     ) -> str:
         file_name_prefix = "place"
 
@@ -2790,6 +2966,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             skipped_notice,
             participant_locations,
             language,
+            commute_check,
         )
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
@@ -2820,6 +2997,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         skipped_notice: str = "",
         participant_locations: Optional[List[str]] = None,
         language: str = "zh",
+        commute_check: Optional[Dict] = None,
     ) -> str:
         language = self._normalize_language(language)
         # 根据主题参数确定配置
@@ -2929,6 +3107,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             keywords,
             places,
             language=language,
+            commute_check=commute_check,
         )
 
         location_markers = []
@@ -3896,6 +4075,18 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         .ai-algo-value {{ font-size: 1.1rem; font-weight: 700; color: var(--primary-dark); font-family: 'SF Mono', 'Consolas', monospace; }}
         .ai-algo-note {{ font-size: 0.85rem; color: #475569; margin-top: 10px; padding-left: 12px; border-left: 3px solid var(--secondary); }}
 
+        /* Commute-time fairness check (real travel time, replaces straight-line proxy) */
+        .ai-commute-attempt {{ display: flex; flex-direction: column; gap: 6px; padding: 12px; margin-top: 8px; border-radius: 10px; background: white; border: 1px solid rgba(0,0,0,0.06); }}
+        .ai-commute-attempt.accepted {{ border-left: 3px solid #06d6a0; }}
+        .ai-commute-attempt.rejected {{ border-left: 3px solid #ef476f; opacity: 0.75; }}
+        .ai-commute-attempt-label {{ font-weight: 600; font-size: 0.9rem; color: var(--dark); display: flex; align-items: center; gap: 8px; }}
+        .ai-commute-status {{ font-size: 0.75rem; font-weight: 700; padding: 2px 10px; border-radius: 12px; }}
+        .ai-commute-status.accepted {{ background: rgba(6, 214, 160, 0.15); color: #059669; }}
+        .ai-commute-status.rejected {{ background: rgba(239, 71, 111, 0.12); color: #be123c; }}
+        .ai-commute-durations {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+        .ai-commute-durations span {{ font-size: 0.75rem; padding: 4px 8px; background: #f1f5f9; border-radius: 6px; color: #475569; }}
+        .ai-commute-durations span.over-budget {{ background: rgba(239, 71, 111, 0.12); color: #be123c; }}
+
         /* AI Requirement Tags */
         .ai-req-detected {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }}
         .ai-req-tag {{ display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }}
@@ -4358,6 +4549,71 @@ Return exactly 3 travel and parking suggestions as a JSON array:
 
         return "\n".join(result)
 
+    def _render_commute_check_html(
+        self, commute_check: Optional[Dict], language: str
+    ) -> str:
+        """把 _verify_commute_fairness 的核验记录渲染成推理链里的一段 HTML。
+
+        commute_check 为 None（未提供通勤预算、或核验因任何原因被跳过）时返回空字符串，
+        Step 2 的其余内容不受影响 -- 这是这个功能对没有用到它的请求保持零视觉差异的地方。
+        """
+        if not commute_check or not commute_check.get("attempts"):
+            return ""
+
+        is_en = language == "en"
+        heading = (
+            "Real commute-time fairness check" if is_en else "真实通勤时间公平性核验"
+        )
+        mode_label = commute_check.get("transport_mode", "TRANSIT")
+        intro = (
+            f"Straight-line distance can hide unfair commutes. Checked real {mode_label.lower()} "
+            "time for each candidate center against everyone's stated budget:"
+            if is_en
+            else f"直线距离会掩盖真实通勤的不公平，已用真实{mode_label}通勤时间核验每个候选中心点是否符合所有人的预算："
+        )
+
+        attempt_blocks = []
+        for attempt in commute_check["attempts"]:
+            accepted = attempt.get("accepted", False)
+            status_class = "accepted" if accepted else "rejected"
+            status_text = (
+                ("Accepted" if is_en else "通过")
+                if accepted
+                else ("Rejected" if is_en else "淘汰")
+            )
+            violation_participants = {
+                v["participant"] for v in attempt.get("violations", [])
+            }
+            duration_spans = []
+            for d in attempt.get("durations", []):
+                over_budget = d["participant"] in violation_participants
+                minutes_text = (
+                    f"{d['duration_minutes']:.0f}min"
+                    if d.get("duration_minutes") is not None
+                    else ("no route" if is_en else "无可用路线")
+                )
+                span_class = "over-budget" if over_budget else ""
+                duration_spans.append(
+                    f"<span class='{span_class}'>{d['participant']}: {minutes_text}</span>"
+                )
+            attempt_blocks.append(
+                f"""
+            <div class="ai-commute-attempt {status_class}">
+                <div class="ai-commute-attempt-label">
+                    {attempt.get("label", "")}
+                    <span class="ai-commute-status {status_class}">{status_text}</span>
+                </div>
+                <div class="ai-commute-durations">{"".join(duration_spans)}</div>
+            </div>"""
+            )
+
+        return f"""
+            <div class="ai-algo-box">
+                <div class="ai-algo-label">{heading}</div>
+                <div class="ai-algo-note">{intro}</div>
+                {"".join(attempt_blocks)}
+            </div>"""
+
     def _generate_search_process(
         self,
         locations: List[Dict],
@@ -4366,6 +4622,9 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         keywords: str,
         places: List[Dict] = None,  # 新增：传入推荐结果用于显示评分详情
         language: str = "zh",
+        commute_check: Optional[
+            Dict
+        ] = None,  # 真实通勤时间核验记录（见 _verify_commute_fairness）
     ) -> str:
         language = self._normalize_language(language)
         primary_keyword = self._get_primary_keyword(keywords)
@@ -4444,6 +4703,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                     {step2_note}
                 </div>
             </div>
+            {self._render_commute_check_html(commute_check, language)}
             <div class="map-operation-animation">
                 <div class="map-bg"></div> <div class="map-cursor"></div> <div class="map-search-indicator"></div>
             </div>""",

@@ -1,6 +1,6 @@
 # MeetSpot 架构说明
 
-版本：v2.0（2026-08-07）
+版本：v2.1（2026-08-25）
 
 ## 1. 项目概述
 
@@ -63,6 +63,18 @@ workspace/js_src/（生成式结果页，不提交仓库）
 - generate_recommendation 在规则评分基础上叠加 LLM 智能排序，综合得分按规则 40% 加 LLM 60%
 - 失败处理：路由路径 25 秒超时降级规则；强制 Agent 接口无超时，适合演示
 
+### 3.4 通勤公平性校验（Commute-Time Fairness，2026-08 新增）
+
+直线距离公平不等于真实通勤公平：同样的直线距离，开车和转乘公交的耗时可能相差数倍。该能力在 `_calculate_smart_center`（`app/tool/meetspot_recommender.py`）已有的多候选评估循环上叠加一次真实通勤时间校验：
+
+1. 前置条件：请求携带 `commute_budgets`（每位参与者的最大可接受通勤分钟数，允许部分为空）且当前 `map_provider == "google"`（仅国际场景，高德路径不受影响、行为不变）。未满足任一条件时直接走原有的 `_calculate_center_point` 几何中点逻辑，零额外开销。
+2. 第一阶段沿用既有的廉价评分（POI 密度 + 交通便利性 + 直线距离公平性）对 3x3 网格候选打分，取排名前 3 的候选。
+3. 第二阶段仅对这 3 个候选发起**一次**批量调用：`app/tool/google_directions_client.py` 封装的 Google Routes API `computeRouteMatrix`（3 候选 × 最多 10 参与者 = 30 个元素，远低于 TRANSIT 模式 100 元素上限），一次请求拿到所有候选到所有参与者的真实通勤时间。
+4. 校验逻辑（`_verify_commute_fairness`）：依次检查每个候选是否满足全部参与者的预算，选中第一个全部满足的候选；若三个都不满足，退化为"违规人数最少"的候选。结果（每个候选的通勤时间、被拒原因）写入 `details["commute_check"]`，覆盖第一阶段选出的候选点。
+5. 结果页新增一段推理链内容（`_render_commute_check_html`，插入 Step 2 "公平中心计算"内）：展示被拒候选及超预算的参与者和分钟数、最终候选每位参与者的真实通勤时间徽章。未提供 `commute_budgets` 时该方法返回空字符串，现有五步骤内容不变。
+
+依赖与降级：任一环节失败（未启用 Routes API、超时、无 key）均 fail-soft 返回空结果，`_calculate_smart_center` 自动回退到第一阶段选出的候选，不影响推荐主流程。仅覆盖 Google Maps 路径（`/`、`/en/*`），高德路径的真实通勤时间校验不在本次范围内。
+
 ## 4. 模块清单
 
 | 模块 | 职责 | 关键文件 |
@@ -70,6 +82,7 @@ workspace/js_src/（生成式结果页，不提交仓库）
 | 启动与入口 | 加载环境变量，启动 uvicorn | web_server.py |
 | API 编排 | 路由、复杂度路由、配额、静态挂载 | api/index.py |
 | 核心推荐 | 五步流水线、评分、回退、HTML 生成 | app/tool/meetspot_recommender.py |
+| 通勤时间查询 | Google Routes API 批量矩阵查询、响应解析 | app/tool/google_directions_client.py |
 | Agent | ReAct 循环与工具封装 | app/agent/meetspot_agent.py、base.py、tools.py |
 | LLM 客户端 | OpenAI 兼容接口、重试、token 统计 | app/llm.py |
 | 配置 | config.toml 与环境变量解析 | app/config.py |
@@ -112,6 +125,8 @@ workspace/js_src/（生成式结果页，不提交仓库）
 | price_range | string | 空 | economy / mid / high |
 | location_coords | object[] | null | 前端 Autocomplete 预解析坐标 |
 | language | string | 空 | zh / en |
+| commute_budgets | (int\|null)[] | null | 与 locations 等长，每位参与者最大通勤分钟数；仅 Google 路径生效，触发 3.4 节的通勤公平性校验 |
+| transport_mode | string | TRANSIT | Google Routes API 出行方式：TRANSIT / DRIVE / WALK / BICYCLE / TWO_WHEELER |
 
 ## 6. 数据流与数据管理
 
@@ -139,6 +154,7 @@ workspace/js_src/（生成式结果页，不提交仓库）
 - 密钥通过环境变量或 config.toml 配置，不提交仓库
 - 高德后端 Web key 不下发前端，前端地图使用独立 JS key 与安全密钥
 - Google Maps key 需在 GCP 控制台按 referer 限制
+- 通勤公平性校验依赖 GCP 控制台单独启用的 Routes API（与 Places/Geocoding 是独立开关），未启用时 fail-soft 降级，不影响主流程
 - 慢速限流中间件已引入（slowapi）
 - 地址文本不留存，结果页自动清理，商业 API 依赖（DeepSeek、高德、Google）如实披露
 
@@ -160,3 +176,4 @@ workspace/js_src/（生成式结果页，不提交仓库）
 - Agent 模式延迟波动较大，现场演示建议用规则路径或强制 Agent 接口，自动路由依赖 25 秒超时降级
 - Issue #50 的线上复现需结合 Render 日志确认是否高德配额
 - app 包测试覆盖率约 44%，为历史存量，核心推荐器约 53%
+- 通勤公平性校验（3.4 节）仅覆盖 Google Maps 路径，高德路径的真实通勤时间校验暂不支持；单次校验仅对每位参与者用同一种出行方式（transport_mode 为请求级参数，非逐人配置）
