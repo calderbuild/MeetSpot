@@ -1704,7 +1704,10 @@ class CafeRecommender(BaseTool):
         attempts = []
         winner_point = None
         winner_index = None
-        least_violations: Optional[Tuple[int, int]] = None
+        # (违规人数, 总超时分钟数, 候选序号) —— 先比人数再比超时总量，人数相同时
+        # 优先选总体超时更少的候选，而不是恒定选第一个（联调时用真实纽约三地址
+        # 复现过三个候选违规人数打平的情况，若只按人数会固定落在评分最差的候选上）
+        least_violations: Optional[Tuple[int, float, int]] = None
 
         for cand_idx, candidate in enumerate(top_candidates):
             durations = []
@@ -1746,13 +1749,17 @@ class CafeRecommender(BaseTool):
             if not violations and winner_point is None:
                 winner_point = candidate
                 winner_index = cand_idx
-            if least_violations is None or len(violations) < least_violations[1]:
-                least_violations = (cand_idx, len(violations))
+            total_overage = sum(
+                (v["duration_minutes"] or 0) - v["budget_minutes"] for v in violations
+            )
+            score = (len(violations), total_overage, cand_idx)
+            if least_violations is None or score < least_violations:
+                least_violations = score
 
         if winner_point is None and least_violations is not None:
-            # 没有候选完全满足所有人预算，退而求其次选违规最少的那个，
+            # 没有候选完全满足所有人预算，退而求其次选violations更少、次选总超时更少的候选，
             # attempts 里如实记录了它仍违反了谁的预算，不是静默妥协
-            winner_index = least_violations[0]
+            winner_index = least_violations[2]
             winner_point = top_candidates[winner_index]
 
         return {

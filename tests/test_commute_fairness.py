@@ -204,6 +204,50 @@ def test_verify_commute_fairness_falls_back_to_least_violations(monkeypatch):
     assert len(result["attempts"][1]["violations"]) == 1
 
 
+def test_verify_commute_fairness_breaks_violation_tie_by_total_overage(monkeypatch):
+    # Regression test for a real bug found during live verification against Google's
+    # Routes API (3 spread-out NYC boroughs): when every candidate violates the same
+    # NUMBER of participants' budgets, the old code always fell back to whichever
+    # candidate happened to be listed first (the geometric center) -- even when another
+    # candidate was objectively less bad for everyone. All three candidates below
+    # violate both participants (2 violations each), but candidate 1 is a much smaller
+    # overage than candidate 0 or candidate 2.
+    recommender = CafeRecommender(api_key="test-key")
+    recommender.map_provider = "google"
+
+    async def _fake_route_matrix(origins, destinations, mode="TRANSIT", api_key=None):
+        return [
+            _matrix_result(0, 0, 45),  # Alice -> candidate 0: way over her 20min budget
+            _matrix_result(1, 0, 80),  # Bob -> candidate 0: way over his 25min budget
+            _matrix_result(0, 1, 21),  # Alice -> candidate 1: barely over
+            _matrix_result(1, 1, 26),  # Bob -> candidate 1: barely over
+            _matrix_result(0, 2, 45),  # Alice -> candidate 2: way over
+            _matrix_result(1, 2, 69),  # Bob -> candidate 2: way over
+        ]
+
+    monkeypatch.setattr(
+        google_directions_client, "google_route_matrix", _fake_route_matrix
+    )
+
+    candidate0 = (116.30, 39.90)
+    candidate1 = (116.31, 39.91)
+    candidate2 = (116.32, 39.92)
+    result = asyncio.run(
+        recommender._verify_commute_fairness(
+            top_candidates=[candidate0, candidate1, candidate2],
+            participant_coords=[(116.29, 39.89), (116.32, 39.92)],
+            commute_budgets=[20, 25],
+            transport_mode="TRANSIT",
+            participant_names=["Alice", "Bob"],
+        )
+    )
+
+    assert all(not a["accepted"] for a in result["attempts"])
+    assert all(len(a["violations"]) == 2 for a in result["attempts"])  # tied on count
+    assert result["winner_point"] == candidate1
+    assert result["winner_index"] == 1
+
+
 def _make_recommender_for_smart_center(monkeypatch, scores_by_index):
     recommender = CafeRecommender(api_key="test-key")
     recommender.map_provider = "google"
