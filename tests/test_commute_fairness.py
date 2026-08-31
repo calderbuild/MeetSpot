@@ -248,6 +248,51 @@ def test_verify_commute_fairness_breaks_violation_tie_by_total_overage(monkeypat
     assert result["winner_index"] == 1
 
 
+def test_verify_commute_fairness_treats_unreachable_as_worse_than_slow(monkeypatch):
+    # Regression test for a real bug an independent review pass caught: when Google
+    # Routes can't find a route at all (ok=False -> duration_minutes=None), the total-
+    # overage tie-break computed `(None or 0) - budget`, a NEGATIVE number, making a
+    # candidate nobody can actually reach via the requested mode look BETTER than a
+    # candidate that's merely slow. An unreachable candidate must never win over a
+    # reachable-but-over-budget one.
+    recommender = CafeRecommender(api_key="test-key")
+    recommender.map_provider = "google"
+
+    async def _fake_route_matrix(origins, destinations, mode="TRANSIT", api_key=None):
+        return [
+            # Candidate 0: no transit route exists to Alice at all (e.g. across water).
+            _matrix_result(0, 0, 0, ok=False),
+            _matrix_result(1, 0, 15),  # Bob -> candidate 0: within budget
+            # Candidate 1: everyone reachable, Alice just slightly over budget.
+            _matrix_result(
+                0, 1, 25
+            ),  # Alice -> candidate 1: 5 min over her 20min budget
+            _matrix_result(1, 1, 15),  # Bob -> candidate 1: within budget
+        ]
+
+    monkeypatch.setattr(
+        google_directions_client, "google_route_matrix", _fake_route_matrix
+    )
+
+    candidate0 = (116.30, 39.90)
+    candidate1 = (116.31, 39.91)
+    result = asyncio.run(
+        recommender._verify_commute_fairness(
+            top_candidates=[candidate0, candidate1],
+            participant_coords=[(116.29, 39.89), (116.32, 39.92)],
+            commute_budgets=[20, 25],
+            transport_mode="TRANSIT",
+            participant_names=["Alice", "Bob"],
+        )
+    )
+
+    # Both candidates tie on violation COUNT (1 each), so this only passes with the fix.
+    assert len(result["attempts"][0]["violations"]) == 1
+    assert len(result["attempts"][1]["violations"]) == 1
+    assert result["winner_point"] == candidate1
+    assert result["winner_index"] == 1
+
+
 def _make_recommender_for_smart_center(monkeypatch, scores_by_index):
     recommender = CafeRecommender(api_key="test-key")
     recommender.map_provider = "google"

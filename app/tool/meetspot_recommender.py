@@ -1749,8 +1749,15 @@ class CafeRecommender(BaseTool):
             if not violations and winner_point is None:
                 winner_point = candidate
                 winner_index = cand_idx
+            # 路线查不到（duration_minutes=None）不能当 0 分钟算，否则 "0 - 预算" 是负数，
+            # 会让一个根本到不了的候选在总超时排序里显得比"到得了但慢"的候选更优
             total_overage = sum(
-                (v["duration_minutes"] or 0) - v["budget_minutes"] for v in violations
+                (
+                    float("inf")
+                    if v["duration_minutes"] is None
+                    else v["duration_minutes"] - v["budget_minutes"]
+                )
+                for v in violations
             )
             score = (len(violations), total_overage, cand_idx)
             if least_violations is None or score < least_violations:
