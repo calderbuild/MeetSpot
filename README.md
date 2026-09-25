@@ -307,6 +307,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **If MeetSpot helps you, please give it a star!**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=calderbuild/MeetSpot&type=Date)](https://star-history.com/#calderbuild/MeetSpot&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=calderbuild/MeetSpot&type=Date)](https://star-history.dera.page/#calderbuild/MeetSpot&type=date)
 
 </div>
