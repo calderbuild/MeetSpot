@@ -83,9 +83,9 @@ def _home_path(lang: str) -> str:
 
 
 def _lang_paths(path: str) -> Tuple[str, str, str]:
-    """(zh, en, x-default) 路径。首页 / 默认英文，所以中文首页走 /zh/；其余页面中文在裸路径。"""
+    """(zh, en, x-default) 路径。首页 / 默认英文且 canonical 指向 /en/，所以中文首页走 /zh/、x-default 用 /en/；其余页面中文在裸路径。"""
     if path == "/":
-        return "/zh/", "/en/", "/"
+        return "/zh/", "/en/", "/en/"
     return path, f"/en{path}", path
 
 

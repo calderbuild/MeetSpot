@@ -17,6 +17,8 @@ def test_zh_homepage_is_its_own_canonical_and_hreflang_target():
     html = client.get("/zh/").text
     assert _canonical(html) == f"{BASE}/zh/"
     assert f'hreflang="zh" href="{BASE}/zh/"' in html
+    # x-default must be a canonical URL; / canonicalizes to /en/
+    assert f'hreflang="x-default" href="{BASE}/en/"' in html
 
 
 def test_sitemap_lists_zh_homepage_not_bare_root_as_zh():
