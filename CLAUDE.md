@@ -27,7 +27,6 @@ curl -X POST "http://127.0.0.1:8000/api/find_meetspot" \
 pytest tests/ -v                         # Full suite
 pytest tests/test_file.py::test_name -v  # Single test
 pytest --cov=app tests/                  # Coverage (target: 80%)
-python tests/test_seo.py http://localhost:8000  # SEO validation (standalone)
 
 # NOTE: tests/*.py are tracked (force-added past a broad .gitignore); CI runs them
 
@@ -244,7 +243,7 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 
 ## Deployment
 
-Hosted on Render free tier (512MB RAM, cold starts after 15min idle).
+Hosted on Render free tier (512MB RAM, cold starts after 15min idle). The service uses the **Docker runtime** (`Dockerfile`, `CMD python web_server.py`), so `render.yaml` is not applied: env vars live only in the dashboard. Render sets `RENDER=true`, which `web_server.py` uses to turn off uvicorn reload.
 Service ID: `srv-d2di8295pdvs73eu3re0`. Render CLI installed (`brew install render`), workspace set.
 
 **Redeploy**: Push to `main` branch triggers auto-deploy. For manual restart without code changes:
