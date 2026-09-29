@@ -20,8 +20,10 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -77,7 +79,7 @@ try:
 except ImportError as e:
     print(f"⚠️ LLM 模块导入失败: {e}")
 
-    # 在Vercel环境下创建最小化配置类
+    # app.llm 导入失败时的最小化配置类
     class MinimalConfig:
         class AMapSettings:
             def __init__(self, api_key):
@@ -106,7 +108,7 @@ except ImportError as e:
     else:
         print("❌ 未找到AMAP_API_KEY环境变量")
 
-# 在Vercel环境下导入最小化推荐器
+# 完整配置不可用时的最小化推荐器
 if not config_available and os.getenv("AMAP_API_KEY"):
     try:
         # 创建最小化推荐器
@@ -116,7 +118,7 @@ if not config_available and os.getenv("AMAP_API_KEY"):
         from datetime import datetime
 
         class MinimalCafeRecommender:
-            """最小化推荐器，专为Vercel环境设计"""
+            """最小化推荐器，完整配置不可用时的降级路径"""
 
             def __init__(self):
                 self.api_key = os.getenv("AMAP_API_KEY")
@@ -189,7 +191,7 @@ if not config_available and os.getenv("AMAP_API_KEY"):
 
     <div class="result">
         <h3>💡 推荐建议</h3>
-        <p>由于在Vercel环境下运行，推荐功能已简化。建议您:</p>
+        <p>服务当前以精简模式运行，推荐功能已简化。建议您:</p>
         <ul>
             <li>选择位置中心点附近的{keywords}</li>
             <li>考虑交通便利性和停车条件</li>
@@ -360,7 +362,7 @@ PRESET_QUESTIONS_EN = [
     {"id": 6, "question": "Is it free to use?", "category": "Other"},
 ]
 
-# 环境变量配置（用于 Vercel）
+# 环境变量配置
 AMAP_API_KEY = os.getenv("AMAP_API_KEY", "")
 AMAP_JS_API_KEY = os.getenv("AMAP_JS_API_KEY", "")  # JS API key for frontend map
 AMAP_SECURITY_JS_CODE = os.getenv("AMAP_SECURITY_JS_CODE", "")
@@ -450,9 +452,9 @@ async def add_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
 
-    # 静态资源长期缓存 (1 year for immutable assets)
+    # 静态资源缓存 1 天。文件名不带内容哈希，不能标 immutable，否则部署后回访用户拿旧 CSS/JS；过期后靠 etag 304 重新验证
     if any(path.endswith(ext) for ext in [".css", ".js", ".woff2", ".woff", ".ttf"]):
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        response.headers["Cache-Control"] = "public, max-age=86400"
     # 图片缓存 (30 days)
     elif any(
         path.endswith(ext)
@@ -468,6 +470,10 @@ async def add_cache_headers(request: Request, call_next):
         response.headers["Cache-Control"] = (
             "public, max-age=600, stale-while-revalidate=86400"
         )
+        if path == "/":
+            # / 的语言由 lang cookie 决定
+            vary = response.headers.get("Vary")
+            response.headers["Vary"] = f"{vary}, Cookie" if vary else "Cookie"
     # sitemap/robots - long cache with stale-while-revalidate for Render cold starts
     # This ensures CDN can serve cached content when origin is cold (fixes GSC "Couldn't fetch")
     elif path in ["/sitemap.xml", "/robots.txt"]:
@@ -489,6 +495,31 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 app.state.limiter = seo_pages.limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+
+_NOT_FOUND_HTML = """<!doctype html>
+<html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>404 - MeetSpot</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 16px;color:#1f2937}}a{{color:#0f766e}}</style>
+</head><body><h1>404</h1><p>{msg}</p><p><a href="{home}">{home_label}</a> · <a href="/public/meetspot_finder.html">{finder_label}</a></p></body></html>"""
+
+
+async def _not_found_handler(request: Request, exc: StarletteHTTPException):
+    """浏览器访问不存在的页面返回 HTML 404，API 和其他客户端保持 JSON。"""
+    wants_html = "text/html" in request.headers.get("accept", "")
+    if exc.status_code != 404 or not wants_html or request.url.path.startswith("/api/"):
+        return await http_exception_handler(request, exc)
+    zh = detect_language(request) == "zh"
+    html = _NOT_FOUND_HTML.format(
+        lang="zh-CN" if zh else "en",
+        msg="页面不存在。" if zh else "This page does not exist.",
+        home="/zh/" if zh else "/en/",
+        home_label="返回首页" if zh else "Home",
+        finder_label="开始找聚会地点" if zh else "Find a meeting spot",
+    )
+    return HTMLResponse(html, status_code=404)
+
+
+app.add_exception_handler(StarletteHTTPException, _not_found_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 
@@ -512,7 +543,7 @@ async def head_method_support(request: Request, call_next):
 
 # 挂载静态文件（如果目录存在）
 try:
-    # Vercel环境下创建必要的目录结构
+    # 创建必要的目录结构
     workspace_dir = "workspace"
     js_src_dir = os.path.join(workspace_dir, "js_src")
     os.makedirs(js_src_dir, exist_ok=True)
@@ -538,7 +569,6 @@ try:
         logger.info("mounted_static_locales")
 except Exception as e:
     logger.warning(f"静态文件挂载失败: {e}")
-    # 在Vercel环境下，静态文件挂载可能失败，这是正常的
 
 app.include_router(auth.router)
 app.include_router(payment.router)
@@ -689,8 +719,8 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
 
         # 获取LLM API配置
         llm_api_key = os.getenv("LLM_API_KEY", "")
-        llm_api_base = os.getenv("LLM_API_BASE", "https://openrouter.ai/api/v1")
-        llm_model = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
+        llm_api_base = os.getenv("LLM_API_BASE", "https://api.deepseek.com")
+        llm_model = os.getenv("LLM_MODEL", "deepseek-flash")
 
         if not llm_api_key:
             print("LLM_API_KEY not configured")
@@ -1262,9 +1292,6 @@ async def api_status():
         "timestamp": time.time(),
     }
 
-
-# Vercel 处理函数
-app_instance = app
 
 # 如果直接运行此文件（本地测试）
 if __name__ == "__main__":

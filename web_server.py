@@ -6,7 +6,7 @@ MeetSpot Local Development Server
 This is the main entry point for local development.
 It imports and runs the FastAPI application from api/index.py.
 
-For production deployment on Railway, this file serves as the main entry point.
+In production (Render), this file is also the start command (see render.yaml).
 """
 
 import sys
@@ -26,14 +26,14 @@ def main():
         from api.index import app  # noqa: F401
         import uvicorn
         
-        # Get port from environment variable (Railway sets PORT automatically)
+        # Hosting platforms set PORT
         port = int(os.environ.get("PORT", 8000))
         
-        # Detect if running in production (Railway sets RAILWAY_ENVIRONMENT)
-        is_production = os.environ.get("RAILWAY_ENVIRONMENT") is not None
+        # Render sets RENDER=true; RAILWAY_ENVIRONMENT kept for Railway deploys
+        is_production = bool(os.environ.get("RENDER") or os.environ.get("RAILWAY_ENVIRONMENT"))
         
         if is_production:
-            print("🚀 启动 MeetSpot 生产服务器 (Railway)...")
+            print("🚀 启动 MeetSpot 生产服务器...")
             print(f"📍 服务端口: {port}")
         else:
             print("🚀 启动 MeetSpot 本地开发服务器...")

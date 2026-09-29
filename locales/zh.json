@@ -247,6 +247,7 @@
   "finder.location_placeholder_1": "输入第一个地点，如：北京朝阳区望京",
   "finder.location_placeholder_2": "输入第二个地点，如：海淀区中关村",
   "finder.location_placeholder_n": "输入地点",
+  "finder.commute_placeholder": "最长通勤（分钟）",
   "finder.location_count_hint": "已输入{count}个地点，可添加更多（最多10个）",
   "finder.add_location": "添加更多地点",
   "finder.section_themes": "选择场景类型",

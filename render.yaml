@@ -10,11 +10,11 @@ services:
       - key: AMAP_API_KEY
         sync: false  # 必需：在 Render 控制台设置
       - key: LLM_API_KEY
-        sync: false  # 必需：在 Render 控制台设置 (DeepWisdom API Key)
+        sync: false  # 必需：在 Render 控制台设置 (DeepSeek API Key)
       - key: LLM_API_BASE
-        value: "https://newapi.deepwisdom.ai/v1"
+        value: "https://api.deepseek.com"
       - key: LLM_MODEL
-        value: "deepseek-chat"  # 推荐：中文能力强、性价比高
+        value: "deepseek-flash"
       - key: PYTHON_VERSION
         value: "3.11"
       - key: PORT

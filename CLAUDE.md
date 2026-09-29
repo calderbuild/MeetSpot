@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MeetSpot is an **AI Agent** for multi-person meeting point recommendations. Users provide locations and requirements; the Agent calculates the geographic center and recommends optimal venues. Built with FastAPI and Python 3.11+, uses Amap (Gaode Map) for 国内场景 + Google Maps Platform for 国际场景, and OpenRouter (default `openai/gpt-4o-mini`) for semantic scoring + AI chat.
+MeetSpot is an **AI Agent** for multi-person meeting point recommendations. Users provide locations and requirements; the Agent calculates the geographic center and recommends optimal venues. Built with FastAPI and Python 3.11+, uses Amap (Gaode Map) for 国内场景 + Google Maps Platform for 国际场景, and DeepSeek (default `deepseek-flash`, OpenAI-compatible API) for semantic scoring + AI chat.
 
 **Live Demo**: https://meetspot-irq2.onrender.com
 
@@ -29,10 +29,10 @@ pytest tests/test_file.py::test_name -v  # Single test
 pytest --cov=app tests/                  # Coverage (target: 80%)
 python tests/test_seo.py http://localhost:8000  # SEO validation (standalone)
 
-# NOTE: tests/ is gitignored -- tests exist locally but are not in the repo
+# NOTE: tests/*.py are tracked (force-added past a broad .gitignore); CI runs them
 
 # Quality gates (run before PRs)
-black . && ruff check . && mypy app/
+ruff check . && flake8 . --select=E9,F63,F7,F82   # same as CI
 
 # Postmortem regression check (optional, runs in CI)
 python tools/postmortem_check.py         # Check for known issue patterns
@@ -53,9 +53,9 @@ python tools/postmortem_check.py         # Check for known issue patterns
 **Required Environment Variables**:
 - `AMAP_API_KEY` - Gaode Map API key (required)
 - `AMAP_SECURITY_JS_CODE` - JS security code for frontend map
-- `LLM_API_KEY` - OpenRouter / OpenAI / 兼容服务的 API key（生产用 OpenRouter `sk-or-v1-...` 形式）
-- `LLM_API_BASE` - API base URL (default: `https://openrouter.ai/api/v1`)
-- `LLM_MODEL` - Model name (default: `openai/gpt-4o-mini`，OpenRouter slug 格式，可换 `google/gemini-2.5-flash` / `anthropic/claude-haiku-4-5` 等)
+- `LLM_API_KEY` - DeepSeek（或任意 OpenAI 兼容服务）的 API key
+- `LLM_API_BASE` - API base URL (default: `https://api.deepseek.com`)
+- `LLM_MODEL` - Model name (default: `deepseek-flash`；`GET /models` 另有 `deepseek-v4-pro`，旧名 `deepseek-chat` / `deepseek-v4-flash` 是指向 `deepseek-flash` 的别名)
 - `GOOGLE_MAPS_API_KEY` - Google Maps Platform key（国际场景必需，缺失时 /en/ 路径地图静默降级）
 
 **Local Config**: Copy `config/config.toml.example` to `config/config.toml` and fill in API keys. Alternatively, create a `.env` file with the environment variables above.
@@ -69,39 +69,40 @@ POST /api/find_meetspot
         ↓
 Complexity Router (assess_request_complexity)
         ↓
-Rule+LLM Mode (Agent mode disabled for memory savings on free tier)
+score >= 40 and app.agent importable → Agent mode (25s timeout, falls back to rules)
+otherwise                             → Rule+LLM mode
         ↓
 5-Step Pipeline: Geocode → Center Calc → POI Search → Ranking → HTML Gen
 ```
 
-Complexity scoring: +10/location, +15 for complex keywords, +10 for special requirements. Currently all requests use Rule+LLM mode (see Concurrency & Memory Budget).
+Complexity scoring (`assess_request_complexity` in `api/index.py`): 3 locations +15 / 4+ +30; 2 venue keywords +12 / 3+ +25; 2 matched requirements +15 / 3+ +25 (or +20 for a >50-char free-text requirement); +5 each for min_rating / max_distance < 10km / price_range. Agent threshold: 40.
 
 ### Entry Points
 - `web_server.py` - Main entry, auto-detects production vs development
 - `api/index.py` - FastAPI app with all endpoints, middleware, rate limiting (slowapi), CORS, and request concurrency control (MAX_CONCURRENT_REQUESTS = 3)
 - `npm run dev` / `npm start` - Proxy to the same Python entry point for platforms that expect Node scripts
 
-### Three-Tier Configuration (Graceful Degradation)
+### Configuration Tiers (Graceful Degradation)
 
 | Mode | Trigger | What Works |
 |------|---------|------------|
-| Full | `config/config.toml` exists | All features, TOML-based config |
-| Simplified | `RAILWAY_ENVIRONMENT` set | Uses `app/config_simple.py` |
-| Minimal | Only `AMAP_API_KEY` env var | `MinimalConfig` class in `api/index.py`, basic recommendations only |
+| Full | `app.config` imports (reads `config/config.toml`, else `config.toml.example`; env vars override) | All features |
+| Minimal | `app.llm` import fails | `MinimalConfig` in `api/index.py`, basic recommendations only |
+| Minimal recommender | `app.config` import fails and `AMAP_API_KEY` set | `MinimalCafeRecommender` in `api/index.py` |
 
 ### Core Components
 
 ```
 app/tool/meetspot_recommender.py    # Main recommendation engine (CafeRecommender class)
   |- _enhance_address()             # 10 hardcoded aliases with city prefix
-  |- PLACE_TYPE_CONFIG dict         # 12 venue themes with colors, icons
+  |- PLACE_TYPE_CONFIG dict         # 13 venue themes + default, with colors, icons
   |- BRAND_FEATURES dict            # 50+ brand profiles with feature scores
   |- _rank_places()                 # 100-point scoring algorithm
   |- _generate_html_content()       # Standalone HTML with Amap JS API
   |- geocode_cache (max 30)         # LRU-style address cache (reduced for free tier)
   |- poi_cache (max 15)             # LRU-style POI cache (reduced for free tier)
 
-data/address_aliases.json           # 48 university + 5 landmark abbreviation mappings
+data/address_aliases.json           # 47 university + 5 landmark abbreviation mappings
 app/design_tokens.py                # WCAG AA color palette, CSS generation
 api/routers/seo_pages.py            # SEO landing pages + /compare page
 api/services/seo_content.py         # SEOContentGenerator: meta tags, JSON-LD schema, city page snippets
@@ -113,7 +114,7 @@ api/services/seo_content.py         # SEOContentGenerator: meta tags, JSON-LD sc
 
 ### AI Chat
 
-`/api/ai_chat` (POST) — bilingual conversational interface. Accepts `message`, `language`, and `conversation_history`. Returns streaming or full response using the configured LLM backend (DeepSeek/OpenAI/OpenRouter). System prompts: `MEETSPOT_SYSTEM_PROMPT` (zh) and `MEETSPOT_SYSTEM_PROMPT_EN` (en) defined in `api/index.py`.
+`/api/ai_chat` (POST) — bilingual conversational interface. Accepts `message`, `lang` (`zh`/`en`), and `conversation_history`. Uses the configured OpenAI-compatible LLM backend (DeepSeek by default). System prompts: `MEETSPOT_SYSTEM_PROMPT` (zh) and `MEETSPOT_SYSTEM_PROMPT_EN` (en) defined in `api/index.py`.
 
 `/api/ai_chat/preset_questions` (GET) — returns language-specific suggested questions for the chat UI.
 
@@ -124,9 +125,9 @@ When Agent Mode is enabled, final venue scores blend rule-based and LLM semantic
 Final Score = Rule Score * 0.4 + LLM Score * 0.6
 ```
 
-**Current status**: `agent_available = False` in `api/index.py` (line 59) — hardcoded off for memory reasons. `/api/find_meetspot_agent` endpoint exists but returns disabled error. Re-enabling requires bumping Render tier.
+**Current status**: enabled. `agent_available` in `api/index.py` flips to `True` when `app.agent` imports; complex requests (score >= 40) go through the agent with a 25s timeout and fall back to rule mode on timeout/error. `/api/find_meetspot_agent` forces agent mode.
 
-The disabled-but-present agent code lives in `app/agent/` (`meetspot_agent.py`, `tools.py`, `base.py`); `create_meetspot_agent()` in `api/index.py` imports it lazily so the module isn't loaded while Agent mode is off.
+Agent code lives in `app/agent/` (`meetspot_agent.py`, `tools.py`, `base.py`).
 
 ### Token Counting
 
@@ -157,7 +158,7 @@ Both `locales/zh.json` and `locales/en.json` are complete and in sync. To add a 
 
 ### Concurrency & Memory Budget
 
-`MAX_CONCURRENT_REQUESTS = 3` semaphore in `api/index.py` prevents OOM on Render's 512MB free tier. Rate limiting via slowapi. Agent mode disabled (`agent_available = False`) for the same reason. If re-enabling Agent mode or raising concurrency, monitor memory on the hosting tier.
+`MAX_CONCURRENT_REQUESTS = 3` semaphore in `api/index.py` prevents OOM on Render's 512MB free tier. Rate limiting via slowapi. Agent mode only runs for complex requests (score >= 40). If raising concurrency or routing more traffic to the agent, monitor memory on the hosting tier.
 
 ### Optional Components
 
@@ -182,7 +183,7 @@ Edit `_rank_places()` in `meetspot_recommender.py`:
 
 ### Distance Filtering
 Two-stage distance handling in `meetspot_recommender.py`:
-1. **POI Search**: Amap API `radius` parameter (hardcoded 5000m, fallback to 50000m) in `_search_places()` calls
+1. **POI Search**: Amap API `radius` parameter (hardcoded 5000m, fallback to 50000m) in `_search_pois()` calls
 2. **Post-filter**: `max_distance` parameter in `_rank_places()` (default 100km, in meters)
 
 ### Brand Knowledge Base
@@ -233,7 +234,7 @@ Each postmortem YAML contains triggers (file patterns, function names, regex, ke
 | Import errors in production | Check MinimalConfig fallback |
 | Wrong city geocoding | Add to `_enhance_address()` alias dict with city prefix |
 | SSR 页面 env var 读取为空 | 勿用 `templates.env.globals["key"] = os.getenv(...)`（模块导入时求值）；改用 `TemplateResponse` context 字典在每次请求时动态传入（见 `_common_context()` in `api/routers/seo_pages.py`） |
-| Render OOM (512MB) | Heavy deps removed (jieba/tiktoken); caches reduced (30/15 limits); Agent mode disabled. If OOM recurs, check `pip list` for new heavy imports |
+| Render OOM (512MB) | Heavy deps removed (jieba/tiktoken); caches reduced (30/15 limits); Agent mode limited to complex requests. If OOM recurs, check `pip list` for new heavy imports |
 | asyncpg + pgbouncer errors | `app/db/database.py` disables prepared statement cache and uses dynamic statement names. If adding raw SQL, avoid named prepared statements |
 | `meetspot_finder.html` 缺全局功能 | 独立静态页不继承 `base.html`，新增全局功能（GA4、schema、trackEvent）需单独在该文件处理 |
 | flake8 E999 f-string 反斜杠 | Python 3.11 不允许 f-string 表达式含反斜杠（`\"`），需先提取为变量再插值 |
@@ -257,7 +258,7 @@ git commit --allow-empty -m "chore: trigger redeploy" && git push origin main
 
 ## CI/CD
 
-7 GitHub Actions workflows in `.github/workflows/`:
+6 GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
@@ -266,12 +267,11 @@ git commit --allow-empty -m "chore: trigger redeploy" && git push origin main
 | `postmortem-update.yml` | `fix:` commits to main | Auto-generates postmortem YAML |
 | `keep-alive.yml` | Cron | Prevents Render free tier cold starts |
 | `lighthouse-ci.yml` | On demand | Performance metrics |
-| `update-badges.yml` | On demand | Update repo badges |
 | `auto-merge-clean.yml` | Dependabot PRs | Auto-merge dependency updates |
 
 ## Gitignore Gotchas
 
 The `.gitignore` has unusually broad patterns -- be aware:
-- `tests/` directory and all test-like files (`*test*.py`, `test_*.py`) are gitignored. Tests exist locally only.
-- `Dockerfile` and `docker-compose.yml` are gitignored.
+- Test-like files (`*test*.py`, `test_*.py`) are gitignored, but `.gitignore` re-includes `tests/*.py`, so the suite in `tests/` is tracked. New test files elsewhere need `git add -f`.
+- `Dockerfile` matches an ignore rule but is tracked (CI builds it); `docker-compose.yml` is ignored and local-only.
 - `workspace/js_src/` is gitignored (runtime-generated HTML).

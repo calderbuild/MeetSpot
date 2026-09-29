@@ -41,7 +41,7 @@ jobs:
           pip install pyyaml
           # Install project dependencies for LLM (optional)
           if [ -f requirements.txt ]; then
-            pip install openai tiktoken tenacity || true
+            pip install openai tenacity || true
           fi
 
       - name: Determine commit to process

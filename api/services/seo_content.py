@@ -26,6 +26,16 @@ class SEOContentGenerator:
             city = data.get("city", "")
             city_en = data.get("city_en", "")
             venue_types = data.get("venue_types", [])
+            if data.get("lang") == "en":
+                name = city_en or city
+                title = f"Meeting Spots in {name} - MeetSpot"
+                description = (
+                    f"Find a fair midpoint for 2-10 people in {name}. "
+                    "MeetSpot picks the best meeting point and recommends "
+                    "top-rated cafes and restaurants nearby."
+                )
+                keywords = f"{name} meeting point,{name} midpoint,group meetup {name}"
+                return {"title": title, "description": description, "keywords": keywords}
             venue_snippet = "、".join(venue_types[:3]) if venue_types else "热门场所"
             title = f"{city}聚会地点推荐 - MeetSpot 聚点"
             description = (
@@ -39,7 +49,7 @@ class SEOContentGenerator:
             description = (
                 "MeetSpot 是一款开源的多人聚会地点推荐工具，"
                 "使用球面几何算法计算公平中点，结合智能评分推荐最佳场所，"
-                "覆盖 350+ 城市，12 种场景主题。"
+                "覆盖 350+ 城市，13 种场景主题。"
             )
             keywords = "关于 MeetSpot,聚会算法,地点推荐技术"
         elif page_type == "faq":

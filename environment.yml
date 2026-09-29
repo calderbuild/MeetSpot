@@ -1,49 +1,9 @@
+# Conda env for local dev. Dependencies live in requirements.txt only, so this file can't drift.
 name: meetspot
 channels:
   - conda-forge
-  - defaults
-
 dependencies:
-  # Python版本
   - python=3.11
-
-  # 核心Web框架
-  - fastapi=0.116.1
-  - uvicorn=0.35.0
-  - pydantic=2.11.7
-  - pydantic-core=2.33.2
-
-  # HTTP客户端
-  - httpx=0.28.1
-  - aiohttp=3.12.15
-  - aiofiles=24.1.0
-
-  # 模板引擎
-  - jinja2=3.1.6
-
-  # 表单处理
-  - python-multipart=0.0.20
-
-  # 日志
-  - loguru=0.7.3
-
-  # 配置解析
-  - tomli=2.1.0
-
-  # 日期处理
-  - python-dateutil=2.9.0
-
-  # pip依赖
   - pip
   - pip:
-      - whitenoise==6.6.0      # 静态文件服务
-      - slowapi==0.1.9         # API限流
-
-  # 系统工具（可选，提升开发体验）
-  - git
-  - make
-
-# 环境变量（可选）
-variables:
-  PYTHONPATH: "${CONDA_PREFIX}/lib/python3.11/site-packages"
-  AMAP_API_KEY: ""  # 在.env或conda activate时设置
+      - -r requirements.txt

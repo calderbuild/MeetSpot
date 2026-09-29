@@ -124,18 +124,15 @@
     </script>
 
     <link rel="icon" type="image/svg+xml" href="/public/favicon.svg" />
-    <link
-      href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
-      rel="stylesheet"
-    />
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preload" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" /></noscript>
 
     <!-- Urban Navigator Theme Fonts - Distinctive Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" /></noscript>
 
     <!-- Design Token System -->
     <link rel="stylesheet" href="/static/css/design-tokens.css" />
@@ -2299,6 +2296,7 @@
                   name="location"
                   id="location-0"
                   placeholder="输入第一个地点，如：北京朝阳区望京"
+                  aria-label="输入第一个地点，如：北京朝阳区望京"
                   data-i18n-placeholder="finder.location_placeholder_1"
                   required
                 />
@@ -2312,7 +2310,9 @@
                   data-for="location-0"
                   min="1"
                   max="180"
-                  placeholder="Max commute (min)"
+                  placeholder="最长通勤（分钟）"
+                  aria-label="最长通勤（分钟）"
+                  data-i18n-placeholder="finder.commute_placeholder"
                 />
               </div>
               <div class="location-input" data-index="1">
@@ -2322,6 +2322,7 @@
                   name="location"
                   id="location-1"
                   placeholder="输入第二个地点，如：海淀区中关村"
+                  aria-label="输入第二个地点，如：海淀区中关村"
                   data-i18n-placeholder="finder.location_placeholder_2"
                   required
                 />
@@ -2335,7 +2336,9 @@
                   data-for="location-1"
                   min="1"
                   max="180"
-                  placeholder="Max commute (min)"
+                  placeholder="最长通勤（分钟）"
+                  aria-label="最长通勤（分钟）"
+                  data-i18n-placeholder="finder.commute_placeholder"
                 />
               </div>
             </div>
@@ -2942,7 +2945,6 @@
                 })
                   .then(function (amap) {
                     AMap = amap;
-                    console.log("AMap loaded successfully");
                     // Initialize autocomplete for existing inputs
                     initAllAutocomplete();
                     resolve(amap);
@@ -2980,7 +2982,6 @@
               }
               // 全局 callback 用于 Google Maps JS SDK
               window._meetspotGoogleMapsLoaded = function () {
-                console.log("Google Maps loaded successfully");
                 if (
                   window.google &&
                   window.google.maps &&
@@ -3043,7 +3044,6 @@
               lat: place.geometry.location.lat(),
               city: "",
             };
-            console.log("Selected place:", locationCoords[input.id]);
           });
           input.dataset.gpacAttached = "1";
         } catch (e) {
@@ -3096,7 +3096,6 @@
               if (locationInput) {
                 locationInput.classList.add("has-coord");
               }
-              console.log("Selected location:", locationCoords[inputId]);
               updateStepIndicator();
             }
           });
@@ -3117,8 +3116,6 @@
               }
             }, 100);
           });
-
-          console.log("Autocomplete initialized for", inputId);
         } catch (err) {
           console.error("Failed to init autocomplete for", inputId, err);
         }
@@ -3271,7 +3268,7 @@
         newLocationDiv.style.animationDelay = "0s";
         newLocationDiv.innerHTML = `
                 <i class='bx bxs-location-plus'></i>
-                <input type="text" name="location" id="${inputId}" placeholder="${_t("finder.location_placeholder_n")}">
+                <input type="text" name="location" id="${inputId}" placeholder="${_t("finder.location_placeholder_n")}" aria-label="${_t("finder.location_placeholder_n")}">
                 <span class="coord-indicator"><i class='bx bx-check'></i></span>
                 <button type="button" class="remove-location-btn" onclick="removeLocation(this)">
                     <i class='bx bx-x'></i>
@@ -3284,7 +3281,7 @@
         newCommuteWrap.setAttribute("data-for", inputId);
         newCommuteWrap.innerHTML = `
                 <i class='bx bx-time-five'></i>
-                <input type="number" class="commute-budget-input" data-for="${inputId}" min="1" max="180" placeholder="Max commute (min)">
+                <input type="number" class="commute-budget-input" data-for="${inputId}" min="1" max="180" placeholder="${_t("finder.commute_placeholder")}" aria-label="${_t("finder.commute_placeholder")}">
             `;
         container.appendChild(newCommuteWrap);
 
@@ -3570,14 +3567,6 @@
           if (validCoords.length === locations.length) {
             // All locations have pre-resolved coordinates
             location_coords = validCoords;
-            console.log(
-              "All locations have pre-resolved coordinates:",
-              location_coords,
-            );
-          } else if (validCoords.length > 0) {
-            console.log(
-              `${validCoords.length}/${locations.length} locations have pre-resolved coordinates, falling back to geocoding for all`,
-            );
           }
 
           let keywords = "";
@@ -4000,17 +3989,9 @@
 
         // 根据语言加载对应地图 SDK：/en/ 用 Google Maps，否则用高德
         const _mapLoader = IS_INTERNATIONAL ? loadGoogleMapsAPI : loadAMapAPI;
-        _mapLoader()
-          .then(() => {
-            console.log(
-              "Address autocomplete ready (provider:",
-              IS_INTERNATIONAL ? "google" : "amap",
-              ")",
-            );
-          })
-          .catch((err) => {
-            console.warn("Address autocomplete not available:", err);
-          });
+        _mapLoader().catch((err) => {
+          console.warn("Address autocomplete not available:", err);
+        });
 
         // Load payment status
         refreshPaymentStatus();
@@ -4142,6 +4123,7 @@
           const val = _t(key);
           if (val && val !== key) {
             el.placeholder = val;
+            el.setAttribute("aria-label", val);
           }
         });
 

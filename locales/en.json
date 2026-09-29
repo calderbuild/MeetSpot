@@ -247,6 +247,7 @@
   "finder.location_placeholder_1": "Enter first location, e.g., Times Square, New York",
   "finder.location_placeholder_2": "Enter second location, e.g., Empire State Building",
   "finder.location_placeholder_n": "Enter location",
+  "finder.commute_placeholder": "Max commute (min)",
   "finder.location_count_hint": "{count} locations entered. You can add more (up to 10)",
   "finder.add_location": "Add More Locations",
   "finder.section_themes": "Choose Venue Type",

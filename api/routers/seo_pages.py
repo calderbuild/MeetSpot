@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from functools import lru_cache
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
@@ -78,14 +78,24 @@ def _lang_prefix(lang: str) -> str:
     return "/en" if lang == "en" else ""
 
 
+def _home_path(lang: str) -> str:
+    return "/en/" if lang == "en" else "/zh/"
+
+
+def _lang_paths(path: str) -> Tuple[str, str, str]:
+    """(zh, en, x-default) 路径。首页 / 默认英文且 canonical 指向 /en/，所以中文首页走 /zh/、x-default 用 /en/；其余页面中文在裸路径。"""
+    if path == "/":
+        return "/zh/", "/en/", "/en/"
+    return path, f"/en{path}", path
+
+
 def _hreflang_links(path: str) -> List[Dict[str, str]]:
     """生成 hreflang 链接对."""
-    zh_path = path
-    en_path = f"/en{path}" if path != "/" else "/en/"
+    zh_path, en_path, default_path = _lang_paths(path)
     return [
         {"lang": "zh", "href": f"{BASE_URL}{zh_path}"},
         {"lang": "en", "href": f"{BASE_URL}{en_path}"},
-        {"lang": "x-default", "href": f"{BASE_URL}{zh_path}"},
+        {"lang": "x-default", "href": f"{BASE_URL}{default_path}"},
     ]
 
 
@@ -96,7 +106,6 @@ def _hreflang_links(path: str) -> List[Dict[str, str]]:
 
 def _render_homepage(request: Request, lang: str):
     t = get_translations(lang)
-    prefix = _lang_prefix(lang)
     if lang == "en":
         keywords = "meeting point finder,midpoint calculator,group meetup,fair meeting location,AI venue recommendation"
     else:
@@ -115,11 +124,11 @@ def _render_homepage(request: Request, lang: str):
         seo_generator.generate_schema_org("website", {}),
         seo_generator.generate_schema_org("organization", {}),
         seo_generator.generate_schema_org(
-            "breadcrumb", {"items": [{"name": "Home", "url": f"{prefix}/"}]}
+            "breadcrumb", {"items": [{"name": "Home", "url": _home_path(lang)}]}
         ),
         faq_schema,
     )
-    canonical = f"{BASE_URL}{prefix}/" if lang == "en" else f"{BASE_URL}/"
+    canonical = f"{BASE_URL}/en/" if lang == "en" else f"{BASE_URL}/zh/"
     return templates.TemplateResponse(
         request,
         "pages/home.html",
@@ -182,10 +191,11 @@ def _render_city_page(request: Request, city_slug: str, lang: str):
             "city": city.get("name"),
             "city_en": city.get("name_en"),
             "venue_types": city.get("popular_venues", []),
+            "lang": lang,
         },
     )
     breadcrumb_items = [
-        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": _home_path(lang)},
         {"name": city_name, "url": f"{prefix}/meetspot/{city_slug}"},
     ]
     schema_list = _build_schema_list(
@@ -241,7 +251,7 @@ def _render_about(request: Request, lang: str):
         "keywords": t.get("seo.about.keywords", "about MeetSpot,meeting algorithm"),
     }
     breadcrumb_items = [
-        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": _home_path(lang)},
         {"name": t.get("seo.breadcrumb.about", "About"), "url": f"{prefix}/about"},
     ]
     schema_list = _build_schema_list(
@@ -327,7 +337,7 @@ def _render_how_it_works(request: Request, lang: str):
         },
     )
     breadcrumb_items = [
-        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": _home_path(lang)},
         {
             "name": t.get("seo.breadcrumb.guide", "Guide"),
             "url": f"{prefix}/how-it-works",
@@ -383,7 +393,7 @@ def _render_faq(request: Request, lang: str):
         "keywords": "MeetSpot FAQ,meeting point help",
     }
     breadcrumb_items = [
-        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": _home_path(lang)},
         {"name": t.get("seo.breadcrumb.faq", "FAQ"), "url": f"{prefix}/faq"},
     ]
     schema_list = _build_schema_list(
@@ -440,7 +450,7 @@ def _render_compare(request: Request, lang: str):
         "keywords": compare_keywords,
     }
     breadcrumb_items = [
-        {"name": t.get("seo.breadcrumb.home", "Home"), "url": f"{prefix}/"},
+        {"name": t.get("seo.breadcrumb.home", "Home"), "url": _home_path(lang)},
         {
             "name": t.get("seo.breadcrumb.compare", "Compare"),
             "url": f"{prefix}/compare",
@@ -536,8 +546,8 @@ async def sitemap():
     entries = []
     for item in all_pages:
         lastmod = CONTENT_DATES.get(item["loc"], city_date)
-        zh_url = f"{BASE_URL}{item['loc']}"
-        en_loc = f"/en{item['loc']}" if item["loc"] != "/" else "/en/"
+        zh_loc, en_loc, default_loc = _lang_paths(item["loc"])
+        zh_url = f"{BASE_URL}{zh_loc}"
         en_url = f"{BASE_URL}{en_loc}"
         hreflang_zh = (
             f'        <xhtml:link rel="alternate" hreflang="zh" href="{zh_url}"/>'
@@ -545,7 +555,7 @@ async def sitemap():
         hreflang_en = (
             f'        <xhtml:link rel="alternate" hreflang="en" href="{en_url}"/>'
         )
-        hreflang_default = f'        <xhtml:link rel="alternate" hreflang="x-default" href="{zh_url}"/>'
+        hreflang_default = f'        <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}{default_loc}"/>'
         # Chinese URL entry
         entries.append(
             f"    <url>\n"
@@ -567,22 +577,16 @@ async def sitemap():
             f"    </url>"
         )
 
-    # meetspot_finder.html: static file uses ?lang= param, not /en/ prefix
+    # meetspot_finder.html: one static page; ?lang=en canonicalizes to the bare URL, so list only that
     finder_date = CONTENT_DATES["/public/meetspot_finder.html"]
-    finder_zh = f"{BASE_URL}/public/meetspot_finder.html"
-    finder_en = f"{BASE_URL}/public/meetspot_finder.html?lang=en"
-    for loc, hreflang_self in [(finder_zh, "zh"), (finder_en, "en")]:
-        entries.append(
-            f"    <url>\n"
-            f"        <loc>{loc}</loc>\n"
-            f"        <lastmod>{finder_date}</lastmod>\n"
-            f"        <changefreq>weekly</changefreq>\n"
-            f"        <priority>0.9</priority>\n"
-            f'        <xhtml:link rel="alternate" hreflang="zh" href="{finder_zh}"/>\n'
-            f'        <xhtml:link rel="alternate" hreflang="en" href="{finder_en}"/>\n'
-            f'        <xhtml:link rel="alternate" hreflang="x-default" href="{finder_zh}"/>\n'
-            f"    </url>"
-        )
+    entries.append(
+        f"    <url>\n"
+        f"        <loc>{BASE_URL}/public/meetspot_finder.html</loc>\n"
+        f"        <lastmod>{finder_date}</lastmod>\n"
+        f"        <changefreq>weekly</changefreq>\n"
+        f"        <priority>0.9</priority>\n"
+        f"    </url>"
+    )
 
     sitemap_xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
