@@ -6,10 +6,10 @@
 api_key = "YOUR_AMAP_API_KEY"  # 替换为您的高德Web服务API Key
 security_js_code = "YOUR_AMAP_SECURITY_JS_CODE"  # 替换为您的高德地图JS API安全密钥
 
-# 如果使用OpenAI或其他LLM服务，也在此配置
-# [openai]
-# api_key = "sk-YOUR_OPENAI_API_KEY"
-# base_url = "YOUR_OPENAI_API_BASE_URL_IF_NEEDED"
+# LLM 配置（OpenAI 兼容接口，默认 DeepSeek）。api_key 只从环境变量 LLM_API_KEY 读取
+# [llm]
+# base_url = "https://api.deepseek.com"
+# model = "deepseek-flash"
 
 # 日志配置
 [log]

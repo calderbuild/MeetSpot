@@ -830,20 +830,20 @@
     <!-- Header - Navigation Theme -->
     <header class="site-header">
       <div class="header-content">
-        <a href="{{ '/en/' if lang == 'en' else '/' }}" class="brand">
+        <a href="{{ '/en/' if lang == 'en' else '/zh/' }}" class="brand">
           <span class="logo-icon">📍</span>
           <span class="logo-text">MeetSpot</span>
           <span class="tagline">{{ t['nav.brand_tagline'] }}</span>
         </a>
         <nav class="main-nav">
           {% set prefix = '/en' if lang == 'en' else '' %}
-          <a href="{{ prefix }}/">{{ t['nav.home'] }}</a>
+          <a href="{{ '/en/' if lang == 'en' else '/zh/' }}">{{ t['nav.home'] }}</a>
           <a href="{{ prefix }}/about">{{ t['nav.about'] }}</a>
           <a href="{{ prefix }}/how-it-works">{{ t['nav.how_it_works'] }}</a>
           <a href="{{ prefix }}/faq">{{ t['nav.faq'] }}</a>
           {% if lang == 'en' %}
           <a
-            href="{{ request.url.path.replace('/en/', '/').replace('/en', '/') }}"
+            href="{{ '/zh/' if request.url.path in ['/', '/en', '/en/'] else request.url.path[3:] }}"
             class="lang-switch"
             onclick="
               trackEvent('language_switch', {
@@ -857,7 +857,7 @@
           >
           {% else %}
           <a
-            href="/en{{ request.url.path }}"
+            href="{{ '/en/' if request.url.path in ['/', '/zh', '/zh/'] else '/en' ~ request.url.path }}"
             class="lang-switch"
             onclick="
               trackEvent('language_switch', {

@@ -166,7 +166,7 @@ workspace/js_src/（生成式结果页，不提交仓库）
 
 ## 10. 测试与质量
 
-- 43 个 pytest 用例全绿，覆盖部分失败、POI 回退、Agent 成功与降级、配额、配置脱敏、跨城推断、价格筛选等
+- 58 个 pytest 用例全绿，覆盖部分失败、POI 回退、Agent 成功与降级、配额、配置脱敏、跨城推断、价格筛选等
 - ruff 与 flake8 关键项 0 错误，CI 执行 pytest、ruff、Docker 构建
 - Docker 镜像构建并实测 /health 与首页 200
 - 性能实测：规则路径约 5 秒（DeepSeek），Agent 模式 30 至 70 秒波动（受 DeepSeek 偶发空响应重试影响）

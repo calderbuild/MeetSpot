@@ -99,7 +99,7 @@ The LLM analyzes semantic fit between venues and requirements, then blends with 
 
 | Step | Function | Details |
 |------|----------|---------|
-| **Geocode** | Address → Coordinates | 90+ smart mappings (universities, landmarks) |
+| **Geocode** | Address → Coordinates | 60+ smart mappings (universities, landmarks) |
 | **Center Calc** | Fair point calculation | Spherical geometry for accuracy |
 | **POI Search** | Venue discovery | Concurrent async search, auto-fallback |
 | **Ranking** | Multi-factor scoring | Base(30) + Popularity(20) + Distance(25) + Scenario(15) + Requirements(10) |
@@ -144,9 +144,11 @@ Open http://127.0.0.1:8000
 ```json
 {
   "success": true,
-  "html_url": "/workspace/js_src/recommendation_xxx.html",
-  "center": {"lat": 39.99, "lng": 116.32},
-  "venues_count": 8
+  "html_url": "/workspace/js_src/place_recommendation_20260929153459_1f2dace8.html",
+  "locations_count": 2,
+  "processing_time": 5.2,
+  "mode": "rule_llm",
+  "message": "Recommendation generated successfully"
 }
 ```
 
@@ -195,13 +197,13 @@ Open http://127.0.0.1:8000
 | **Backend** | FastAPI, Pydantic, aiohttp, SQLAlchemy 2.0, asyncio |
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript, Boxicons |
 | **Maps** | Amap (Gaode) for China + Google Maps Platform for international (auto-routed by language) |
-| **AI** | DeepSeek (default `deepseek-v4-flash`) via OpenAI-compatible API |
+| **AI** | DeepSeek (default `deepseek-flash`) via OpenAI-compatible API |
 | **Deploy** | Render, Railway, Docker, Vercel |
 
-### Docker Compose Quick Start
+### Docker Quick Start
 
 1. Copy the environment template and fill in your keys: `cp .env.example .env`
-2. Start the app: `docker compose up --build`
+2. Build and run: `docker build -t meetspot . && docker run --env-file .env -p 8000:8000 meetspot`
 3. Open http://localhost:8000 and check http://localhost:8000/health
 
 ---
@@ -233,8 +235,8 @@ uvicorn api.index:app --reload
 # Run tests
 pytest tests/ -v
 
-# Code quality
-black . && ruff check . && mypy app/
+# Code quality (same checks as CI)
+ruff check . && flake8 . --select=E9,F63,F7,F82
 ```
 
 ---

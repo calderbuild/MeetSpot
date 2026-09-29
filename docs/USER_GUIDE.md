@@ -40,7 +40,7 @@ docker compose up --build
 | GOOGLE_MAPS_API_KEY | 否 | 英文场景地图与 POI；启用通勤公平性校验还需在 GCP 控制台单独启用 Routes API 并加入该 key 的限制列表 |
 | LLM_API_KEY | 是 | DeepSeek 或其他兼容接口 key |
 | LLM_API_BASE | 否 | 默认 https://api.deepseek.com |
-| LLM_MODEL | 否 | 默认 deepseek-v4-flash |
+| LLM_MODEL | 否 | 默认 deepseek-flash |
 | DATABASE_URL | 否 | SQLite 默认，生产建议 PostgreSQL |
 | FREE_DAILY_LIMIT | 否 | 每 IP 每日免费次数，0 表示关闭 |
 | PORT | 否 | 默认 8000 |
@@ -52,7 +52,7 @@ docker compose up --build
 ## 4. 用户操作流程
 
 1. 打开首页，输入 2 至 10 个参与者地址
-2. 选择场所类型（咖啡馆、餐厅、茶馆等 12 类）
+2. 选择场所类型（咖啡馆、餐厅、茶馆等 13 类）
 3. 填写特殊需求（安静、停车、人均预算等）和筛选条件（评分、距离、价格档位）
 4. 填写特殊需求（安静、停车、人均预算等）和筛选条件（评分、距离、价格档位）
 5. 提交后查看结果页：地图、评分卡片、五步推理链、交通与停车建议

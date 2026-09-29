@@ -97,7 +97,7 @@ LLM 分析场所与需求的语义匹配度，再与规则评分融合。结果�
 
 | 步骤 | 功能 | 详情 |
 |------|------|------|
-| **地理编码** | 地址 → 坐标 | 90+ 智能映射（大学简称、城市地标） |
+| **地理编码** | 地址 → 坐标 | 60+ 智能映射（大学简称、城市地标） |
 | **中心计算** | 公平点计算 | 球面几何保证精确性 |
 | **POI 搜索** | 场所发现 | 并发异步搜索，自动降级 |
 | **智能排序** | 多因素评分 | 基础分(30) + 热度分(20) + 距离分(25) + 场景匹配(15) + 需求匹配(10) |
@@ -142,9 +142,11 @@ python web_server.py
 ```json
 {
   "success": true,
-  "html_url": "/workspace/js_src/recommendation_xxx.html",
-  "center": {"lat": 39.99, "lng": 116.32},
-  "venues_count": 8
+  "html_url": "/workspace/js_src/place_recommendation_20260929153459_1f2dace8.html",
+  "locations_count": 2,
+  "processing_time": 5.2,
+  "mode": "rule_llm",
+  "message": "Recommendation generated successfully"
 }
 ```
 
@@ -197,13 +199,13 @@ python web_server.py
 | **后端** | FastAPI, Pydantic, aiohttp, SQLAlchemy 2.0, asyncio |
 | **前端** | HTML5, CSS3, 原生 JavaScript, Boxicons |
 | **地图** | 高德地图 - 地理编码、POI 搜索、JS API |
-| **AI** | DeepSeek / GPT-4o-mini 语义分析 |
+| **AI** | DeepSeek（默认 `deepseek-flash`，OpenAI 兼容接口）语义分析 |
 | **部署** | Render, Railway, Docker, Vercel |
 
-### Docker Compose 快速开始
+### Docker 快速开始
 
 1. 复制环境变量模板并填入 key：`cp .env.example .env`
-2. 启动应用：`docker compose up --build`
+2. 构建并启动：`docker build -t meetspot . && docker run --env-file .env -p 8000:8000 meetspot`
 3. 打开 http://localhost:8000，健康检查地址 http://localhost:8000/health
 
 ---
@@ -235,8 +237,8 @@ uvicorn api.index:app --reload
 # 运行测试
 pytest tests/ -v
 
-# 代码质量检查
-black . && ruff check . && mypy app/
+# 代码质量检查（与 CI 一致）
+ruff check . && flake8 . --select=E9,F63,F7,F82
 ```
 
 ---
