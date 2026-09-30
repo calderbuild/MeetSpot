@@ -3203,7 +3203,9 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                     keywords,
                     language=language,
                 ),
-                timeout=20.0,  # 20秒超时，配合瘦身后的提示，避免Render 30秒请求超时
+                # 8 秒超时：deepseek-flash 会先推理几千 token，本地实测 5-42 秒不等，超时就用默认建议。
+                # ponytail: 只是限时；要真正变快，得给这个调用关掉推理（先查服务商文档）
+                timeout=8.0,
             )
         except asyncio.TimeoutError:
             logger.warning("LLM 交通建议生成超时，使用默认建议")
