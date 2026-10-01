@@ -56,7 +56,9 @@ async def has_pro(app_user_id: str) -> bool:
         resp.raise_for_status()
         entitlement = resp.json()["subscriber"]["entitlements"].get(ENTITLEMENT_ID)
     except Exception as e:
-        logger.warning(f"revenuecat_lookup_failed: {type(e).__name__}: {e}")
+        # Type and status only: never echo request details that could carry the key
+        status = getattr(getattr(e, "response", None), "status_code", None)
+        logger.warning(f"revenuecat_lookup_failed: {type(e).__name__} status={status}")
         return False
 
     active = bool(entitlement) and _is_active(entitlement)

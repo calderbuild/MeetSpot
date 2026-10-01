@@ -3666,8 +3666,8 @@
             if (result.need_payment) {
               ThinkingAnimator.reset();
               loading.style.display = "none";
-              submitBtn.disabled = false;
               if (!IS_MACOS_APP) {
+                submitBtn.disabled = false;
                 openPaymentModal();
                 return;
               }
@@ -3744,6 +3744,11 @@
       // Inside the Electron app, purchases go through RevenueCat instead of 302.AI.
       // The server checks the entitlement itself; this id is only a lookup key.
       const IS_MACOS_APP = window.MEETSPOT_PLATFORM === "macos";
+      if (IS_MACOS_APP) {
+        // 302.AI credits don't apply in the macOS app; only the free counter stays
+        document.getElementById("psBalance").closest(".payment-status__item").remove();
+        document.querySelector("#paymentStatus .payment-status__sep").remove();
+      }
       const RC_SDK_URL =
         "https://cdn.jsdelivr.net/npm/@revenuecat/purchases-js@1.67.1/dist/Purchases.es.js";
 
@@ -3817,6 +3822,7 @@
           // Show buy link when free uses exhausted and no credits
           const buyLink = document.getElementById("psBuyLink");
           if (
+            !IS_MACOS_APP &&
             _paymentState.freeRemaining === 0 &&
             _paymentState.balance === 0
           ) {
@@ -3842,7 +3848,11 @@
         const btn = document.getElementById("submitBtn");
         const btnText = document.getElementById("submitBtnText");
         if (!btn || !btnText) return;
-        if (_paymentState.freeRemaining === 0 && _paymentState.balance === 0) {
+        if (
+          !IS_MACOS_APP &&
+          _paymentState.freeRemaining === 0 &&
+          _paymentState.balance === 0
+        ) {
           btn.querySelector("i").className = "bx bx-coin-stack";
           btnText.textContent = _t("finder.btn_buy_credits");
           btn.dataset.needPayment = "true";
