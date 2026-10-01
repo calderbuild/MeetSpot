@@ -1431,6 +1431,13 @@
         color: var(--coral-300);
       }
 
+      .payment-status__pro {
+        padding: 4px 10px;
+        background: rgba(255, 107, 53, 0.16);
+        border-radius: 6px;
+        cursor: default;
+      }
+
       @media (max-width: 600px) {
         .payment-status {
           display: none;
@@ -2230,6 +2237,7 @@
           data-i18n="finder.payment_buy"
           >购买</a
         >
+        <a class="payment-status__buy" id="rcProStatus" style="display: none"></a>
       </div>
       <div class="nav-links">
         <a href="/how-it-works" data-i18n="finder.nav_guide">使用指南</a>
@@ -3053,6 +3061,8 @@
 
       // Initialize autocomplete for a single input
       function initAutocomplete(inputId) {
+        // Google path: inputs added after load miss initAllGoogleAutocomplete()
+        attachGoogleAutocomplete(document.getElementById(inputId));
         if (!AMap) {
           console.warn(
             "AMap not loaded, skipping autocomplete init for",
@@ -3672,10 +3682,14 @@
                 return;
               }
               if (await showRevenueCatPaywall()) {
+                showSuccess(
+                  _currentLang === "en" ? "MeetSpot Pro unlocked" : "已解锁 MeetSpot Pro",
+                  _currentLang === "en" ? "Running your search again..." : "正在重新搜索……",
+                );
                 // Defer so this handler's finally block runs before the retry starts
                 setTimeout(() => {
                   document.getElementById("meetspotForm").requestSubmit();
-                }, 0);
+                }, 1500);
               }
               return;
             }
@@ -3771,15 +3785,11 @@
         overlay.appendChild(target);
         document.body.appendChild(overlay);
         try {
-          const { public_key } = await (await fetch("/api/config/revenuecat")).json();
-          if (!public_key) throw new Error("RevenueCat public key not configured");
-          const { Purchases } = await import(RC_SDK_URL);
-          const purchases = Purchases.isConfigured()
-            ? Purchases.getSharedInstance()
-            : Purchases.configure({ apiKey: public_key, appUserId: getRcAppUserId() });
+          const purchases = await getPurchases();
           const { customerInfo } = await purchases.presentPaywall({ htmlTarget: target });
           const unlocked = "meetspot_pro" in customerInfo.entitlements.active;
           trackEvent("rc_purchase_complete", { label: String(unlocked) });
+          if (unlocked) showRcStatus(true);
           return unlocked;
         } catch (err) {
           console.warn("RevenueCat paywall closed or failed", err);
@@ -3788,6 +3798,40 @@
           overlay.remove();
         }
       }
+
+      async function getPurchases() {
+        const { public_key } = await (await fetch("/api/config/revenuecat")).json();
+        if (!public_key) throw new Error("RevenueCat public key not configured");
+        const { Purchases } = await import(RC_SDK_URL);
+        return Purchases.isConfigured()
+          ? Purchases.getSharedInstance()
+          : Purchases.configure({ apiKey: public_key, appUserId: getRcAppUserId() });
+      }
+
+      // Display only: the server still decides whether a search skips the free quota
+      function showRcStatus(isPro) {
+        const el = document.getElementById("rcProStatus");
+        el.style.display = "";
+        el.classList.toggle("payment-status__pro", isPro);
+        el.innerHTML = isPro
+          ? "<i class='bx bxs-badge-check'></i> MeetSpot Pro"
+          : "<i class='bx bx-crown'></i> Go Pro";
+        el.onclick = isPro ? null : () => showRevenueCatPaywall();
+        // The free counter means nothing once searches are unlimited
+        document.getElementById("psFreeRemaining").closest(".payment-status__item").style.display =
+          isPro ? "none" : "";
+      }
+
+      async function refreshRcStatus() {
+        try {
+          const customerInfo = await (await getPurchases()).getCustomerInfo();
+          showRcStatus("meetspot_pro" in customerInfo.entitlements.active);
+        } catch (err) {
+          console.warn("RevenueCat status unavailable", err);
+        }
+      }
+
+      if (IS_MACOS_APP) refreshRcStatus();
 
       // ========== Payment System ==========
 
