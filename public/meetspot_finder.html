@@ -3021,15 +3021,14 @@
 
       // 初始化所有现有 input 的 Google Places Autocomplete
       function initAllGoogleAutocomplete() {
-        const inputs = document.querySelectorAll(".location-input input");
-        inputs.forEach((input) => {
-          if (input.dataset.gpacAttached === "1") return;
-          attachGoogleAutocomplete(input);
-        });
+        document
+          .querySelectorAll(".location-input input")
+          .forEach((input) => attachGoogleAutocomplete(input));
       }
 
       function attachGoogleAutocomplete(input) {
-        if (!GooglePlacesService || !input) return;
+        if (!GooglePlacesService || !input || input.dataset.gpacAttached === "1")
+          return;
         try {
           const ac = new GooglePlacesService.Autocomplete(input, {
             fields: ["place_id", "geometry", "name", "formatted_address"],
