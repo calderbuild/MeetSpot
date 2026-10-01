@@ -1276,6 +1276,12 @@ async def get_google_maps_config():
     return {"api_key": api_key}
 
 
+@app.get("/api/config/revenuecat")
+async def get_revenuecat_config():
+    """RevenueCat public (Test Store) key for the macOS app paywall; safe to expose."""
+    return {"public_key": os.getenv("REVENUECAT_PUBLIC_KEY", "")}
+
+
 @app.get("/api/config/analytics")
 async def get_analytics_config():
     """返回分析追踪配置（百度统计 + GA4）"""

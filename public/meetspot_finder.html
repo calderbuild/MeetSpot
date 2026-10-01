@@ -3647,9 +3647,11 @@
             });
 
             const _submitTime = Date.now();
+            const searchHeaders = { "Content-Type": "application/json" };
+            if (IS_MACOS_APP) searchHeaders["X-RC-App-User-Id"] = getRcAppUserId();
             const response = await fetch("/api/find_meetspot", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: searchHeaders,
               body: JSON.stringify(requestBody),
             });
 
@@ -3665,7 +3667,16 @@
               ThinkingAnimator.reset();
               loading.style.display = "none";
               submitBtn.disabled = false;
-              openPaymentModal();
+              if (!IS_MACOS_APP) {
+                openPaymentModal();
+                return;
+              }
+              if (await showRevenueCatPaywall()) {
+                // Defer so this handler's finally block runs before the retry starts
+                setTimeout(() => {
+                  document.getElementById("meetspotForm").requestSubmit();
+                }, 0);
+              }
               return;
             }
 
@@ -3728,6 +3739,50 @@
             }
           }
         });
+
+      // ========== RevenueCat (macOS app) ==========
+      // Inside the Electron app, purchases go through RevenueCat instead of 302.AI.
+      // The server checks the entitlement itself; this id is only a lookup key.
+      const IS_MACOS_APP = window.MEETSPOT_PLATFORM === "macos";
+      const RC_SDK_URL =
+        "https://cdn.jsdelivr.net/npm/@revenuecat/purchases-js@1.67.1/dist/Purchases.es.js";
+
+      function getRcAppUserId() {
+        let id = localStorage.getItem("meetspot_rc_app_user_id");
+        if (!id) {
+          id = "meetspot_" + crypto.randomUUID().replace(/-/g, "");
+          localStorage.setItem("meetspot_rc_app_user_id", id);
+        }
+        return id;
+      }
+
+      async function showRevenueCatPaywall() {
+        const overlay = document.createElement("div");
+        overlay.style.cssText =
+          "position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;";
+        const target = document.createElement("div");
+        target.style.cssText =
+          "width:min(480px,94vw);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;";
+        overlay.appendChild(target);
+        document.body.appendChild(overlay);
+        try {
+          const { public_key } = await (await fetch("/api/config/revenuecat")).json();
+          if (!public_key) throw new Error("RevenueCat public key not configured");
+          const { Purchases } = await import(RC_SDK_URL);
+          const purchases = Purchases.isConfigured()
+            ? Purchases.getSharedInstance()
+            : Purchases.configure({ apiKey: public_key, appUserId: getRcAppUserId() });
+          const { customerInfo } = await purchases.presentPaywall({ htmlTarget: target });
+          const unlocked = "pro" in customerInfo.entitlements.active;
+          trackEvent("rc_purchase_complete", { label: String(unlocked) });
+          return unlocked;
+        } catch (err) {
+          console.warn("RevenueCat paywall closed or failed", err);
+          return false;
+        } finally {
+          overlay.remove();
+        }
+      }
 
       // ========== Payment System ==========
 
