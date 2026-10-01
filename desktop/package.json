@@ -6,9 +6,11 @@
   "main": "main.js",
   "license": "MIT",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package": "electron-packager . MeetSpot --icon=build/icon.icns --out=dist --overwrite --ignore=^/dist && codesign --force --deep --sign - dist/MeetSpot-darwin-*/MeetSpot.app"
   },
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "electron": "^44.5.1"
   }
 }

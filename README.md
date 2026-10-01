@@ -16,6 +16,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Build Status](https://github.com/calderbuild/MeetSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/calderbuild/MeetSpot/actions)
 
+**RevenueCat Shipaton 2026:** [demo video (1:48)](https://youtu.be/_y6peCnn-8w) · [Devpost](https://devpost.com/software/meetspot-for-macos) · [macOS app + RevenueCat](#macos-app--revenuecat)
+
 [English](README.md) | [简体中文](README_ZH.md)
 
 </div>
@@ -130,11 +132,43 @@ Open http://127.0.0.1:8000
 
 MeetSpot also ships as a macOS desktop app (Electron, in `desktop/`). Each device gets one free search a day. In the macOS app, a **MeetSpot Pro** purchase through RevenueCat removes that limit.
 
+<div align="center">
+<img src="docs/shipaton/macos-app.jpg" alt="MeetSpot running as a macOS app" width="52%"/>
+<img src="docs/shipaton/commute-check.png" alt="Real commute-time fairness check" width="16%"/>
+<img src="docs/shipaton/paywall.jpg" alt="RevenueCat paywall in the macOS app" width="28%"/>
+</div>
+
 How the purchase flow works:
 
 1. The app keeps an anonymous RevenueCat app user id in localStorage and sends it as `X-RC-App-User-Id` with every search.
 2. When the free search is used up, the server answers `need_payment`. The app then loads [`@revenuecat/purchases-js`](https://www.npmjs.com/package/@revenuecat/purchases-js) and calls `presentPaywall()` for the current offering.
 3. After the purchase, the app reruns the search. The server never trusts the client: it calls RevenueCat REST `GET /v1/subscribers/{id}` with the secret key and skips the quota only when the `meetspot_pro` entitlement is active (`app/payment/revenuecat.py`). If that lookup fails, the request falls back to the normal quota and is never granted.
+4. On launch the app calls `getCustomerInfo()`. An active `meetspot_pro` shows a **MeetSpot Pro** badge; otherwise a **Go Pro** button opens the same paywall. The badge is display only, and the server still decides on every search.
+
+```mermaid
+sequenceDiagram
+    participant App as macOS app (Electron)
+    participant API as MeetSpot server (FastAPI)
+    participant RC as RevenueCat
+    App->>API: POST /api/find_meetspot + X-RC-App-User-Id
+    API->>RC: GET /v1/subscribers/{id} (secret key)
+    RC-->>API: entitlements
+    alt meetspot_pro active
+        API-->>App: results, no quota
+    else not active or lookup failed
+        API-->>App: need_payment once the free search is used
+        App->>RC: presentPaywall(), Test Store purchase
+        App->>API: rerun the search
+    end
+```
+
+| File | What it does |
+|------|--------------|
+| `desktop/main.js`, `desktop/preload.js` | Electron shell; the preload sets `window.MEETSPOT_PLATFORM = "macos"` |
+| `public/meetspot_finder.html` | App user id, Web SDK paywall, automatic retry, Pro badge |
+| `app/payment/revenuecat.py` | Server-side entitlement check; any failure falls back to the free limit |
+| `api/index.py` | Quota gate in `find_meetspot`, `/api/config/revenuecat` |
+| `tests/test_revenuecat.py` | 12 tests against a mocked RevenueCat |
 
 Run it locally:
 
@@ -146,6 +180,9 @@ uvicorn api.index:app
 
 # 2. Desktop app (second terminal)
 cd desktop && npm install && npm start
+
+# Or build MeetSpot.app with its icon (ad-hoc signed, written to desktop/dist/)
+cd desktop && npm run package
 ```
 
 RevenueCat setup: create a project (it comes with a Test Store), an entitlement `meetspot_pro`, a Test Store product attached to it (a one-time purchase, since Test Store subscriptions expire after about 25 minutes), add it to the default offering, and configure a paywall on that offering.

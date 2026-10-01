@@ -27,7 +27,11 @@ function createWindow() {
 }
 
 app.setName("MeetSpot");
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // `npm start` runs inside the stock Electron bundle; the packaged app gets this icon from icon.icns
+  if (app.dock) app.dock.setIcon(path.join(__dirname, "build", "icon.png"));
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
