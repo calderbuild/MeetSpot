@@ -30,6 +30,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 # WhiteNoise将通过StaticFiles中间件集成，不需要ASGI↔WSGI转换
 from api.routers import auth, payment, seo_pages
+from app.payment import revenuecat
 from app.i18n import detect_language, t as _t
 
 # 导入应用模块
@@ -885,8 +886,13 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
         else (detect_language(raw_request) if raw_request else "zh")
     )
 
+    # macOS app: a RevenueCat `pro` entitlement (checked server side) lifts the quota
+    rc_user = raw_request.headers.get("x-rc-app-user-id") if raw_request else None
+    is_pro = bool(rc_user) and await revenuecat.has_pro(rc_user)
+    quota_applies = client_ip and FREE_DAILY_LIMIT > 0 and not is_pro
+
     # 免费次数限制检查
-    if client_ip and FREE_DAILY_LIMIT > 0:
+    if quota_applies:
         try:
             from app.db.database import AsyncSessionLocal
             from app.db import payment_crud
@@ -905,8 +911,7 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
 
     # 请求成功后记录免费使用
     if (
-        client_ip
-        and FREE_DAILY_LIMIT > 0
+        quota_applies
         and isinstance(result, dict)
         and result.get("success")
     ):
