@@ -2,7 +2,7 @@ const { app, BrowserWindow, shell } = require("electron");
 const path = require("path");
 
 // Local server during development; set MEETSPOT_URL to point at the hosted build.
-const MEETSPOT_URL = process.env.MEETSPOT_URL || "http://127.0.0.1:8000/";
+const MEETSPOT_URL = process.env.MEETSPOT_URL || "http://127.0.0.1:8000/public/meetspot_finder.html";
 
 function createWindow() {
   const win = new BrowserWindow({
