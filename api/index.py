@@ -886,7 +886,7 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
         else (detect_language(raw_request) if raw_request else "zh")
     )
 
-    # macOS app: a RevenueCat `pro` entitlement (checked server side) lifts the quota
+    # macOS app: a RevenueCat `meetspot_pro` entitlement (checked server side) lifts the quota
     rc_user = raw_request.headers.get("x-rc-app-user-id") if raw_request else None
     is_pro = bool(rc_user) and await revenuecat.has_pro(rc_user)
     quota_applies = client_ip and FREE_DAILY_LIMIT > 0 and not is_pro

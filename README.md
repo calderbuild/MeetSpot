@@ -134,7 +134,7 @@ How the purchase flow works:
 
 1. The app keeps an anonymous RevenueCat app user id in localStorage and sends it as `X-RC-App-User-Id` with every search.
 2. When the free search is used up, the server answers `need_payment`. The app then loads [`@revenuecat/purchases-js`](https://www.npmjs.com/package/@revenuecat/purchases-js) and calls `presentPaywall()` for the current offering.
-3. After the purchase, the app reruns the search. The server never trusts the client: it calls RevenueCat REST `GET /v1/subscribers/{id}` with the secret key and skips the quota only when the `pro` entitlement is active (`app/payment/revenuecat.py`). If that lookup fails, the request falls back to the normal quota and is never granted.
+3. After the purchase, the app reruns the search. The server never trusts the client: it calls RevenueCat REST `GET /v1/subscribers/{id}` with the secret key and skips the quota only when the `meetspot_pro` entitlement is active (`app/payment/revenuecat.py`). If that lookup fails, the request falls back to the normal quota and is never granted.
 
 Run it locally:
 
@@ -148,9 +148,9 @@ uvicorn api.index:app
 cd desktop && npm install && npm start
 ```
 
-RevenueCat setup: create a project (it comes with a Test Store), an entitlement `pro`, a Test Store product attached to it (a one-time purchase, since Test Store subscriptions expire after about 25 minutes), add it to the default offering, and configure a paywall on that offering.
+RevenueCat setup: create a project (it comes with a Test Store), an entitlement `meetspot_pro`, a Test Store product attached to it (a one-time purchase, since Test Store subscriptions expire after about 25 minutes), add it to the default offering, and configure a paywall on that offering.
 
-To make a test purchase, run one search (free), then run a second one. The paywall appears. Pick the product and choose the successful-purchase option in the Test Store dialog. The search reruns and goes through, and the customer shows `pro` active in the RevenueCat dashboard.
+To make a test purchase, run one search (free), then run a second one. The paywall appears. Pick the product and choose the successful-purchase option in the Test Store dialog. The search reruns and goes through, and the customer shows `meetspot_pro` active in the RevenueCat dashboard.
 
 Known limitation: the app user id is anonymous and device-local. Anyone who learns that id could reuse its entitlement. The production fix is to tie the id to a MeetSpot account (`app/auth`). Without the header or the RevenueCat keys, MeetSpot behaves exactly as before, and the web build keeps its existing payment flow.
 

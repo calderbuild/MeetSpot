@@ -3773,7 +3773,7 @@
             ? Purchases.getSharedInstance()
             : Purchases.configure({ apiKey: public_key, appUserId: getRcAppUserId() });
           const { customerInfo } = await purchases.presentPaywall({ htmlTarget: target });
-          const unlocked = "pro" in customerInfo.entitlements.active;
+          const unlocked = "meetspot_pro" in customerInfo.entitlements.active;
           trackEvent("rc_purchase_complete", { label: String(unlocked) });
           return unlocked;
         } catch (err) {

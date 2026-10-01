@@ -1,7 +1,7 @@
 """RevenueCat entitlement check for the macOS app.
 
 The server asks RevenueCat directly (REST v1, secret key) whether an app user
-id holds the `pro` entitlement. The client only sends its id; it never gets to
+id holds the `meetspot_pro` entitlement. The client only sends its id; it never gets to
 claim it paid.
 """
 
@@ -15,7 +15,7 @@ import httpx
 from app.logger import logger
 
 RC_API = "https://api.revenuecat.com/v1/subscribers/"
-ENTITLEMENT_ID = "pro"
+ENTITLEMENT_ID = "meetspot_pro"
 CACHE_TTL = 60
 CACHE_MAX = 500
 

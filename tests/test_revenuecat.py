@@ -39,7 +39,7 @@ def _rc_env(monkeypatch):
 
 
 def test_active_lifetime_entitlement(monkeypatch):
-    calls = _mock_rc(monkeypatch, _subscriber({"pro": {"expires_date": None}}))
+    calls = _mock_rc(monkeypatch, _subscriber({"meetspot_pro": {"expires_date": None}}))
     assert asyncio.run(revenuecat.has_pro("user-1")) is True
     assert calls[0].headers["authorization"] == "Bearer sk_test_dummy"
     assert calls[0].url.path == "/v1/subscribers/user-1"
@@ -47,14 +47,14 @@ def test_active_lifetime_entitlement(monkeypatch):
 
 def test_active_until_future(monkeypatch):
     _mock_rc(
-        monkeypatch, _subscriber({"pro": {"expires_date": "2999-01-01T00:00:00Z"}})
+        monkeypatch, _subscriber({"meetspot_pro": {"expires_date": "2999-01-01T00:00:00Z"}})
     )
     assert asyncio.run(revenuecat.has_pro("user-1")) is True
 
 
 def test_expired_entitlement(monkeypatch):
     _mock_rc(
-        monkeypatch, _subscriber({"pro": {"expires_date": "2020-01-01T00:00:00Z"}})
+        monkeypatch, _subscriber({"meetspot_pro": {"expires_date": "2020-01-01T00:00:00Z"}})
     )
     assert asyncio.run(revenuecat.has_pro("user-1")) is False
 
@@ -64,7 +64,7 @@ def test_grace_period_keeps_access(monkeypatch):
         monkeypatch,
         _subscriber(
             {
-                "pro": {
+                "meetspot_pro": {
                     "expires_date": "2020-01-01T00:00:00Z",
                     "grace_period_expires_date": "2999-01-01T00:00:00Z",
                 }
@@ -94,7 +94,7 @@ def test_timeout_never_grants(monkeypatch):
 
 def test_no_secret_key_skips_lookup(monkeypatch):
     monkeypatch.delenv("REVENUECAT_SECRET_KEY")
-    calls = _mock_rc(monkeypatch, _subscriber({"pro": {"expires_date": None}}))
+    calls = _mock_rc(monkeypatch, _subscriber({"meetspot_pro": {"expires_date": None}}))
     assert asyncio.run(revenuecat.has_pro("user-1")) is False
     assert calls == []
 
@@ -107,7 +107,7 @@ def test_positive_result_cached_negative_not(monkeypatch):
         len(calls) == 2
     )  # "no" must not stick, the post-purchase retry needs a fresh lookup
 
-    calls = _mock_rc(monkeypatch, _subscriber({"pro": {"expires_date": None}}))
+    calls = _mock_rc(monkeypatch, _subscriber({"meetspot_pro": {"expires_date": None}}))
     asyncio.run(revenuecat.has_pro("user-1"))
     asyncio.run(revenuecat.has_pro("user-1"))
     assert len(calls) == 1
