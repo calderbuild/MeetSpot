@@ -201,3 +201,6 @@ docs/plans/
 
 # Session handoff snapshots (local scratch, not project docs)
 docs/handoffs/
+
+# Electron desktop app
+desktop/node_modules/

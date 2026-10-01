@@ -1,0 +1,14 @@
+{
+  "name": "meetspot-desktop",
+  "productName": "MeetSpot",
+  "version": "0.1.0",
+  "description": "MeetSpot for macOS",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^44.5.1"
+  }
+}
