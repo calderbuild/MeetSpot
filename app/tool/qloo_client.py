@@ -77,6 +77,11 @@ def percentiles(affinity: Dict[str, float]) -> Dict[str, float]:
     return {cid: i / last for i, cid in enumerate(ordered)}
 
 
+def pct_to_rank(pct: float, pool: int) -> int:
+    """分位数 -> 名次（1 = 最喜欢）。页面上说"排第 11/30"比说分位数好懂。"""
+    return round((1 - pct) * (pool - 1)) + 1
+
+
 def maximin_order(pct_by_person: Dict[str, Dict[str, float]]) -> List[str]:
     """按"最不满意的人的分位数"降序排，平均分位数做平局裁决。
 
@@ -440,6 +445,7 @@ async def rank_venues(
         poi = to_poi(by_id[cid])
         poi["_taste"] = {
             "rank": rank,
+            "pool": len(order),
             "fair_pct": min(pct[n][cid] for n in pct),
             "people": [
                 {
@@ -453,7 +459,11 @@ async def rank_venues(
         ranked.append(poi)
 
     excluded = [
-        {**x, "name": by_id[x["entity_id"]].get("name", "")}
+        {
+            **x,
+            "name": by_id[x["entity_id"]].get("name", ""),
+            "unhappy_rank": pct_to_rank(x["unhappy_pct"], len(order)),
+        }
         for x in excluded_by_fairness(pct, top_n)
     ]
     shared = []
@@ -464,5 +474,5 @@ async def rank_venues(
         "ranked": ranked,
         "excluded": excluded,
         "common_ground": shared[:5],
-        "candidate_count": len(candidates),
+        "candidate_count": len(order),
     }

@@ -18,6 +18,7 @@ from app.tool.qloo_client import (
     maximin_order,
     mean_order,
     min_heat,
+    pct_to_rank,
     percentiles,
     rank_venues,
     split_tastes,
@@ -155,6 +156,12 @@ def test_excluded_names_who_would_be_unhappy():
     assert set(excluded) == {"Hard Rock Cafe", "TAO Uptown"}
     assert excluded["Hard Rock Cafe"]["unhappy_person"] == "Cleo"
     assert excluded["TAO Uptown"]["unhappy_person"] == "Ben"
+
+
+def test_pct_to_rank():
+    assert pct_to_rank(1.0, 30) == 1
+    assert pct_to_rank(0.0, 30) == 30
+    assert pct_to_rank(0.4482758620689655, 30) == 17  # Hard Rock Cafe 对 Cleo
 
 
 def test_maximin_skips_candidates_missing_for_someone():

@@ -250,6 +250,9 @@ class MeetSpotRequest(BaseModel):
     # 目前仅 Google 路径（language="en"）生效，未提供时行为与之前完全一致
     commute_budgets: Optional[List[Optional[int]]] = None
     transport_mode: Optional[str] = "TRANSIT"  # Routes API travelMode
+    # 每人口味（可选，与 locations 平行索引，如 "Taylor Swift, Barbie"）。用 Qloo 按最不满意的人
+    # 给场所排序；仅 Google 路径（language="en"）且配置了 QLOO_API_KEY 时生效
+    tastes: Optional[List[str]] = None
 
 
 class AIChatRequest(BaseModel):
@@ -853,6 +856,11 @@ def assess_request_complexity(request: MeetSpotRequest) -> dict:
     # 决定模式 (阈值: 40分)
     use_agent = score >= 40 and agent_available
 
+    # 带口味的请求走规则路径：口味公平排序和结果页都在 CafeRecommender 里，自动路由的 agent 不渲染它们
+    if any((t or "").strip() for t in (request.tastes or [])):
+        use_agent = False
+        reasons.append("包含口味偏好，使用 Qloo 口味公平排序")
+
     # 如果Agent不可用，降级到规则模式
     if score >= 40 and not agent_available:
         reasons.append("Agent模块不可用，使用增强规则模式")
@@ -1041,6 +1049,7 @@ async def _process_meetspot_request(
                 language=lang,
                 commute_budgets=request.commute_budgets,
                 transport_mode=request.transport_mode or "TRANSIT",
+                tastes=request.tastes,
             )
 
             processing_time = time.time() - start_time
