@@ -1,9 +1,26 @@
 """MeetSpot Agent 工具集 - 封装推荐系统的核心功能"""
 
+import json
 from typing import Dict, List
 
 from app.tool.base import BaseTool, ToolResult
 from app.logger import logger
+
+
+def _new_recommender(map_provider: str):
+    """agent 工具共用的推荐器；map_provider="google" 时 geocode / POI 搜索走 Google Maps。"""
+    import os
+
+    from app.config import config
+    from app.tool.meetspot_recommender import CafeRecommender
+
+    recommender = CafeRecommender()
+    recommender.map_provider = map_provider
+    google_cfg = getattr(config, "google_maps", None)
+    recommender.google_api_key = (
+        getattr(google_cfg, "api_key", "") or os.getenv("GOOGLE_MAPS_API_KEY", "")
+    )
+    return recommender
 
 
 class GeocodeTool(BaseTool):
@@ -29,15 +46,16 @@ class GeocodeTool(BaseTool):
         "required": ["address"]
     }
 
+    map_provider: str = "amap"  # "google" 时 geocode / POI 搜索走 Google Maps（英文 / 海外场景）
+
     class Config:
         arbitrary_types_allowed = True
 
     def _get_recommender(self):
         """延迟加载推荐器，并确保 API key 已设置"""
         if not hasattr(self, '_cached_recommender'):
-            from app.tool.meetspot_recommender import CafeRecommender
             from app.config import config
-            recommender = CafeRecommender()
+            recommender = _new_recommender(self.map_provider)
             # 确保 API key 已设置
             if hasattr(config, 'amap') and config.amap and hasattr(config.amap, 'api_key'):
                 recommender.api_key = config.amap.api_key
@@ -119,15 +137,16 @@ class CalculateCenterTool(BaseTool):
         "required": ["coordinates"]
     }
 
+    map_provider: str = "amap"  # "google" 时 geocode / POI 搜索走 Google Maps（英文 / 海外场景）
+
     class Config:
         arbitrary_types_allowed = True
 
     def _get_recommender(self):
         """延迟加载推荐器，并确保 API key 已设置"""
         if not hasattr(self, '_cached_recommender'):
-            from app.tool.meetspot_recommender import CafeRecommender
             from app.config import config
-            recommender = CafeRecommender()
+            recommender = _new_recommender(self.map_provider)
             if hasattr(config, 'amap') and config.amap and hasattr(config.amap, 'api_key'):
                 recommender.api_key = config.amap.api_key
             object.__setattr__(self, '_cached_recommender', recommender)
@@ -230,15 +249,16 @@ class SearchPOITool(BaseTool):
         "required": ["center_lng", "center_lat", "keywords"]
     }
 
+    map_provider: str = "amap"  # "google" 时 geocode / POI 搜索走 Google Maps（英文 / 海外场景）
+
     class Config:
         arbitrary_types_allowed = True
 
     def _get_recommender(self):
         """延迟加载推荐器，并确保 API key 已设置"""
         if not hasattr(self, '_cached_recommender'):
-            from app.tool.meetspot_recommender import CafeRecommender
             from app.config import config
-            recommender = CafeRecommender()
+            recommender = _new_recommender(self.map_provider)
             if hasattr(config, 'amap') and config.amap and hasattr(config.amap, 'api_key'):
                 recommender.api_key = config.amap.api_key
             object.__setattr__(self, '_cached_recommender', recommender)
@@ -385,15 +405,16 @@ class GenerateRecommendationTool(BaseTool):
         "required": ["places", "center"]
     }
 
+    map_provider: str = "amap"  # "google" 时 geocode / POI 搜索走 Google Maps（英文 / 海外场景）
+
     class Config:
         arbitrary_types_allowed = True
 
     def _get_recommender(self):
         """延迟加载推荐器，并确保 API key 已设置"""
         if not hasattr(self, '_cached_recommender'):
-            from app.tool.meetspot_recommender import CafeRecommender
             from app.config import config
-            recommender = CafeRecommender()
+            recommender = _new_recommender(self.map_provider)
             if hasattr(config, 'amap') and config.amap and hasattr(config.amap, 'api_key'):
                 recommender.api_key = config.amap.api_key
             object.__setattr__(self, '_cached_recommender', recommender)
@@ -502,10 +523,125 @@ class GenerateRecommendationTool(BaseTool):
             return BaseTool.fail_response(f"生成推荐错误: {str(e)}")
 
 
+class GroupTasteTool(BaseTool):
+    """多人口味公平工具 - 用 Qloo 按"最不满意的人"给中心点附近的场所排序"""
+
+    name: str = "group_taste_rank"
+    description: str = """Rank venues near the meeting center by the whole group's taste (Qloo Taste AI).
+
+Each participant lists things they like (artists, movies, shows, brands, books).
+Qloo scores the same nearby venues once per person; venues are ordered by the
+least-satisfied person, so nobody is dragged somewhere they would dislike.
+
+Returns, per venue: each person's rank of it among nearby options and which of
+their tastes drove the match; venues left out because one person ranks them low;
+what the group has in common; and what each taste was recognized as.
+Use it after calculate_center whenever participants gave tastes."""
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "center": {
+                "type": "object",
+                "description": "Meeting center from calculate_center",
+                "properties": {
+                    "lng": {"type": "number"},
+                    "lat": {"type": "number"},
+                },
+                "required": ["lng", "lat"],
+            },
+            "participants": {
+                "type": "array",
+                "description": "One entry per participant",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "e.g. Person 1"},
+                        "tastes": {
+                            "type": "string",
+                            "description": "Comma-separated, e.g. 'Taylor Swift, Barbie'",
+                        },
+                    },
+                    "required": ["name", "tastes"],
+                },
+            },
+            "keywords": {
+                "type": "string",
+                "description": "Venue type: restaurant, cafe or bar",
+                "default": "restaurant",
+            },
+        },
+        "required": ["center", "participants"],
+    }
+
+    async def execute(
+        self, center: Dict, participants: List[Dict], keywords: str = "restaurant"
+    ) -> ToolResult:
+        from app.tool.qloo_client import pct_to_rank, rank_venues, resolve_people
+
+        people = await resolve_people(
+            [p.get("name", f"Person {i + 1}") for i, p in enumerate(participants)],
+            [p.get("tastes", "") for p in participants],
+        )
+        if people is None:
+            return BaseTool.fail_response(json.dumps({"error": "taste lookup failed"}))
+        result = await rank_venues((center["lng"], center["lat"]), keywords, people)
+        recognized = {
+            p["name"]: {
+                "recognized_as": [f"{i['name']} ({i['kind']})" for i in p["items"]],
+                "not_recognized": p["unresolved"],
+            }
+            for p in people
+        }
+        if not result:
+            return BaseTool.fail_response(
+                json.dumps(
+                    {"error": "taste ranking unavailable", "participants": recognized},
+                    ensure_ascii=False,
+                )
+            )
+
+        venues = []
+        for place in result["ranked"]:
+            taste = place["_taste"]
+            venues.append(
+                {
+                    "name": place["name"],
+                    "address": place["address"],
+                    "location": place["location"],
+                    "rating": place["biz_ext"]["rating"],
+                    "worst_rank": pct_to_rank(taste["fair_pct"], taste["pool"]),
+                    "per_person": {
+                        p["name"]: {
+                            "rank": pct_to_rank(p["pct"], taste["pool"]),
+                            "because": (p["because"] or {}).get("name"),
+                        }
+                        for p in taste["people"]
+                    },
+                }
+            )
+        return BaseTool.success_response(
+            {
+                "pool_size": result["candidate_count"],
+                "venues": venues,
+                "left_out": [
+                    {
+                        "name": x["name"],
+                        "who": x["unhappy_person"],
+                        "their_rank": x["unhappy_rank"],
+                    }
+                    for x in result["excluded"]
+                ],
+                "common_ground": result["common_ground"],
+                "participants": recognized,
+            }
+        )
+
+
 # 导出所有工具
 __all__ = [
     "GeocodeTool",
     "CalculateCenterTool",
     "SearchPOITool",
-    "GenerateRecommendationTool"
+    "GenerateRecommendationTool",
+    "GroupTasteTool",
 ]

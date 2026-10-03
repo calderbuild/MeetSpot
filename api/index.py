@@ -4,6 +4,7 @@ import time
 import asyncio
 import re
 import gc
+from datetime import date
 from typing import List, Optional
 
 # 并发控制：防止OOM，保证每个请求都能完成
@@ -24,7 +25,7 @@ from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, constr
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -250,6 +251,10 @@ class MeetSpotRequest(BaseModel):
     # 目前仅 Google 路径（language="en"）生效，未提供时行为与之前完全一致
     commute_budgets: Optional[List[Optional[int]]] = None
     transport_mode: Optional[str] = "TRANSIT"  # Routes API travelMode
+    # 每人口味（可选，与 locations 平行索引，如 "Taylor Swift, Barbie"）。用 Qloo 按最不满意的人
+    # 给场所排序；仅 Google 路径（language="en"）且配置了 QLOO_API_KEY 时生效
+    # 每人一项、每项 200 字以内（与前端 maxlength / 10 个地点上限一致），限制打到 Qloo 的请求数
+    tastes: Optional[List[constr(max_length=200)]] = Field(default=None, max_length=10)
 
 
 class AIChatRequest(BaseModel):
@@ -373,6 +378,16 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
 # 免费次数限制
 FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
+
+
+# Qloo hackathon 评审期（到 2026-11-16）：评委必须能免费、不限次试用口味功能，
+# 所以带口味的请求不计免费次数；过了日期自动恢复，不用记得回来删
+QLOO_JUDGING_ENDS = date(2026, 11, 17)
+
+
+def _judging_exempt(request) -> bool:
+    has_tastes = any((t or "").strip() for t in (request.tastes or []))
+    return has_tastes and date.today() < QLOO_JUDGING_ENDS
 
 
 def _parse_cors_origins(raw_value: str) -> List[str]:
@@ -853,6 +868,11 @@ def assess_request_complexity(request: MeetSpotRequest) -> dict:
     # 决定模式 (阈值: 40分)
     use_agent = score >= 40 and agent_available
 
+    # 带口味的请求走规则路径：口味公平排序和结果页都在 CafeRecommender 里，自动路由的 agent 不渲染它们
+    if any((t or "").strip() for t in (request.tastes or [])):
+        use_agent = False
+        reasons.append("包含口味偏好，使用 Qloo 口味公平排序")
+
     # 如果Agent不可用，降级到规则模式
     if score >= 40 and not agent_available:
         reasons.append("Agent模块不可用，使用增强规则模式")
@@ -889,7 +909,9 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
     # macOS app: a RevenueCat `meetspot_pro` entitlement (checked server side) lifts the quota
     rc_user = raw_request.headers.get("x-rc-app-user-id") if raw_request else None
     is_pro = bool(rc_user) and await revenuecat.has_pro(rc_user)
-    quota_applies = client_ip and FREE_DAILY_LIMIT > 0 and not is_pro
+    quota_applies = (
+        client_ip and FREE_DAILY_LIMIT > 0 and not is_pro and not _judging_exempt(request)
+    )
 
     # 免费次数限制检查
     if quota_applies:
@@ -1041,6 +1063,7 @@ async def _process_meetspot_request(
                 language=lang,
                 commute_budgets=request.commute_budgets,
                 transport_mode=request.transport_mode or "TRANSIT",
+                tastes=request.tastes,
             )
 
             processing_time = time.time() - start_time
@@ -1173,13 +1196,18 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             raise HTTPException(status_code=500, detail="高德地图API密钥未配置")
 
         print("🔧 [Agent] 初始化 MeetSpotAgent...")
-        agent = create_meetspot_agent()
+        # 口味排序只在英文 / Google 路径可用，没指定语言但带了口味时按英文处理
+        has_tastes = any((t or "").strip() for t in (request.tastes or []))
+        lang = request.language if request.language in ("zh", "en") else ("en" if has_tastes else "zh")
+        agent = create_meetspot_agent(lang)
 
         print("🚀 [Agent] 开始执行推荐任务...")
         result = await agent.recommend(
             locations=request.locations,
             keywords=request.keywords or "咖啡馆",
             requirements=request.user_requirements or "",
+            tastes=request.tastes,
+            language=lang,
         )
 
         processing_time = time.time() - start_time
@@ -1193,6 +1221,8 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             "geocode_results": result.get("geocode_results", []),
             "center_point": result.get("center_point"),
             "search_results": result.get("search_results", []),
+            "taste_ranking": result.get("taste_ranking"),
+            "tool_trace": result.get("tool_trace", []),
             "steps_executed": result.get("steps_executed", 0),
             "locations_count": len(request.locations),
             "processing_time": processing_time,

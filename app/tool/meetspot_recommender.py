@@ -21,6 +21,13 @@ from app.tool.google_maps_client import (
     google_geocode as _google_geocode,
     google_search_pois as _google_search_pois,
 )
+from app.tool.qloo_client import (
+    group_heat as qloo_group_heat,
+    heat_at,
+    pct_to_rank,
+    rank_venues as qloo_rank_venues,
+    resolve_people,
+)
 
 # LLM 智能评分（延迟导入以避免循环依赖）
 _llm_instance = None
@@ -53,6 +60,70 @@ def _get_llm():
         except Exception as e:
             logger.warning(f"LLM 初始化失败，智能评分不可用: {e}")
     return _llm_instance
+
+
+# 价格区间 -> Qloo price_level 上限（1-4）；high 不设上限
+PRICE_LEVEL_MAX = {"economy": 1, "mid": 2}
+
+
+# "Ask the agent" 卡片的前端逻辑。回答是 LLM 文本：先转义，只把 **粗体** 和换行还原成 HTML
+_AGENT_JS = r"""
+(function () {
+  var btn = document.getElementById("agentRun");
+  var steps = document.getElementById("agentSteps");
+  var answer = document.getElementById("agentAnswer");
+  var LABELS = {
+    geocode: "Located an address",
+    calculate_center: "Found the fair midpoint",
+    group_taste_rank: "Ranked venues by everyone's taste (Qloo)",
+    search_poi: "Searched nearby places",
+    generate_recommendation: "Drafted recommendations"
+  };
+  function esc(t) {
+    return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  btn.addEventListener("click", async function () {
+    var payload = JSON.parse(document.getElementById("agentPayload").textContent);
+    btn.disabled = true;
+    var phases = ["Locating everyone...", "Finding the fair midpoint...",
+      "Asking Qloo how each person would rank nearby places...", "Writing its answer..."];
+    var phase = 0;
+    var spin = function () {
+      btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>" + phases[Math.min(phase++, phases.length - 1)];
+    };
+    spin();
+    var timer = setInterval(spin, 14000);
+    steps.hidden = true;
+    answer.hidden = true;
+    try {
+      var res = await fetch("/api/find_meetspot_agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json();
+      if (!data.success || !data.recommendation) throw new Error("no answer");
+      steps.innerHTML = (data.tool_trace || []).map(function (s) {
+        var icon = s.ok ? "bx-check-circle" : "bx-x-circle";
+        return "<li class='" + (s.ok ? "ok" : "fail") + "'><i class='bx " + icon + "'></i>" +
+          esc(LABELS[s.tool] || s.tool) + "</li>";
+      }).join("");
+      steps.hidden = !steps.innerHTML;
+      answer.innerHTML = esc(data.recommendation)
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br>");
+      answer.hidden = false;
+      btn.innerHTML = "<i class='bx bx-revision'></i>Ask again";
+    } catch (e) {
+      answer.textContent = "The agent could not finish this time. Try again in a minute.";
+      answer.hidden = false;
+      btn.innerHTML = "<i class='bx bx-play-circle'></i>Ask the agent";
+    }
+    clearInterval(timer);
+    btn.disabled = false;
+  });
+})();
+"""
 
 
 class CafeRecommender(BaseTool):
@@ -686,6 +757,7 @@ class CafeRecommender(BaseTool):
             List[Optional[int]]
         ] = None,  # 每人最大可接受通勤分钟数
         transport_mode: str = "TRANSIT",  # Routes API travelMode，仅 Google 路径下生效
+        tastes: Optional[List[str]] = None,  # 每人口味文本，与 locations 平行；仅 Google 路径生效
     ) -> ToolResult:
         language = self._normalize_language(language)
         # 根据语言切换地图 provider：英文走 Google Maps，中文走高德
@@ -872,6 +944,16 @@ class CafeRecommender(BaseTool):
             # 通勤校验只支持 Google Routes API，高德路径下 _verify_commute_fairness 本身
             # 也会短路返回 None，但这里提前按 provider 拦截，避免高德请求白白多打一轮
             # 3x3 网格候选的 POI 搜索（曾在联调时触发高德 QPS 限流）
+            people = await self._resolve_group_tastes(locations, tastes)
+            # 热力只依赖几何中心，和通勤核验（Google Routes）并发跑
+            heat_task = (
+                asyncio.ensure_future(
+                    qloo_group_heat(self._calculate_center_point(coordinates), people)
+                )
+                if people
+                else None
+            )
+
             center_evaluation: Optional[Dict] = None
             if (
                 commute_budgets
@@ -888,14 +970,31 @@ class CafeRecommender(BaseTool):
                 )
             else:
                 center_point = self._calculate_center_point(coordinates)
+            fair_heat: Dict[str, Dict] = await heat_task if heat_task else {}
+            if fair_heat and center_evaluation:
+                center_point = self._prefer_taste_heat(
+                    center_evaluation.get("commute_check"), fair_heat, center_point
+                )
+
+            taste = None
+            if people:
+                taste = await qloo_rank_venues(
+                    center_point,
+                    keywords,
+                    people,
+                    price_level_max=PRICE_LEVEL_MAX.get(price_range),
+                )
 
             # 处理多个关键词的搜索
             keywords_list = [kw.strip() for kw in keywords.split() if kw.strip()]
 
             searched_places = []
 
+            # 有口味排序结果时，候选直接来自 Qloo（已按最不满意的人排好），不再搜 Google
+            if taste:
+                searched_places = taste["ranked"]
             # 如果有多个关键词，使用并发搜索提高性能
-            if len(keywords_list) > 1:
+            elif len(keywords_list) > 1:
                 logger.info(f"多场景并发搜索: {keywords_list}")
 
                 # 创建并发搜索任务
@@ -1022,6 +1121,11 @@ class CafeRecommender(BaseTool):
                 price_range=price_range,
                 language=language,
             )
+            if taste:
+                # _rank_places 只负责补齐展示字段，最终顺序以口味公平排序为准
+                recommended_places.sort(key=lambda p: p["_taste"]["rank"])
+                for place in recommended_places:
+                    place["_recommendation_reason"] = self._taste_reason(place)
 
             skipped_notice = ""
             if failed_locations:
@@ -1053,6 +1157,9 @@ class CafeRecommender(BaseTool):
                 skipped_notice=skipped_notice,
                 language=language,
                 commute_check=(center_evaluation or {}).get("commute_check"),
+                taste_html=self._render_taste_html(people, taste, fair_heat)
+                + (self._render_agent_html(locations, keywords, tastes) if taste else ""),
+                heat_cells=self._top_heat_cells(fair_heat, center_point),
             )
             result_text = self._format_result_text(
                 location_info,
@@ -1741,6 +1848,7 @@ class CafeRecommender(BaseTool):
                     "label": f"Candidate {cand_idx + 1}"
                     + (" (geometric center)" if cand_idx == 0 else ""),
                     "accepted": len(violations) == 0,
+                    "point": candidate,
                     "durations": durations,
                     "violations": violations,
                 }
@@ -2958,6 +3066,8 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         participant_locations: Optional[List[str]] = None,
         language: str = "zh",
         commute_check: Optional[Dict] = None,
+        taste_html: str = "",
+        heat_cells: Optional[List[Dict]] = None,
     ) -> str:
         file_name_prefix = "place"
 
@@ -2981,6 +3091,8 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             participant_locations,
             language,
             commute_check,
+            taste_html,
+            heat_cells,
         )
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
@@ -3012,6 +3124,8 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         participant_locations: Optional[List[str]] = None,
         language: str = "zh",
         commute_check: Optional[Dict] = None,
+        taste_html: str = "",
+        heat_cells: Optional[List[Dict]] = None,
     ) -> str:
         language = self._normalize_language(language)
         # 根据主题参数确定配置
@@ -3365,7 +3479,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                             <h3 class="cafe-name">{place["name"]}</h3>
                         </div>
                         <span class="cafe-rating">{self._result_text(language, "result.place.rating_label", "Rating") if language == "en" else "评分"}: {rating}</span>
-                    </div>{reason_html}
+                    </div>{reason_html}{self._render_taste_fit(place)}
                     <div class="cafe-details">
                         <div class="cafe-info">
                             <i class='bx bx-map'></i>
@@ -3480,6 +3594,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         var MAP_LOAD_ERROR = "__LOAD_ERROR__";
         var CENTER_LAT = __CENTER_LAT__;
         var CENTER_LNG = __CENTER_LNG__;
+        var HEAT_CELLS = __HEAT__;
 
         function initGoogleMap() {
             if (!window.google || !window.google.maps) {
@@ -3492,6 +3607,18 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: true
+            });
+            // Qloo 口味公平热力层：每个格子是所有人里最低的口味热度
+            HEAT_CELLS.forEach(function (c) {
+                new google.maps.Circle({
+                    center: { lat: c.lat, lng: c.lng },
+                    radius: 90,
+                    strokeWeight: 0,
+                    fillColor: '#06D6A0',
+                    fillOpacity: 0.08 + 0.3 * c.heat,
+                    clickable: false,
+                    map: map
+                });
             });
             var bounds = new google.maps.LatLngBounds();
             var pathCoords = [];
@@ -3599,6 +3726,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         }
     </script>""".replace("__MARKERS__", markers_json)
                 .replace("__GOOGLE_KEY__", str(self.google_api_key or ""))
+                .replace("__HEAT__", json.dumps(heat_cells or []))
                 .replace("__BEST_LABEL__", _best_point_text.replace('"', '\\"'))
                 .replace("__LOAD_ERROR__", _map_load_error_text.replace('"', '\\"'))
                 .replace("__CENTER_LAT__", str(_center_lat))
@@ -3799,6 +3927,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         .map-legend {{ position: absolute; bottom: 15px; left: 15px; background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 100; }}
         .legend-item {{ display: flex; align-items: center; margin-bottom: 8px; }}
         .legend-color {{ width: 20px; height: 20px; margin-right: 10px; border-radius: 50%; }}
+        .legend-taste {{ background: rgba(6, 214, 160, 0.35); transform: scale(0.6); }}
         .legend-center {{ background-color: var(--brand-secondary, #06D6A0); }}  /* 薄荷绿 - 中心点 */
         .legend-location {{ background-color: var(--brand-primary, #0A4D68); }}  /* 深海蓝 - 参与地点 */
         .legend-place {{ background-color: var(--brand-accent, #FF6B35); }}  /* 日落橙 - 推荐场所 */ 
@@ -4084,6 +4213,28 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         .ai-coords {{ font-size: 0.8rem; color: #64748b; font-family: 'SF Mono', 'Consolas', monospace; }}
 
         /* AI Algorithm Box */
+        .taste-card .taste-person {{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }}
+        .taste-chip {{ background: rgba(10, 77, 104, 0.06); border: 1px solid rgba(10, 77, 104, 0.18); border-radius: 999px; padding: 3px 10px; font-size: 0.9rem; }}
+        .taste-chip em {{ font-style: normal; color: #6B7280; margin-left: 6px; font-size: 0.8rem; }}
+        .taste-muted {{ color: #6B7280; font-size: 0.85rem; }}
+        .taste-note {{ margin: 10px 0 0; color: #374151; }}
+        .taste-excluded {{ margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: rgba(220, 38, 38, 0.06); color: #7F1D1D; }}
+        .taste-excluded i {{ margin-right: 6px; }}
+        .taste-powered {{ font-size: 0.8rem; font-weight: 500; color: #6B7280; margin-left: 8px; }}
+        .taste-fit {{ margin: 0 0 12px; display: grid; gap: 4px; }}
+        .taste-fit-row {{ display: grid; grid-template-columns: 60px 56px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 0.85rem; }}
+        .taste-fit-pct {{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+        .taste-fit-bar {{ height: 6px; border-radius: 3px; background: #E5E7EB; overflow: hidden; }}
+        .taste-fit-bar span {{ display: block; height: 100%; background: #0A4D68; }}
+        .taste-because {{ color: #6B7280; }}
+        .agent-run {{ margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: none; border-radius: 10px; background: #0A4D68; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; }}
+        .agent-run:hover {{ background: #083A4F; }}
+        .agent-run:focus-visible {{ outline: 3px solid #06D6A0; outline-offset: 2px; }}
+        .agent-run:disabled {{ opacity: 0.75; cursor: progress; }}
+        .agent-steps {{ list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }}
+        .agent-steps li {{ display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; background: rgba(6, 214, 160, 0.1); color: #065F46; }}
+        .agent-steps li.fail {{ background: rgba(220, 38, 38, 0.08); color: #7F1D1D; }}
+        .agent-answer {{ margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: rgba(10, 77, 104, 0.05); line-height: 1.6; color: #1F2937; }}
         .ai-algo-box {{ background: white; border-radius: 12px; padding: 16px; margin: 12px 0; border: 1px solid rgba(10, 77, 104, 0.1); }}
         .ai-algo-formula {{ display: flex; align-items: center; gap: 12px; padding: 12px; background: linear-gradient(135deg, rgba(10, 77, 104, 0.05) 0%, rgba(6, 214, 160, 0.05) 100%); border-radius: 8px; }}
         .ai-algo-formula i {{ font-size: 1.8rem; color: var(--secondary); }}
@@ -4368,10 +4519,15 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         }</span></div>
                     <div class="legend-item"><div class="legend-color legend-place"></div><span>{
             cfg["map_legend"]
-        }</span></div>
+        }</span></div>{
+            '<div class="legend-item"><div class="legend-color legend-taste"></div><span>Shared taste (Qloo)</span></div>'
+            if heat_cells
+            else ""
+        }
                 </div>
             </div>
         </div>
+        {taste_html}
         <div class="card glass-card">
             <h2 class="section-title"><i class='bx {cfg["icon_section"]}'></i>{
             self._result_text(
@@ -4565,6 +4721,185 @@ Return exactly 3 travel and parking suggestions as a JSON array:
 
         return "\n".join(result)
 
+    # ========== Qloo 多人口味公平 ==========
+
+    async def _resolve_group_tastes(
+        self, locations: List[str], tastes: Optional[List[str]]
+    ) -> List[Dict]:
+        """只在 Google 路径 + 至少一人填了口味 + 配了 QLOO_API_KEY 时启用。
+
+        返回空列表 = 不启用，请求的行为与没有口味功能时完全一致。
+        Qloo 的口味信号在国内数据上返回 0 条（2026-10-03 实测北京五道口），所以高德路径不接。
+        """
+        if (
+            self.map_provider != "google"
+            or not tastes
+            or not any((t or "").strip() for t in tastes)
+            or not os.getenv("QLOO_API_KEY")
+        ):
+            return []
+        names = [f"Person {i + 1}" for i in range(len(locations))]
+        padded = [(tastes[i] if i < len(tastes) else "") or "" for i in range(len(names))]
+        return await resolve_people(names, padded)
+
+    @staticmethod
+    def _prefer_taste_heat(
+        commute_check: Optional[Dict],
+        fair_heat: Dict[str, Dict],
+        current: Tuple[float, float],
+    ) -> Tuple[float, float]:
+        """通勤都达标的候选中心有多个时，选口味公平热度最高的那个。
+
+        热度只在通勤达标的候选之间排先后，不推翻通勤核验（热力图头部饱和在 0.95 左右，
+        单独拿来定中心点区分度不够）。
+        """
+        if not commute_check:
+            return current
+        for attempt in commute_check.get("attempts", []):
+            lng, lat = attempt["point"]
+            attempt["taste_heat"] = heat_at(fair_heat, lng, lat)
+        accepted = [
+            (i, a) for i, a in enumerate(commute_check["attempts"]) if a["accepted"]
+        ]
+        if len(accepted) < 2:
+            return current
+        best_i, best = max(accepted, key=lambda ia: ia[1]["taste_heat"] or -1.0)
+        commute_check["winner_index"] = best_i
+        commute_check["winner_point"] = best["point"]
+        return best["point"]
+
+    @staticmethod
+    def _taste_reason(place: Dict) -> str:
+        taste = place["_taste"]
+        worst = pct_to_rank(taste["fair_pct"], taste["pool"])
+        becauses = [
+            f"{p['name']} via {p['because']['name']}"
+            for p in taste["people"]
+            if p.get("because")
+        ]
+        reason = f"Works for everyone: nobody ranks it below #{worst} of {taste['pool']} nearby options."
+        if becauses:
+            reason += " " + "; ".join(becauses) + "."
+        return html.escape(reason)
+
+    @staticmethod
+    def _render_taste_fit(place: Dict) -> str:
+        taste = place.get("_taste")
+        if not taste:
+            return ""
+        rows = []
+        for p in taste["people"]:
+            pct = round(p["pct"] * 100)
+            rank = pct_to_rank(p["pct"], taste["pool"])
+            because = (
+                f" <span class='taste-because'>· {html.escape(p['because']['name'])}</span>"
+                if p.get("because")
+                else ""
+            )
+            rows.append(
+                f"<div class='taste-fit-row'><span class='taste-fit-name'>{html.escape(p['name'])}</span>"
+                f"<span class='taste-fit-bar'><span style='width:{pct}%'></span></span>"
+                f"<span class='taste-fit-pct'>#{rank}/{taste['pool']}{because}</span></div>"
+            )
+        return f"<div class='taste-fit' title='Where each person ranks this place among nearby options (Qloo)'>{''.join(rows)}</div>"
+
+    @staticmethod
+    def _top_heat_cells(
+        fair_heat: Dict[str, Dict], center: Tuple[float, float], limit: int = 150
+    ) -> List[Dict]:
+        """地图热力层只画中心点 3km 内热度最高的格子，控制页面体积。"""
+        lng0, lat0 = center
+        near = [
+            c
+            for c in fair_heat.values()
+            if abs(c["lat"] - lat0) < 0.027 and abs(c["lng"] - lng0) < 0.035
+        ]
+        near.sort(key=lambda c: -c["heat"])
+        return [
+            {"lat": c["lat"], "lng": c["lng"], "heat": round(c["heat"], 3)}
+            for c in near[:limit]
+        ]
+
+    @staticmethod
+    def _render_taste_html(
+        people: List[Dict], taste: Optional[Dict], fair_heat: Dict[str, Dict]
+    ) -> str:
+        """结果页的"Group taste"卡片：每人被识别成了什么、共同点、被刻意排除的店。"""
+        if not people:
+            return ""
+        person_rows = []
+        for p in people:
+            chips = "".join(
+                f"<span class='taste-chip'>{html.escape(i['name'])}<em>{html.escape(i['kind'] or '')}</em></span>"
+                for i in p["items"]
+            ) or "<span class='taste-muted'>no preference</span>"
+            missed = (
+                f"<span class='taste-muted'>not recognized: {html.escape(', '.join(p['unresolved']))}</span>"
+                if p["unresolved"]
+                else ""
+            )
+            person_rows.append(
+                f"<div class='taste-person'><strong>{html.escape(p['name'])}</strong>{chips}{missed}</div>"
+            )
+
+        blocks = ["".join(person_rows)]
+        if taste:
+            blocks.append(
+                f"<p class='taste-note'>Ranked {taste['candidate_count']} nearby places by the "
+                "least-satisfied person, so nobody gets dragged somewhere they would dislike.</p>"
+            )
+            if taste["common_ground"]:
+                blocks.append(
+                    "<p class='taste-note'><strong>What you have in common:</strong> "
+                    + html.escape(", ".join(taste["common_ground"]))
+                    + "</p>"
+                )
+            for x in taste["excluded"]:
+                blocks.append(
+                    f"<p class='taste-excluded'><i class='bx bx-block'></i><strong>{html.escape(x['name'])}</strong> "
+                    f"scores well on average, but {html.escape(x['unhappy_person'])} ranks it only "
+                    f"#{x['unhappy_rank']} of {taste['candidate_count']}, so it was left out.</p>"
+                )
+        else:
+            blocks.append(
+                "<p class='taste-note'>Taste ranking was unavailable for this search; "
+                "showing the standard recommendations.</p>"
+            )
+        if fair_heat:
+            blocks.append(
+                "<p class='taste-note'>Green shading on the map marks blocks where "
+                "everyone's tastes overlap.</p>"
+            )
+        return (
+            "<div class='card glass-card taste-card'><h2 class='section-title'>"
+            "<i class='bx bx-heart-circle'></i>Group taste "
+            "<span class='taste-powered'>powered by Qloo</span></h2>"
+            + "".join(blocks)
+            + "</div>"
+        )
+
+    @staticmethod
+    def _render_agent_html(locations: List[str], keywords: str, tastes: List[str]) -> str:
+        """"Ask the agent" 卡片：同一组人交给 MeetSpotAgent（LLM + group_taste_rank 工具）再跑一遍，
+        展示它调用了哪些工具和它写的推荐理由。agent 约要一分钟，所以是按钮触发，不是默认路径。"""
+        payload = json.dumps(
+            {"locations": locations, "keywords": keywords, "tastes": tastes, "language": "en"}
+        ).replace("</", "<\\/")
+        return (
+            "<div class='card glass-card agent-card'><h2 class='section-title'>"
+            "<i class='bx bx-bot'></i>Ask the agent</h2>"
+            "<p class='taste-note'>Hand the same group to MeetSpot's AI agent. It plans its own steps, "
+            "calls Qloo through a group-taste tool, and explains its pick person by person. "
+            "Takes about a minute.</p>"
+            "<button type='button' class='agent-run' id='agentRun'><i class='bx bx-play-circle'></i>"
+            "Ask the agent</button>"
+            "<ol class='agent-steps' id='agentSteps' hidden></ol>"
+            "<div class='agent-answer' id='agentAnswer' hidden></div>"
+            f"<script type='application/json' id='agentPayload'>{payload}</script>"
+            "<script>" + _AGENT_JS + "</script>"
+            "</div>"
+        )
+
     def _render_commute_check_html(
         self, commute_check: Optional[Dict], language: str
     ) -> str:
@@ -4616,7 +4951,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                 f"""
             <div class="ai-commute-attempt {status_class}">
                 <div class="ai-commute-attempt-label">
-                    {attempt.get("label", "")}
+                    {attempt.get("label", "")}{f" · taste overlap {attempt['taste_heat'] * 100:.0f}%" if attempt.get("taste_heat") is not None else ""}
                     <span class="ai-commute-status {status_class}">{status_text}</span>
                 </div>
                 <div class="ai-commute-durations">{"".join(duration_spans)}</div>

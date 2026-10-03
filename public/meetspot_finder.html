@@ -856,6 +856,43 @@
         box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
       }
 
+      /* Group taste (Qloo): each person's favorite artists / movies / brands, same row as the
+         commute budget and only on the international path, since Qloo has no taste data for China */
+      .commute-input-wrap {
+        flex-wrap: wrap;
+      }
+
+      .commute-input-wrap input.taste-input {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .demo-group-btn {
+        display: none;
+        margin: 0 auto 12px;
+        padding: 6px 14px;
+        border: 1.5px dashed var(--slate-200);
+        border-radius: 10px;
+        background: white;
+        color: var(--slate-600);
+        font-size: 0.85rem;
+        font-family: inherit;
+        cursor: pointer;
+        align-items: center;
+        gap: 6px;
+      }
+
+      html.commute-enabled .demo-group-btn {
+        display: flex;
+      }
+
+      .demo-group-btn:hover,
+      .demo-group-btn:focus-visible {
+        border-color: var(--coral-500);
+        color: var(--coral-500);
+        outline: none;
+      }
+
       .location-hint {
         text-align: center;
         padding: 10px 16px;
@@ -2296,6 +2333,14 @@
               </div>
             </div>
 
+            <button
+              type="button"
+              class="demo-group-btn"
+              onclick="fillDemoGroup()"
+            >
+              <i class="bx bx-group"></i>
+              <span data-i18n="finder.demo_group">Try a demo group in New York</span>
+            </button>
             <div class="locations-container" id="locationsContainer">
               <div class="location-input" data-index="0">
                 <i class="bx bxs-location-plus"></i>
@@ -2322,6 +2367,16 @@
                   aria-label="最长通勤（分钟）"
                   data-i18n-placeholder="finder.commute_placeholder"
                 />
+                <i class="bx bx-heart"></i>
+                <input
+                  type="text"
+                  class="taste-input"
+                  data-for="location-0"
+                  maxlength="200"
+                  placeholder="Loves: e.g. Taylor Swift, Barbie"
+                  aria-label="Things this person loves"
+                  data-i18n-placeholder="finder.taste_placeholder"
+                />
               </div>
               <div class="location-input" data-index="1">
                 <i class="bx bxs-location-plus"></i>
@@ -2347,6 +2402,16 @@
                   placeholder="最长通勤（分钟）"
                   aria-label="最长通勤（分钟）"
                   data-i18n-placeholder="finder.commute_placeholder"
+                />
+                <i class="bx bx-heart"></i>
+                <input
+                  type="text"
+                  class="taste-input"
+                  data-for="location-1"
+                  maxlength="200"
+                  placeholder="Loves: e.g. Taylor Swift, Barbie"
+                  aria-label="Things this person loves"
+                  data-i18n-placeholder="finder.taste_placeholder"
                 />
               </div>
             </div>
@@ -3291,6 +3356,8 @@
         newCommuteWrap.innerHTML = `
                 <i class='bx bx-time-five'></i>
                 <input type="number" class="commute-budget-input" data-for="${inputId}" min="1" max="180" placeholder="${_t("finder.commute_placeholder")}" aria-label="${_t("finder.commute_placeholder")}">
+                <i class='bx bx-heart'></i>
+                <input type="text" class="taste-input" data-for="${inputId}" maxlength="200" placeholder="${_t("finder.taste_placeholder")}" aria-label="${_t("finder.taste_placeholder")}">
             `;
         container.appendChild(newCommuteWrap);
 
@@ -3332,6 +3399,38 @@
               : `已输入${count}个地点（已达上限）`;
           hintElement.className = "location-hint limit";
         }
+      }
+
+      // Demo group for the Qloo taste feature: three New Yorkers with clearly different tastes,
+      // so the ranking visibly changes per person. Fills the form only; the user still submits.
+      const DEMO_GROUP = [
+        { address: "Times Square, New York", taste: "Taylor Swift, Barbie" },
+        { address: "Union Square, New York", taste: "Metallica, John Wick" },
+        { address: "Grand Central Terminal, New York", taste: "Bad Bunny, Trader Joe's" },
+      ];
+
+      function fillDemoGroup() {
+        const container = document.getElementById("locationsContainer");
+        while (container.querySelectorAll(".location-input").length < DEMO_GROUP.length) {
+          addLocation();
+        }
+        const inputs = container.querySelectorAll('input[name="location"]');
+        DEMO_GROUP.forEach((person, i) => {
+          const input = inputs[i];
+          input.value = person.address;
+          delete locationCoords[input.id];
+          const taste = container.querySelector(`.taste-input[data-for="${input.id}"]`);
+          if (taste) taste.value = person.taste;
+        });
+        // Restaurant only: a leftover Cafe selection would make Qloo search cafes instead
+        document
+          .querySelectorAll(".place-type.selected")
+          .forEach((type) => type.click());
+        const restaurant = document.querySelector('.place-type[data-type="餐厅"]');
+        if (restaurant) restaurant.click();
+        updateLocationCountHint();
+        updateStepIndicator();
+        trackEvent("demo_group_filled", {});
       }
 
       function removeLocation(button) {
@@ -3509,6 +3608,7 @@
           let locations = [];
           let coordsArray = []; // Collect pre-resolved coordinates
           let commuteBudgetsArray = []; // Parallel to coordsArray: max commute minutes per participant
+          let tastesArray = []; // Parallel to coordsArray: each participant's favorite artists / movies / brands
 
           // Collect locations and their coordinates
           Array.from(locationInputs).forEach((input) => {
@@ -3524,6 +3624,10 @@
               const commuteMinutes = commuteInput
                 ? parseInt(commuteInput.value, 10) || null
                 : null;
+              const tasteInput = inputId
+                ? document.querySelector(`.taste-input[data-for="${inputId}"]`)
+                : null;
+              const taste = tasteInput ? tasteInput.value.trim() : "";
               if (
                 inputId &&
                 locationCoords[inputId] &&
@@ -3533,7 +3637,10 @@
                 locations.push(value);
                 coordsArray.push(locationCoords[inputId]);
                 commuteBudgetsArray.push(commuteMinutes);
+                tastesArray.push(taste);
               } else if (
+                !IS_INTERNATIONAL &&
+                !taste &&
                 value.includes(" ") &&
                 !value.includes("区") &&
                 !value.includes("市") &&
@@ -3548,11 +3655,13 @@
                   locations.push(loc);
                   coordsArray.push(null); // No pre-resolved coord
                   commuteBudgetsArray.push(null);
+                  tastesArray.push("");
                 });
               } else {
                 locations.push(value);
                 coordsArray.push(null); // No pre-resolved coord
                 commuteBudgetsArray.push(commuteMinutes);
+                tastesArray.push(taste);
               }
             }
           });
@@ -3646,6 +3755,14 @@
               commuteBudgetsArray.some((b) => b)
             ) {
               requestBody.commute_budgets = commuteBudgetsArray;
+            }
+
+            // Same rule for tastes: only sent when someone filled one in
+            if (
+              tastesArray.length === locations.length &&
+              tastesArray.some((t) => t)
+            ) {
+              requestBody.tastes = tastesArray;
             }
 
             trackEvent("tool_submit", {
