@@ -582,6 +582,8 @@ Use it after calculate_center whenever participants gave tastes."""
             [p.get("name", f"Person {i + 1}") for i, p in enumerate(participants)],
             [p.get("tastes", "") for p in participants],
         )
+        if people is None:
+            return BaseTool.fail_response(json.dumps({"error": "taste lookup failed"}))
         result = await rank_venues((center["lng"], center["lat"]), keywords, people)
         recognized = {
             p["name"]: {

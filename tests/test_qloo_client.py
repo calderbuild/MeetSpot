@@ -207,6 +207,7 @@ def test_split_tastes():
     assert split_tastes("Taylor Swift, Barbie；x ,, ") == ["Taylor Swift", "Barbie；x"]
     assert split_tastes("a; b，c") == ["a", "b", "c"]
     assert split_tastes("") == []
+    assert split_tastes(",".join(str(i) for i in range(20))) == ["0", "1", "2", "3", "4"]
 
 
 def test_top_reason_picks_biggest_contributor():
@@ -324,3 +325,15 @@ def test_get_gives_up_after_retries_and_on_other_errors(monkeypatch):
     monkeypatch.setattr(qloo_client, "_RETRY_DELAYS", (0, 0, 0))
     assert asyncio.run(qloo_client._get(_FakeSession([429] * 4), "/s", {}, "k")) is None
     assert asyncio.run(qloo_client._get(_FakeSession([400, 200]), "/s", {}, "k")) is None
+
+
+def test_resolve_people_gives_up_when_a_lookup_fails(monkeypatch):
+    async def fake_get(session, path, params, api_key):
+        if params["query"] == "Metallica":
+            return None  # 429 重试用尽 / 网络错误
+        return {"results": [{"entity_id": "E", "name": params["query"], "types": ["urn:entity:movie"]}]}
+
+    monkeypatch.setattr(qloo_client, "_get", fake_get)
+    ok = asyncio.run(qloo_client.resolve_people(["A", "B"], ["Barbie", "Wicked"], api_key="k"))
+    assert [p["items"][0]["name"] for p in ok] == ["Barbie", "Wicked"]
+    assert asyncio.run(qloo_client.resolve_people(["A", "B"], ["Barbie", "Metallica"], api_key="k")) is None

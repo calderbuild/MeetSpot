@@ -154,6 +154,19 @@ def test_ranked_places_follow_taste_rank_not_rule_score(monkeypatch):
     assert "#4/30" in fit  # Person 1 pct 0.9 -> 第 4 名，和推荐理由用同一套名次
 
 
+def test_qloo_unavailable_falls_back_to_google_search(monkeypatch):
+    calls = []
+    recommender = _make_recommender(monkeypatch, calls)
+
+    async def no_rank(*args, **kwargs):
+        calls.append("rank_none")
+        return None
+
+    monkeypatch.setattr(rec_module, "qloo_rank_venues", no_rank)
+    _run(recommender, language="en", tastes=["Barbie", "Metallica"])
+    assert "rank_none" in calls and "google_search" in calls
+
+
 def test_no_tastes_keeps_original_flow(monkeypatch):
     calls = []
     recommender = _make_recommender(monkeypatch, calls)

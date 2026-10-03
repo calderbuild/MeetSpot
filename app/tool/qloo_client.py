@@ -58,10 +58,16 @@ def venue_tag_for(keywords: str) -> str:
     return VENUE_TAGS["restaurant"]
 
 
+MAX_TASTES_PER_PERSON = 5
+
+
 def split_tastes(text: str) -> List[str]:
-    """ "Taylor Swift, Barbie; sushi" -> ["Taylor Swift", "Barbie", "sushi"]"""
+    """ "Taylor Swift, Barbie; sushi" -> ["Taylor Swift", "Barbie", "sushi"]
+
+    最多取 MAX_TASTES_PER_PERSON 项：每项一次 /search，hackathon key 并发一高就 429。
+    """
     parts = (text or "").replace(";", ",").replace("，", ",").split(",")
-    return [p.strip() for p in parts if p.strip()]
+    return [p.strip() for p in parts if p.strip()][:MAX_TASTES_PER_PERSON]
 
 
 def percentiles(affinity: Dict[str, float]) -> Dict[str, float]:
@@ -241,11 +247,13 @@ async def _get(
     return None
 
 
-async def _search_one(session, query: str, api_key: str) -> Dict[str, Any]:
+async def _search_one(session, query: str, api_key: str) -> Optional[Dict[str, Any]]:
     data = await _get(
         session, "/search", {"query": query, "types": TASTE_TYPES, "take": 1}, api_key
     )
-    hit = ((data or {}).get("results") or [None])[0]
+    if data is None:
+        return None  # 网络错误 / 429 重试用尽，和"搜不到"区分开
+    hit = (data.get("results") or [None])[0]
     if not hit:
         return {"query": query, "entity_id": None, "name": None, "kind": None}
     kind = (hit.get("types") or [hit.get("subtype") or ""])[0].split(":")[-1]
@@ -259,14 +267,20 @@ async def _search_one(session, query: str, api_key: str) -> Dict[str, Any]:
 
 async def resolve_people(
     names: List[str], tastes: List[str], api_key: Optional[str] = None
-) -> List[Dict[str, Any]]:
-    """每个人的口味文本 -> 解析后的 Qloo 实体。没填口味的人 items 为空（"无偏好"）。"""
+) -> Optional[List[Dict[str, Any]]]:
+    """每个人的口味文本 -> 解析后的 Qloo 实体。没填口味的人 items 为空（"无偏好"）。
+
+    任何一次查询失败（不是搜不到）就返回 None：少算一个人的公平排序比不排更糟，调用方回退到原有推荐。
+    """
     key = _resolve_api_key(api_key)
     queries = [split_tastes(t) for t in tastes]
     async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
         flat = await asyncio.gather(
             *(_search_one(session, q, key) for qs in queries for q in qs)
         )
+    if any(h is None for h in flat):
+        logger.warning("Qloo 口味查询失败，放弃口味排序")
+        return None
     people, i = [], 0
     for name, qs in zip(names, queries):
         hits = list(flat[i : i + len(qs)])

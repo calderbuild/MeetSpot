@@ -22,6 +22,8 @@ def test_chinese_agent_stays_on_amap(monkeypatch):
     monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "g-key")
     agent = create_meetspot_agent("zh")
     assert agent.available_tools.tool_map["geocode"]._get_recommender().map_provider == "amap"
+    assert "group_taste_rank" not in agent.available_tools.tool_map
+    assert "group_taste_rank" not in agent.system_prompt
 
 
 def test_english_task_asks_for_taste_tool_only_when_tastes_given():

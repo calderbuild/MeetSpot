@@ -29,16 +29,11 @@ SYSTEM_PROMPT = """你是 MeetSpot 智能会面助手。
 2. calculate_center(coordinates, keywords)：计算公平中心
 3. search_poi(center_lng, center_lat, keywords, radius)：搜索附近场所
 4. generate_recommendation(...)：生成最终推荐
-5. group_taste_rank(center, participants, keywords)：参与者给了口味时，用 Qloo 按"最不满意的人"给中心点附近的场所排序
 
 流程：先 geocode 所有地址，再 calculate_center，再 search_poi，最后 generate_recommendation。
 
 输出要求：中文；推荐 3-5 个场所，说明距离、评分与推荐理由；考虑特殊需求（停车、安静、商务等）。
 失败处理：地址解析失败时给出具体提示；搜索无结果时调整关键词或扩大半径。
-
-参与者给了口味时：calculate_center 之后调用 group_taste_rank，推荐以它的排序为准（不再调用 search_poi /
-generate_recommendation），逐个说明每个人是因为自己的哪样口味会喜欢，并说明被排除的店为什么被排除。
-任务用英文提出时，用英文回答。
 """
 
 SYSTEM_PROMPT_EN = """You are MeetSpot, an assistant that finds a fair place for a group to meet.
@@ -102,8 +97,10 @@ class MeetSpotAgent(BaseAgent):
                 CalculateCenterTool(map_provider=provider),
                 SearchPOITool(map_provider=provider),
                 GenerateRecommendationTool(map_provider=provider),
-                GroupTasteTool(),
             )
+            # Qloo 只有海外口味信号，口味工具只给 Google 路径
+            if provider == "google":
+                self.available_tools.add_tool(GroupTasteTool())
 
     async def step(self) -> str:
         """执行一步: think + act

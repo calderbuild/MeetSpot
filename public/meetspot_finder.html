@@ -3639,6 +3639,8 @@
                 commuteBudgetsArray.push(commuteMinutes);
                 tastesArray.push(taste);
               } else if (
+                !IS_INTERNATIONAL &&
+                !taste &&
                 value.includes(" ") &&
                 !value.includes("区") &&
                 !value.includes("市") &&

@@ -24,7 +24,7 @@ from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, constr
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -252,7 +252,8 @@ class MeetSpotRequest(BaseModel):
     transport_mode: Optional[str] = "TRANSIT"  # Routes API travelMode
     # 每人口味（可选，与 locations 平行索引，如 "Taylor Swift, Barbie"）。用 Qloo 按最不满意的人
     # 给场所排序；仅 Google 路径（language="en"）且配置了 QLOO_API_KEY 时生效
-    tastes: Optional[List[str]] = None
+    # 每人一项、每项 200 字以内（与前端 maxlength / 10 个地点上限一致），限制打到 Qloo 的请求数
+    tastes: Optional[List[constr(max_length=200)]] = Field(default=None, max_length=10)
 
 
 class AIChatRequest(BaseModel):
