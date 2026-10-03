@@ -117,3 +117,42 @@ def test_english_agent_gets_english_system_prompt(monkeypatch):
     assert "Answer in English" in create_meetspot_agent("en").system_prompt
     assert "English" in create_meetspot_agent("en").next_step_prompt
     assert "中文" in create_meetspot_agent("zh").system_prompt
+
+
+def test_english_text_reply_ends_the_agent_loop(monkeypatch):
+    """英文最终回答没有"推荐"二字，过去会一直跑到 max_steps。"""
+    from types import SimpleNamespace
+
+    monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "g-key")
+    agent = create_meetspot_agent("en")
+
+    async def fake_ask_tool(**kwargs):
+        return SimpleNamespace(tool_calls=[], content="Go to The Press Lounge: nobody ranks it below #2.")
+
+    monkeypatch.setattr(agent.llm, "ask_tool", fake_ask_tool)
+    assert asyncio.run(agent.think()) is False
+
+
+def test_taste_requests_skip_the_free_limit_during_judging(monkeypatch):
+    import api.index as index
+    from datetime import date
+
+    taste = MeetSpotRequest(locations=["a", "b"], tastes=["Barbie", ""])
+    plain = MeetSpotRequest(locations=["a", "b"])
+    assert index._judging_exempt(taste) and not index._judging_exempt(plain)
+
+    class After(date):
+        @classmethod
+        def today(cls):
+            return date(2026, 11, 17)
+
+    monkeypatch.setattr(index, "date", After)
+    assert not index._judging_exempt(taste)
+
+
+def test_agent_card_payload_cannot_close_its_script_tag():
+    from app.tool.meetspot_recommender import CafeRecommender
+
+    out = CafeRecommender._render_agent_html(["</script><b>x"], "restaurant", ["Barbie"])
+    assert "</script><b>" not in out and "<\\/script><b>x" in out
+    assert "/api/find_meetspot_agent" in out

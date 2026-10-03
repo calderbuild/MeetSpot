@@ -4,6 +4,7 @@ import time
 import asyncio
 import re
 import gc
+from datetime import date
 from typing import List, Optional
 
 # 并发控制：防止OOM，保证每个请求都能完成
@@ -377,6 +378,16 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
 # 免费次数限制
 FREE_DAILY_LIMIT = int(os.getenv("FREE_DAILY_LIMIT", "1"))
+
+
+# Qloo hackathon 评审期（到 2026-11-16）：评委必须能免费、不限次试用口味功能，
+# 所以带口味的请求不计免费次数；过了日期自动恢复，不用记得回来删
+QLOO_JUDGING_ENDS = date(2026, 11, 17)
+
+
+def _judging_exempt(request) -> bool:
+    has_tastes = any((t or "").strip() for t in (request.tastes or []))
+    return has_tastes and date.today() < QLOO_JUDGING_ENDS
 
 
 def _parse_cors_origins(raw_value: str) -> List[str]:
@@ -898,7 +909,9 @@ async def find_meetspot(request: MeetSpotRequest, raw_request: Request = None):
     # macOS app: a RevenueCat `meetspot_pro` entitlement (checked server side) lifts the quota
     rc_user = raw_request.headers.get("x-rc-app-user-id") if raw_request else None
     is_pro = bool(rc_user) and await revenuecat.has_pro(rc_user)
-    quota_applies = client_ip and FREE_DAILY_LIMIT > 0 and not is_pro
+    quota_applies = (
+        client_ip and FREE_DAILY_LIMIT > 0 and not is_pro and not _judging_exempt(request)
+    )
 
     # 免费次数限制检查
     if quota_applies:
@@ -1183,7 +1196,9 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             raise HTTPException(status_code=500, detail="高德地图API密钥未配置")
 
         print("🔧 [Agent] 初始化 MeetSpotAgent...")
-        lang = request.language if request.language in ("zh", "en") else "zh"
+        # 口味排序只在英文 / Google 路径可用，没指定语言但带了口味时按英文处理
+        has_tastes = any((t or "").strip() for t in (request.tastes or []))
+        lang = request.language if request.language in ("zh", "en") else ("en" if has_tastes else "zh")
         agent = create_meetspot_agent(lang)
 
         print("🚀 [Agent] 开始执行推荐任务...")
@@ -1206,6 +1221,8 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             "geocode_results": result.get("geocode_results", []),
             "center_point": result.get("center_point"),
             "search_results": result.get("search_results", []),
+            "taste_ranking": result.get("taste_ranking"),
+            "tool_trace": result.get("tool_trace", []),
             "steps_executed": result.get("steps_executed", 0),
             "locations_count": len(request.locations),
             "processing_time": processing_time,

@@ -66,6 +66,66 @@ def _get_llm():
 PRICE_LEVEL_MAX = {"economy": 1, "mid": 2}
 
 
+# "Ask the agent" 卡片的前端逻辑。回答是 LLM 文本：先转义，只把 **粗体** 和换行还原成 HTML
+_AGENT_JS = r"""
+(function () {
+  var btn = document.getElementById("agentRun");
+  var steps = document.getElementById("agentSteps");
+  var answer = document.getElementById("agentAnswer");
+  var LABELS = {
+    geocode: "Located an address",
+    calculate_center: "Found the fair midpoint",
+    group_taste_rank: "Ranked venues by everyone's taste (Qloo)",
+    search_poi: "Searched nearby places",
+    generate_recommendation: "Drafted recommendations"
+  };
+  function esc(t) {
+    return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  btn.addEventListener("click", async function () {
+    var payload = JSON.parse(document.getElementById("agentPayload").textContent);
+    btn.disabled = true;
+    var phases = ["Locating everyone...", "Finding the fair midpoint...",
+      "Asking Qloo how each person would rank nearby places...", "Writing its answer..."];
+    var phase = 0;
+    var spin = function () {
+      btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>" + phases[Math.min(phase++, phases.length - 1)];
+    };
+    spin();
+    var timer = setInterval(spin, 14000);
+    steps.hidden = true;
+    answer.hidden = true;
+    try {
+      var res = await fetch("/api/find_meetspot_agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json();
+      if (!data.success || !data.recommendation) throw new Error("no answer");
+      steps.innerHTML = (data.tool_trace || []).map(function (s) {
+        var icon = s.ok ? "bx-check-circle" : "bx-x-circle";
+        return "<li class='" + (s.ok ? "ok" : "fail") + "'><i class='bx " + icon + "'></i>" +
+          esc(LABELS[s.tool] || s.tool) + "</li>";
+      }).join("");
+      steps.hidden = !steps.innerHTML;
+      answer.innerHTML = esc(data.recommendation)
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br>");
+      answer.hidden = false;
+      btn.innerHTML = "<i class='bx bx-revision'></i>Ask again";
+    } catch (e) {
+      answer.textContent = "The agent could not finish this time. Try again in a minute.";
+      answer.hidden = false;
+      btn.innerHTML = "<i class='bx bx-play-circle'></i>Ask the agent";
+    }
+    clearInterval(timer);
+    btn.disabled = false;
+  });
+})();
+"""
+
+
 class CafeRecommender(BaseTool):
     """场所推荐工具，基于多个地点计算最佳会面位置并推荐周边场所"""
 
@@ -1097,7 +1157,8 @@ class CafeRecommender(BaseTool):
                 skipped_notice=skipped_notice,
                 language=language,
                 commute_check=(center_evaluation or {}).get("commute_check"),
-                taste_html=self._render_taste_html(people, taste, fair_heat),
+                taste_html=self._render_taste_html(people, taste, fair_heat)
+                + (self._render_agent_html(locations, keywords, tastes) if taste else ""),
                 heat_cells=self._top_heat_cells(fair_heat, center_point),
             )
             result_text = self._format_result_text(
@@ -4166,6 +4227,14 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         .taste-fit-bar {{ height: 6px; border-radius: 3px; background: #E5E7EB; overflow: hidden; }}
         .taste-fit-bar span {{ display: block; height: 100%; background: #0A4D68; }}
         .taste-because {{ color: #6B7280; }}
+        .agent-run {{ margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: none; border-radius: 10px; background: #0A4D68; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; }}
+        .agent-run:hover {{ background: #083A4F; }}
+        .agent-run:focus-visible {{ outline: 3px solid #06D6A0; outline-offset: 2px; }}
+        .agent-run:disabled {{ opacity: 0.75; cursor: progress; }}
+        .agent-steps {{ list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }}
+        .agent-steps li {{ display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; background: rgba(6, 214, 160, 0.1); color: #065F46; }}
+        .agent-steps li.fail {{ background: rgba(220, 38, 38, 0.08); color: #7F1D1D; }}
+        .agent-answer {{ margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: rgba(10, 77, 104, 0.05); line-height: 1.6; color: #1F2937; }}
         .ai-algo-box {{ background: white; border-radius: 12px; padding: 16px; margin: 12px 0; border: 1px solid rgba(10, 77, 104, 0.1); }}
         .ai-algo-formula {{ display: flex; align-items: center; gap: 12px; padding: 12px; background: linear-gradient(135deg, rgba(10, 77, 104, 0.05) 0%, rgba(6, 214, 160, 0.05) 100%); border-radius: 8px; }}
         .ai-algo-formula i {{ font-size: 1.8rem; color: var(--secondary); }}
@@ -4807,6 +4876,28 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             "<span class='taste-powered'>powered by Qloo</span></h2>"
             + "".join(blocks)
             + "</div>"
+        )
+
+    @staticmethod
+    def _render_agent_html(locations: List[str], keywords: str, tastes: List[str]) -> str:
+        """"Ask the agent" 卡片：同一组人交给 MeetSpotAgent（LLM + group_taste_rank 工具）再跑一遍，
+        展示它调用了哪些工具和它写的推荐理由。agent 约要一分钟，所以是按钮触发，不是默认路径。"""
+        payload = json.dumps(
+            {"locations": locations, "keywords": keywords, "tastes": tastes, "language": "en"}
+        ).replace("</", "<\\/")
+        return (
+            "<div class='card glass-card agent-card'><h2 class='section-title'>"
+            "<i class='bx bx-bot'></i>Ask the agent</h2>"
+            "<p class='taste-note'>Hand the same group to MeetSpot's AI agent. It plans its own steps, "
+            "calls Qloo through a group-taste tool, and explains its pick person by person. "
+            "Takes about a minute.</p>"
+            "<button type='button' class='agent-run' id='agentRun'><i class='bx bx-play-circle'></i>"
+            "Ask the agent</button>"
+            "<ol class='agent-steps' id='agentSteps' hidden></ol>"
+            "<div class='agent-answer' id='agentAnswer' hidden></div>"
+            f"<script type='application/json' id='agentPayload'>{payload}</script>"
+            "<script>" + _AGENT_JS + "</script>"
+            "</div>"
         )
 
     def _render_commute_check_html(

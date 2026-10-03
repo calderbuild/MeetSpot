@@ -54,6 +54,7 @@ Writing rules:
   describe what a taste "means"; say "Person 1 matches via Barbie (ranks it 1 of 30)".
 - Name venues that were left out and whose rank kept them out, the group's common ground, and any taste
   that was not recognized.
+- Never print coordinates or internal scores; describe the meeting area by neighborhood or the venue address.
 """
 
 
@@ -74,6 +75,7 @@ class MeetSpotAgent(BaseAgent):
     # 工具集合
     available_tools: ToolCollection = Field(default=None)
     map_provider: str = "amap"  # "google" 时工具走 Google Maps（英文 / 海外场景）
+    language: str = "zh"
 
     # 当前工具调用
     tool_calls: List[Any] = Field(default_factory=list)
@@ -82,6 +84,8 @@ class MeetSpotAgent(BaseAgent):
     geocode_results: List[Dict] = Field(default_factory=list)
     center_point: Optional[Dict] = None
     search_results: List[Dict] = Field(default_factory=list)
+    taste_ranking: Optional[Dict] = None
+    tool_trace: List[Dict] = Field(default_factory=list)  # 每次工具调用：名字 + 是否成功，给前端展示
 
     class Config:
         arbitrary_types_allowed = True
@@ -179,7 +183,8 @@ class MeetSpotAgent(BaseAgent):
             # 纯文本消息（可能是最终回复）
             self.memory.add_message(Message.assistant_message(content))
             # 如果没有工具调用且有内容，可能是最终回复
-            if "推荐" in content and len(content) > 100:
+            # 英文回答里没有"推荐"二字，不加语言判断会一直跑到 max_steps
+            if self.language == "en" or ("推荐" in content and len(content) > 100):
                 return False  # 结束循环
 
         return bool(self.tool_calls) or bool(content)
@@ -211,6 +216,7 @@ class MeetSpotAgent(BaseAgent):
 
                 # 保存中间结果
                 self._save_intermediate_result(tool_name, result, args)
+                self.tool_trace.append({"tool": tool_name, "ok": not getattr(result, "error", None)})
 
                 # 将工具结果添加到记忆
                 result_str = str(result)
@@ -234,6 +240,7 @@ class MeetSpotAgent(BaseAgent):
                     name=tool_name
                 ))
                 results.append(f"{tool_name}: 失败 - {str(e)}")
+                self.tool_trace.append({"tool": tool_name, "ok": False})
 
         return " | ".join(results)
 
@@ -267,6 +274,9 @@ class MeetSpotAgent(BaseAgent):
                 places = data.get("places", [])
                 self.search_results.extend(places)
 
+            elif tool_name == "group_taste_rank" and data:
+                self.taste_ranking = data
+
         except Exception as e:
             logger.debug(f"保存中间结果时出错: {e}")
 
@@ -296,6 +306,8 @@ class MeetSpotAgent(BaseAgent):
         self.geocode_results = []
         self.center_point = None
         self.search_results = []
+        self.taste_ranking = None
+        self.tool_trace = []
         self.current_step = 0
         self.state = AgentState.IDLE
         self.memory.clear()
@@ -382,6 +394,8 @@ class MeetSpotAgent(BaseAgent):
             "geocode_results": self.geocode_results,
             "center_point": self.center_point,
             "search_results": self.search_results[:10],  # 限制返回数量
+            "taste_ranking": self.taste_ranking,
+            "tool_trace": self.tool_trace,
             "steps_executed": self.current_step,
             "raw_output": raw_result
         }
@@ -399,6 +413,7 @@ def create_meetspot_agent(language: str = "zh") -> MeetSpotAgent:
         # next_step_prompt 每一步都会追加，留中文的话模型会跟着最后一条消息改用中文回答
         return MeetSpotAgent(
             map_provider=provider,
+            language="en",
             system_prompt=SYSTEM_PROMPT_EN,
             next_step_prompt="Continue with the next step, or if all tool calls are done, "
             "write the final recommendation in English.",
