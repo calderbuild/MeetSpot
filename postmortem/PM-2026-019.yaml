@@ -1,0 +1,35 @@
+id: PM-2026-019
+created_at: '2026-10-03T10:23:36.941005+00:00'
+source_commit: b835187
+severity: medium
+title: 'English results page shows Google wording, no raw '
+description: 'The English path runs on Google Maps, but the results page still said
+
+  ''Powered by Amap'', suggested Amap or Baidu for navigation, and printed the
+
+  midpoint as raw coordinates. Distance lines lost their spaces (''about1.0 kmfrom'')
+
+  because the flex li split the text into separate items; I wrapped it in a'
+root_cause: See commit body for details
+triggers:
+  files:
+  - app/tool/meetspot_recommender.py
+  - locales/en.json
+  functions: []
+  patterns: []
+  keywords:
+  - general
+fix_pattern:
+  approach: English results page shows Google wording, no raw coordinates, spaced
+    distances (#93)
+  key_changes:
+  - English results page shows Google wording, no raw coordinates, spaced distances
+    (#93)
+verification:
+- Review related code changes
+related:
+  files_changed:
+  - app/tool/meetspot_recommender.py
+  - locales/en.json
+tags:
+- general
