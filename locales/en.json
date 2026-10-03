@@ -420,7 +420,7 @@
   "result.transport.title": "Travel & Parking Tips",
   "result.transport.routes": "Getting There",
   "result.transport.smart": "Smart Travel Suggestions",
-  "result.transport.center_near": "The midpoint is near <span class=\"center-coords\">{lng:.6f}, {lat:.6f}</span>.",
+  "result.transport.center_near": "The fair midpoint is the marker on the map above. Distance from each starting point:",
   "result.transport.distance_item": "<strong>{name}</strong>: about <span class=\"distance\">{distance:.1f} km</span> from the midpoint",
   "result.place.rating_label": "Rating",
   "result.place.no_rating": "No rating yet",
@@ -436,7 +436,7 @@
   "result.empty.title": "No recommended {venues} found",
   "result.empty.desc_line1": "We couldn't find any matching {venues} in the selected area.",
   "result.empty.desc_line2": "Try expanding the radius or adjusting your keywords.",
-  "result.footer.text": "© {year} {topic} - Smart {noun} recommendation service | Powered by Amap",
+  "result.footer.text": "© {year} {topic} - Smart {noun} recommendation service | Map data: Google Maps",
 
   "compare.hero_title": "3 Ways to Pick a Meeting Spot",
   "compare.hero_desc": "Group chat, one person decides, or let an algorithm figure it out?",

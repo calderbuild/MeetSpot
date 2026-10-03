@@ -2704,7 +2704,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         """生成默认交通建议（兜底逻辑）"""
         language = self._normalize_language(language)
         if language == "en":
-            return """<li><i class='bx bx-check'></i>Use Amap or Baidu Maps for turn-by-turn navigation</li>
+            return """<li><i class='bx bx-check'></i>Use Google Maps or Apple Maps for turn-by-turn directions</li>
                         <li><i class='bx bx-check'></i>Leave about 30 minutes earlier during peak hours</li>
                         <li><i class='bx bx-check'></i>Some venues may offer parking, so it is worth confirming in advance</li>
                         <li><i class='bx bx-check'></i>If using public transit, check nearby metro and bus stops first</li>"""
@@ -3300,7 +3300,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                 )
             )
             location_distance_html += (
-                f"<li><i class='bx bx-map'></i>{distance_line}</li>"
+                f"<li><i class='bx bx-map'></i><span>{distance_line}</span></li>"
             )
 
         # LLM 动态生成交通与停车建议 (带超时保护)
@@ -4562,7 +4562,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             self._result_text(
                 language,
                 "result.transport.center_near",
-                'The midpoint is near <span class="center-coords">{lng:.6f}, {lat:.6f}</span>.',
+                "The fair midpoint is the marker on the map above. Distance from each starting point:",
                 lng=center_point[0],
                 lat=center_point[1],
             )
@@ -4601,7 +4601,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             self._result_text(
                 language,
                 "result.footer.text",
-                "© {year} {topic} - Smart {noun} recommendation service | Powered by Amap",
+                "© {year} {topic} - Smart {noun} recommendation service | Map data: Google Maps",
                 year=datetime.now().year,
                 topic=cfg["topic"],
                 noun=cfg["noun_singular"],
