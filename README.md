@@ -16,6 +16,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Build Status](https://github.com/calderbuild/MeetSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/calderbuild/MeetSpot/actions)
 
+**Qloo Agentic Hackathon 2026:** [group taste fairness](#group-taste-fairness-with-qloo) · [try the New York demo group](https://meetspot-irq2.onrender.com/public/meetspot_finder.html?lang=en)
+
 **RevenueCat Shipaton 2026:** [demo video (1:48)](https://youtu.be/_y6peCnn-8w) · [Devpost](https://devpost.com/software/meetspot-for-macos) · [macOS app + RevenueCat](#macos-app--revenuecat)
 
 [English](README.md) | [简体中文](README_ZH.md)
@@ -38,6 +40,46 @@ Most location tools return results near *you*. MeetSpot calculates the **geograp
 <div align="center">
 <img src="docs/show1-en.png" alt="MeetSpot Interface" width="85%"/>
 </div>
+
+---
+
+## Group Taste Fairness with Qloo
+
+Picking a place for a group usually means somebody gets dragged somewhere they would never choose. MeetSpot already finds a fair *location* for everyone; since 2026-09-30 it also finds a fair *place*, using each person's own taste.
+
+Each person lists a few things they love (artists, movies, shows, brands, books). MeetSpot resolves them to Qloo entities, has Qloo score the same set of nearby venues once **per person**, and ranks venues by the **least-satisfied person** (maximin over each person's percentile), not the group average. A venue that two people love and the third would hate is left out, and the page says who would have been unhappy and why.
+
+```mermaid
+flowchart LR
+    A[Addresses + tastes per person] --> B[Qloo /search: resolve each taste]
+    A --> C[Fair center + real commute check]
+    B --> D[Qloo heatmap per person: min per cell]
+    D --> C
+    C --> E[Qloo insights: 30 candidate venues near the center]
+    E --> F[Qloo insights per person on the same 30, with explainability]
+    F --> G[Percentile per person, rank by the worst-off person]
+    B --> H[Qloo analysis/compare: shared taste tags]
+    G --> I[Results page + MeetSpot agent tool group_taste_rank]
+    H --> I
+```
+
+**How Qloo is used**
+
+| Qloo capability | What MeetSpot does with it |
+|---|---|
+| `/search` | Turns "Taylor Swift, Barbie" into entities and shows each person what their taste was recognized as |
+| `/v2/insights` place + `filter.location` + venue tag | Candidate restaurants, cafes or bars around the fair center |
+| `filter.results.entities` + `signal.interests.entities` | Scores the *same* candidates once per person, so people can be compared |
+| `feature.explainability` | "Person 1 matches via Barbie": the reason comes from Qloo's data, not from an LLM |
+| `filter.type=urn:heatmap` | One taste heatmap per person; the cell-wise minimum picks between commute-fair centers and shades the map |
+| `/v2/analysis/compare` | "What you have in common" for the group |
+| `filter.price_level.max` | Budget filter mapped from the existing price range field |
+
+**What the agent does.** `MeetSpotAgent` (a ReAct agent over DeepSeek) gets a new tool, `group_taste_rank`. Given a group with tastes it geocodes everyone, computes the fair center, calls the tool, and explains its pick person by person using only what the tools returned. On the results page, **Ask the agent** runs it on the same group and shows each tool call it made.
+
+**What changed for the hackathon** (all after 2026-09-30): the Qloo client (`app/tool/qloo_client.py`), per-person maximin ranking and taste heatmap in the recommender, the agent tool and English agent mode, per-person taste inputs with a New York demo group, the taste card / fit bars / left-out venues on the results page, and the Ask the agent card. Requests without tastes behave exactly as before.
+
+**Try it:** open the [finder](https://meetspot-irq2.onrender.com/public/meetspot_finder.html?lang=en), click **Try a demo group in New York**, then **Find Fair Midpoint**. Taste searches are not counted against the free daily limit during judging.
 
 ---
 
@@ -207,6 +249,17 @@ Known limitation: the app user id is anonymous and device-local. Anyone who lear
 }
 ```
 
+Optional `tastes` (one string per location, English path only) turns on Qloo group taste ranking:
+
+```json
+{
+  "locations": ["Times Square, New York", "Union Square, New York", "Grand Central Terminal, New York"],
+  "keywords": "restaurant",
+  "tastes": ["Taylor Swift, Barbie", "Metallica, John Wick", "Bad Bunny, Trader Joe's"],
+  "language": "en"
+}
+```
+
 **Response:**
 ```json
 {
@@ -223,7 +276,7 @@ Known limitation: the app user id is anonymous and device-local. Anyone who lear
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/find_meetspot_agent` | POST | Force Agent Mode (LLM reasoning) |
+| `/api/find_meetspot_agent` | POST | Force Agent Mode (LLM reasoning); with `tastes` it calls Qloo through `group_taste_rank` and returns `taste_ranking` + `tool_trace` |
 | `/api/ai_chat` | POST | AI customer service chat |
 | `/health` | GET | System health check |
 | `/docs` | GET | Interactive API documentation |
