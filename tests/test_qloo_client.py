@@ -225,12 +225,13 @@ def test_to_poi_matches_amap_shape():
             "name": "Eataly",
             "location": {"lat": 40.742, "lon": -73.99},
             "properties": {"address": "200 5th Ave", "business_rating": 4.5, "price_level": 2},
-            "tags": [{"name": "Italian"}],
+            "tags": [{"name": "Italian"}, {"name": "Outdoor seating"}],
         }
     )
     assert poi["location"] == "-73.99,40.742"
     assert poi["biz_ext"] == {"rating": "4.5", "cost": "$$"}
     assert poi["_qloo_entity_id"] == "E1"
+    assert poi["tag"] == "Italian;Outdoor seating"
 
 
 def _fake_get_factory():

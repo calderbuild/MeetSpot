@@ -3547,7 +3547,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
                     center: { lat: c.lat, lng: c.lng },
                     radius: 90,
                     strokeWeight: 0,
-                    fillColor: '#7C3AED',
+                    fillColor: '#06D6A0',
                     fillOpacity: 0.08 + 0.3 * c.heat,
                     clickable: false,
                     map: map
@@ -3860,6 +3860,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         .map-legend {{ position: absolute; bottom: 15px; left: 15px; background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 100; }}
         .legend-item {{ display: flex; align-items: center; margin-bottom: 8px; }}
         .legend-color {{ width: 20px; height: 20px; margin-right: 10px; border-radius: 50%; }}
+        .legend-taste {{ background: rgba(6, 214, 160, 0.35); transform: scale(0.6); }}
         .legend-center {{ background-color: var(--brand-secondary, #06D6A0); }}  /* 薄荷绿 - 中心点 */
         .legend-location {{ background-color: var(--brand-primary, #0A4D68); }}  /* 深海蓝 - 参与地点 */
         .legend-place {{ background-color: var(--brand-accent, #FF6B35); }}  /* 日落橙 - 推荐场所 */ 
@@ -4146,7 +4147,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
 
         /* AI Algorithm Box */
         .taste-card .taste-person {{ display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }}
-        .taste-chip {{ background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.2); border-radius: 999px; padding: 3px 10px; font-size: 0.9rem; }}
+        .taste-chip {{ background: rgba(10, 77, 104, 0.06); border: 1px solid rgba(10, 77, 104, 0.18); border-radius: 999px; padding: 3px 10px; font-size: 0.9rem; }}
         .taste-chip em {{ font-style: normal; color: #6B7280; margin-left: 6px; font-size: 0.8rem; }}
         .taste-muted {{ color: #6B7280; font-size: 0.85rem; }}
         .taste-note {{ margin: 10px 0 0; color: #374151; }}
@@ -4154,9 +4155,10 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         .taste-excluded i {{ margin-right: 6px; }}
         .taste-powered {{ font-size: 0.8rem; font-weight: 500; color: #6B7280; margin-left: 8px; }}
         .taste-fit {{ margin: 0 0 12px; display: grid; gap: 4px; }}
-        .taste-fit-row {{ display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 8px; font-size: 0.85rem; }}
+        .taste-fit-row {{ display: grid; grid-template-columns: 60px 56px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 0.85rem; }}
+        .taste-fit-pct {{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
         .taste-fit-bar {{ height: 6px; border-radius: 3px; background: #E5E7EB; overflow: hidden; }}
-        .taste-fit-bar span {{ display: block; height: 100%; background: #7C3AED; }}
+        .taste-fit-bar span {{ display: block; height: 100%; background: #0A4D68; }}
         .taste-because {{ color: #6B7280; }}
         .ai-algo-box {{ background: white; border-radius: 12px; padding: 16px; margin: 12px 0; border: 1px solid rgba(10, 77, 104, 0.1); }}
         .ai-algo-formula {{ display: flex; align-items: center; gap: 12px; padding: 12px; background: linear-gradient(135deg, rgba(10, 77, 104, 0.05) 0%, rgba(6, 214, 160, 0.05) 100%); border-radius: 8px; }}
@@ -4442,7 +4444,11 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         }</span></div>
                     <div class="legend-item"><div class="legend-color legend-place"></div><span>{
             cfg["map_legend"]
-        }</span></div>
+        }</span></div>{
+            '<div class="legend-item"><div class="legend-color legend-taste"></div><span>Shared taste (Qloo)</span></div>'
+            if heat_cells
+            else ""
+        }
                 </div>
             </div>
         </div>
@@ -4710,6 +4716,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         rows = []
         for p in taste["people"]:
             pct = round(p["pct"] * 100)
+            rank = pct_to_rank(p["pct"], taste["pool"])
             because = (
                 f" <span class='taste-because'>· {html.escape(p['because']['name'])}</span>"
                 if p.get("because")
@@ -4718,9 +4725,9 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             rows.append(
                 f"<div class='taste-fit-row'><span class='taste-fit-name'>{html.escape(p['name'])}</span>"
                 f"<span class='taste-fit-bar'><span style='width:{pct}%'></span></span>"
-                f"<span class='taste-fit-pct'>{pct}%{because}</span></div>"
+                f"<span class='taste-fit-pct'>#{rank}/{taste['pool']}{because}</span></div>"
             )
-        return f"<div class='taste-fit' title='Taste fit per person (Qloo)'>{''.join(rows)}</div>"
+        return f"<div class='taste-fit' title='Where each person ranks this place among nearby options (Qloo)'>{''.join(rows)}</div>"
 
     @staticmethod
     def _top_heat_cells(
@@ -4786,7 +4793,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
             )
         if fair_heat:
             blocks.append(
-                "<p class='taste-note'>Purple shading on the map marks blocks where "
+                "<p class='taste-note'>Green shading on the map marks blocks where "
                 "everyone's tastes overlap.</p>"
             )
         return (

@@ -197,7 +197,7 @@ def to_poi(entity: Dict[str, Any]) -> Dict[str, Any]:
         "address": props.get("address", ""),
         "tel": props.get("phone", "") or "",
         "type": ";".join(tags[:3]),
-        "tag": ",".join(tags[:6]),
+        "tag": ";".join(tags[:6]),  # 结果卡按 ";" 拆成标签
         "biz_ext": {
             "rating": f"{float(rating):.1f}" if rating is not None else "",
             "cost": "$" * int(price_level) if price_level else "",

@@ -150,6 +150,8 @@ def test_ranked_places_follow_taste_rank_not_rule_score(monkeypatch):
     reason = captured["places"][0]["_recommendation_reason"]
     assert "Person 1 via Barbie" in reason
     assert "nobody ranks it below #7 of 30" in reason  # fair_pct 0.8 -> 第 7 名
+    fit = CafeRecommender._render_taste_fit(captured["places"][0])
+    assert "#4/30" in fit  # Person 1 pct 0.9 -> 第 4 名，和推荐理由用同一套名次
 
 
 def test_no_tastes_keeps_original_flow(monkeypatch):
