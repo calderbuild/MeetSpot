@@ -4,6 +4,7 @@
 """
 
 import json
+import os
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field
@@ -13,6 +14,7 @@ from app.agent.tools import (
     CalculateCenterTool,
     GeocodeTool,
     GenerateRecommendationTool,
+    GroupTasteTool,
     SearchPOITool,
 )
 from app.logger import logger
@@ -27,11 +29,36 @@ SYSTEM_PROMPT = """你是 MeetSpot 智能会面助手。
 2. calculate_center(coordinates, keywords)：计算公平中心
 3. search_poi(center_lng, center_lat, keywords, radius)：搜索附近场所
 4. generate_recommendation(...)：生成最终推荐
+5. group_taste_rank(center, participants, keywords)：参与者给了口味时，用 Qloo 按"最不满意的人"给中心点附近的场所排序
 
 流程：先 geocode 所有地址，再 calculate_center，再 search_poi，最后 generate_recommendation。
 
 输出要求：中文；推荐 3-5 个场所，说明距离、评分与推荐理由；考虑特殊需求（停车、安静、商务等）。
 失败处理：地址解析失败时给出具体提示；搜索无结果时调整关键词或扩大半径。
+
+参与者给了口味时：calculate_center 之后调用 group_taste_rank，推荐以它的排序为准（不再调用 search_poi /
+generate_recommendation），逐个说明每个人是因为自己的哪样口味会喜欢，并说明被排除的店为什么被排除。
+任务用英文提出时，用英文回答。
+"""
+
+SYSTEM_PROMPT_EN = """You are MeetSpot, an assistant that finds a fair place for a group to meet.
+
+Tools:
+1. geocode(address): address to coordinates
+2. calculate_center(coordinates, keywords): fair meeting center
+3. search_poi(center_lng, center_lat, keywords, radius): nearby venues
+4. generate_recommendation(...): rank venues without taste data
+5. group_taste_rank(center, participants, keywords): rank nearby venues by the whole group's taste (Qloo),
+   ordered by the least-satisfied person
+
+When participants give tastes, call group_taste_rank after calculate_center and follow its order.
+
+Writing rules:
+- Answer in English and start directly with the recommendation, no preamble about tools or steps.
+- Use only facts returned by the tools. Do not invent venue descriptions, vibes, views or menus, and do not
+  describe what a taste "means"; say "Person 1 matches via Barbie (ranks it 1 of 30)".
+- Name venues that were left out and whose rank kept them out, the group's common ground, and any taste
+  that was not recognized.
 """
 
 
@@ -51,6 +78,7 @@ class MeetSpotAgent(BaseAgent):
 
     # 工具集合
     available_tools: ToolCollection = Field(default=None)
+    map_provider: str = "amap"  # "google" 时工具走 Google Maps（英文 / 海外场景）
 
     # 当前工具调用
     tool_calls: List[Any] = Field(default_factory=list)
@@ -68,11 +96,13 @@ class MeetSpotAgent(BaseAgent):
         super().__init__(**data)
         # 初始化工具集合
         if self.available_tools is None:
+            provider = self.map_provider
             self.available_tools = ToolCollection(
-                GeocodeTool(),
-                CalculateCenterTool(),
-                SearchPOITool(),
-                GenerateRecommendationTool()
+                GeocodeTool(map_provider=provider),
+                CalculateCenterTool(map_provider=provider),
+                SearchPOITool(map_provider=provider),
+                GenerateRecommendationTool(map_provider=provider),
+                GroupTasteTool(),
             )
 
     async def step(self) -> str:
@@ -247,7 +277,9 @@ class MeetSpotAgent(BaseAgent):
         self,
         locations: List[str],
         keywords: str = "咖啡馆",
-        requirements: str = ""
+        requirements: str = "",
+        tastes: Optional[List[str]] = None,
+        language: str = "zh",
     ) -> Dict:
         """执行推荐任务
 
@@ -257,6 +289,8 @@ class MeetSpotAgent(BaseAgent):
             locations: 参与者位置列表
             keywords: 搜索关键词（场所类型）
             requirements: 用户特殊需求
+            tastes: 每人口味文本（与 locations 平行，可选）；有值时 agent 会调用 group_taste_rank
+            language: "en" 时任务和回答用英文
 
         Returns:
             包含推荐结果的字典
@@ -268,6 +302,11 @@ class MeetSpotAgent(BaseAgent):
         self.current_step = 0
         self.state = AgentState.IDLE
         self.memory.clear()
+
+        if language == "en":
+            task = self._english_task(locations, keywords, requirements, tastes)
+            result = await self.run(task)
+            return self._format_result(result)
 
         # 构建任务描述
         locations_str = "、".join(locations)
@@ -290,6 +329,39 @@ class MeetSpotAgent(BaseAgent):
 
         # 格式化返回结果
         return self._format_result(result)
+
+    @staticmethod
+    def _english_task(
+        locations: List[str],
+        keywords: str,
+        requirements: str,
+        tastes: Optional[List[str]],
+    ) -> str:
+        tastes = tastes or []
+        lines = []
+        for i, loc in enumerate(locations):
+            taste = (tastes[i] if i < len(tastes) else "") or ""
+            lines.append(
+                f"- Person {i + 1}: at {loc}; likes: {taste.strip() or 'no preference given'}"
+            )
+        has_tastes = any((t or "").strip() for t in tastes)
+        steps = (
+            "1. geocode every location\n"
+            "2. calculate_center with all coordinates\n"
+            "3. group_taste_rank with the center, each person's name and tastes, and the venue type\n"
+            "4. Recommend the top 3 venues in its order. For each, say which of each person's tastes "
+            "makes it a fit and their rank of it. Then name any venue that was left out and whose "
+            "rank kept it out. Mention what the group has in common, and any taste that was not recognized."
+            if has_tastes
+            else "1. geocode every location\n2. calculate_center\n3. search_poi\n4. generate_recommendation"
+        )
+        return (
+            "Find a fair place for this group to meet.\n\n"
+            "Participants:\n" + "\n".join(lines) + "\n\n"
+            f"Venue type: {keywords}\n"
+            f"Other requirements: {requirements or 'none'}\n\n"
+            f"Steps:\n{steps}\n\nAnswer in English."
+        )
 
     def _format_result(self, raw_result: str) -> Dict:
         """格式化最终结果
@@ -319,10 +391,19 @@ class MeetSpotAgent(BaseAgent):
 
 
 # 创建默认 Agent 实例的工厂函数
-def create_meetspot_agent() -> MeetSpotAgent:
+def create_meetspot_agent(language: str = "zh") -> MeetSpotAgent:
     """创建 MeetSpotAgent 实例
 
     Returns:
         配置好的 MeetSpotAgent 实例
     """
-    return MeetSpotAgent()
+    provider = "google" if language == "en" and os.getenv("GOOGLE_MAPS_API_KEY") else "amap"
+    if language == "en":
+        # next_step_prompt 每一步都会追加，留中文的话模型会跟着最后一条消息改用中文回答
+        return MeetSpotAgent(
+            map_provider=provider,
+            system_prompt=SYSTEM_PROMPT_EN,
+            next_step_prompt="Continue with the next step, or if all tool calls are done, "
+            "write the final recommendation in English.",
+        )
+    return MeetSpotAgent(map_provider=provider)

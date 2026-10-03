@@ -1182,13 +1182,16 @@ async def find_meetspot_agent(request: MeetSpotRequest):
             raise HTTPException(status_code=500, detail="高德地图API密钥未配置")
 
         print("🔧 [Agent] 初始化 MeetSpotAgent...")
-        agent = create_meetspot_agent()
+        lang = request.language if request.language in ("zh", "en") else "zh"
+        agent = create_meetspot_agent(lang)
 
         print("🚀 [Agent] 开始执行推荐任务...")
         result = await agent.recommend(
             locations=request.locations,
             keywords=request.keywords or "咖啡馆",
             requirements=request.user_requirements or "",
+            tastes=request.tastes,
+            language=lang,
         )
 
         processing_time = time.time() - start_time
