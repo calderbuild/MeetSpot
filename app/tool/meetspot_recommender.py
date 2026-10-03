@@ -62,6 +62,10 @@ def _get_llm():
     return _llm_instance
 
 
+# 价格区间 -> Qloo price_level 上限（1-4）；high 不设上限
+PRICE_LEVEL_MAX = {"economy": 1, "mid": 2}
+
+
 class CafeRecommender(BaseTool):
     """场所推荐工具，基于多个地点计算最佳会面位置并推荐周边场所"""
 
@@ -108,8 +112,6 @@ class CafeRecommender(BaseTool):
     geocode_cache: Dict[str, Dict] = Field(default_factory=dict)
     poi_cache: Dict[str, List] = Field(default_factory=dict)
     GEOCODE_CACHE_MAX: int = 30  # 路演模式：减少到30个地址
-    # 价格区间 -> Qloo price_level 上限（1-4）；high 不设上限
-    _PRICE_LEVEL_MAX = {"economy": 1, "mid": 2}
     POI_CACHE_MAX: int = 15  # 路演模式：减少到15个POI搜索结果
 
     # ========== 品牌特征知识库 ==========
@@ -883,11 +885,14 @@ class CafeRecommender(BaseTool):
             # 也会短路返回 None，但这里提前按 provider 拦截，避免高德请求白白多打一轮
             # 3x3 网格候选的 POI 搜索（曾在联调时触发高德 QPS 限流）
             people = await self._resolve_group_tastes(locations, tastes)
-            fair_heat: Dict[str, Dict] = {}
-            if people:
-                fair_heat = await qloo_group_heat(
-                    self._calculate_center_point(coordinates), people
+            # 热力只依赖几何中心，和通勤核验（Google Routes）并发跑
+            heat_task = (
+                asyncio.ensure_future(
+                    qloo_group_heat(self._calculate_center_point(coordinates), people)
                 )
+                if people
+                else None
+            )
 
             center_evaluation: Optional[Dict] = None
             if (
@@ -905,6 +910,7 @@ class CafeRecommender(BaseTool):
                 )
             else:
                 center_point = self._calculate_center_point(coordinates)
+            fair_heat: Dict[str, Dict] = await heat_task if heat_task else {}
             if fair_heat and center_evaluation:
                 center_point = self._prefer_taste_heat(
                     center_evaluation.get("commute_check"), fair_heat, center_point
@@ -916,7 +922,7 @@ class CafeRecommender(BaseTool):
                     center_point,
                     keywords,
                     people,
-                    price_level_max=self._PRICE_LEVEL_MAX.get(price_range),
+                    price_level_max=PRICE_LEVEL_MAX.get(price_range),
                 )
 
             # 处理多个关键词的搜索
@@ -4691,7 +4697,6 @@ Return exactly 3 travel and parking suggestions as a JSON array:
         best_i, best = max(accepted, key=lambda ia: ia[1]["taste_heat"] or -1.0)
         commute_check["winner_index"] = best_i
         commute_check["winner_point"] = best["point"]
-        commute_check["taste_pick"] = True
         return best["point"]
 
     @staticmethod

@@ -82,13 +82,17 @@ def pct_to_rank(pct: float, pool: int) -> int:
     return round((1 - pct) * (pool - 1)) + 1
 
 
+def _common_keys(by_person: Dict[str, Dict]) -> set:
+    return set.intersection(*(set(v) for v in by_person.values()))
+
+
 def maximin_order(pct_by_person: Dict[str, Dict[str, float]]) -> List[str]:
     """按"最不满意的人的分位数"降序排，平均分位数做平局裁决。
 
     只排所有人都有分数的候选（某人的打分接口漏掉一家店时，那家店不参与排序）。
     """
     people = list(pct_by_person)
-    common = set.intersection(*(set(pct_by_person[p]) for p in people))
+    common = _common_keys(pct_by_person)
 
     def key(cid: str) -> Tuple[float, float]:
         vals = [pct_by_person[p][cid] for p in people]
@@ -99,7 +103,7 @@ def maximin_order(pct_by_person: Dict[str, Dict[str, float]]) -> List[str]:
 
 def mean_order(pct_by_person: Dict[str, Dict[str, float]]) -> List[str]:
     people = list(pct_by_person)
-    common = set.intersection(*(set(pct_by_person[p]) for p in people))
+    common = _common_keys(pct_by_person)
     return sorted(common, key=lambda c: -sum(pct_by_person[p][c] for p in people))
 
 
@@ -154,7 +158,7 @@ def min_heat(heat_by_person: Dict[str, Dict[str, Dict[str, Any]]]) -> Dict[str, 
     只保留所有人都有数据的格子；返回 {geohash: {"heat", "lat", "lng"}}。
     """
     people = list(heat_by_person)
-    common = set.intersection(*(set(heat_by_person[p]) for p in people))
+    common = _common_keys(heat_by_person)
     out = {}
     for gh in common:
         cell = heat_by_person[people[0]][gh]
@@ -203,8 +207,6 @@ def to_poi(entity: Dict[str, Any]) -> Dict[str, Any]:
             "cost": "$" * int(price_level) if price_level else "",
         },
         "photos": [],
-        "_qloo_entity_id": entity.get("entity_id", ""),
-        "_qloo_popularity": entity.get("popularity", 0),
     }
 
 

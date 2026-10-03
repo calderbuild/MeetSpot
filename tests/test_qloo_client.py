@@ -230,7 +230,7 @@ def test_to_poi_matches_amap_shape():
     )
     assert poi["location"] == "-73.99,40.742"
     assert poi["biz_ext"] == {"rating": "4.5", "cost": "$$"}
-    assert poi["_qloo_entity_id"] == "E1"
+    assert poi["id"] == "E1"
     assert poi["tag"] == "Italian;Outdoor seating"
 
 
