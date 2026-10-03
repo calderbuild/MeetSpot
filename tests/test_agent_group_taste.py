@@ -129,7 +129,7 @@ def test_english_text_reply_ends_the_agent_loop(monkeypatch):
     async def fake_ask_tool(**kwargs):
         return SimpleNamespace(tool_calls=[], content="Go to The Press Lounge: nobody ranks it below #2.")
 
-    monkeypatch.setattr(agent.llm, "ask_tool", fake_ask_tool)
+    monkeypatch.setattr(agent, "llm", SimpleNamespace(ask_tool=fake_ask_tool))  # CI 没有 LLM key
     assert asyncio.run(agent.think()) is False
 
 
