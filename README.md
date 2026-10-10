@@ -261,7 +261,7 @@ Known limitation: the app user id is anonymous and device-local. Anyone who lear
 
 ## Free Tier and Pricing
 
-The live web app gives each visitor (tracked by IP) one free search a day. After that, searches use credits bought through the existing web payment flow (302.ai checkout, `api/routers/payment.py`). Self-hosted instances have no limit unless you configure one (`FREE_DAILY_LIMIT`).
+The live web app gives each visitor (tracked by IP) one free search a day. After that, searches use credits bought through the existing web payment flow (302.ai checkout, `api/routers/payment.py`). Self-hosted instances use the same default (`FREE_DAILY_LIMIT=1`); set `FREE_DAILY_LIMIT=0` to turn the limit off.
 
 ---
 

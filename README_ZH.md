@@ -170,7 +170,7 @@ MeetSpot 有一个为 RevenueCat Shipaton 2026 做的 macOS 桌面版（Electron
 
 ## 免费额度与收费
 
-线上网页版每位访客（按 IP 计）每天可免费搜索一次，之后通过网页支付流程（302.ai 收银台，`api/routers/payment.py`）购买次数。自己部署的实例默认不限次数，除非配置 `FREE_DAILY_LIMIT`。
+线上网页版每位访客（按 IP 计）每天可免费搜索一次，之后通过网页支付流程（302.ai 收银台，`api/routers/payment.py`）购买次数。自己部署的实例默认同样是每天 1 次（`FREE_DAILY_LIMIT=1`），设为 `0` 即可关闭限制。
 
 ---
 
