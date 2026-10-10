@@ -15,6 +15,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Build Status](https://github.com/calderbuild/MeetSpot/actions/workflows/ci.yml/badge.svg)](https://github.com/calderbuild/MeetSpot/actions)
+[![GitHub stars](https://img.shields.io/github/stars/calderbuild/MeetSpot?style=social)](https://github.com/calderbuild/MeetSpot)
 
 **Qloo Agentic Hackathon 2026:** [group taste fairness](#group-taste-fairness-with-qloo) · [try the New York demo group](https://meetspot-irq2.onrender.com/public/meetspot_finder.html?lang=en)
 
@@ -40,6 +41,16 @@ Most location tools return results near *you*. MeetSpot calculates the **geograp
 <div align="center">
 <img src="docs/show1-en.png" alt="MeetSpot Interface" width="85%"/>
 </div>
+
+---
+
+## What's New
+
+| When | What | Context |
+|------|------|---------|
+| 2026-10 | **Group taste fairness**: each person lists what they like, Qloo scores the same venues once per person, and venues are ranked by the least-satisfied person ([details](#group-taste-fairness-with-qloo), PR #92) | Qloo Agentic Hackathon 2026 |
+| 2026-10 | **macOS app + RevenueCat paywall**: Electron desktop build with a server-verified `meetspot_pro` entitlement, running against the RevenueCat Test Store ([details](#macos-app--revenuecat), PR #89, #90) | RevenueCat Shipaton 2026 (results on 2026-10-20) |
+| 2026-09 | **Real commute-time fairness**: when users set a max commute per person, candidate centers are checked against real travel times from Google Routes and rejected if anyone goes over ([details](#real-commute-time-fairness), PR #84) | AI Builders Hackathon 2026 |
 
 ---
 
@@ -83,6 +94,14 @@ flowchart LR
 
 ---
 
+## Real Commute-Time Fairness
+
+A geometric midpoint can still be unfair: one person may have a direct train while another needs two transfers. On the international (Google Maps) path, each participant can set a **max commute** in minutes. MeetSpot then takes several candidate centers, asks Google Routes (`computeRouteMatrix`) for each person's real travel time to each one, and keeps the candidate that breaks no one's limit. If every candidate breaks some limit, it picks the one with the smallest total overage, and treats an unreachable leg as the worst case. The results page shows which candidates were accepted or rejected and why.
+
+Requests without commute limits, and the Amap (China) path, behave exactly as before. Code: `app/tool/google_directions_client.py` and `_verify_commute_fairness` in `app/tool/meetspot_recommender.py`.
+
+---
+
 ## Agent Architecture
 
 MeetSpot is an **AI Agent** - it makes autonomous decisions based on request complexity, not just executes searches.
@@ -100,7 +119,7 @@ MeetSpot is an **AI Agent** - it makes autonomous decisions based on request com
               ▼                    │                    ▼
     ┌─────────────────┐            │          ┌─────────────────┐
     │    Rule Mode    │            │          │   Agent Mode    │
-    │   (2-4 sec)     │            │          │   (8-15 sec)    │
+    │  Rules + LLM    │            │          │   ReAct agent   │
     │  Deterministic  │            │          │  LLM-Enhanced   │
     └────────┬────────┘            │          └────────┬────────┘
              │                     │                   │
@@ -122,14 +141,17 @@ MeetSpot is an **AI Agent** - it makes autonomous decisions based on request com
 
 The Agent autonomously decides which processing mode to use:
 
-| Factor | Score | Example |
-|--------|-------|---------|
-| Location count | +10/location | 4 locations = 40 pts |
-| Complex keywords | +15 | "quiet business cafe with private rooms" |
-| Special requirements | +10 | "parking, wheelchair accessible, WiFi" |
+| Factor | Score |
+|--------|-------|
+| Locations | 3 locations +15, 4 or more +30 |
+| Venue types in `keywords` | 2 types +12, 3 or more +25 |
+| Special requirements | 2 matched +15, 3 or more +25, or +20 for a long free-text description (over 50 characters) |
+| Filters | +5 each for `min_rating`, `max_distance` under 10 km, `price_range` |
 
-- **Score < 40**: Rule Mode (fast, deterministic, pattern-matched)
-- **Score >= 40**: Agent Mode (LLM reasoning, semantic understanding)
+- **Score < 40**: Rule Mode (deterministic rules, faster)
+- **Score >= 40**: Agent Mode (LLM reasoning, semantic understanding). If the agent times out or errors, the request falls back to Rule Mode.
+
+The scoring lives in `assess_request_complexity` in `api/index.py`.
 
 ### Agent Mode Scoring
 
@@ -147,7 +169,7 @@ The LLM analyzes semantic fit between venues and requirements, then blends with 
 | **Center Calc** | Fair point calculation | Spherical geometry for accuracy |
 | **POI Search** | Venue discovery | Concurrent async search, auto-fallback |
 | **Ranking** | Multi-factor scoring | Base(30) + Popularity(20) + Distance(25) + Scenario(15) + Requirements(10) |
-| **HTML Gen** | Interactive map | Amap JS API integration |
+| **HTML Gen** | Interactive map | Amap JS API (China) or Google Maps JS API (international) |
 
 ---
 
@@ -172,7 +194,9 @@ Open http://127.0.0.1:8000
 
 ## macOS App + RevenueCat
 
-MeetSpot also ships as a macOS desktop app (Electron, in `desktop/`). Each device gets one free search a day. In the macOS app, a **MeetSpot Pro** purchase through RevenueCat removes that limit.
+MeetSpot has a macOS desktop build (Electron, in `desktop/`) built for RevenueCat Shipaton 2026. The free tier is one search a day; a **MeetSpot Pro** entitlement through RevenueCat removes that limit.
+
+Status: the purchase flow works end to end against the **RevenueCat Test Store** only. The app is not on any store and does not take real payments yet; you run it from source.
 
 <div align="center">
 <img src="docs/shipaton/macos-app.jpg" alt="MeetSpot running as a macOS app" width="52%"/>
@@ -232,6 +256,12 @@ RevenueCat setup: create a project (it comes with a Test Store), an entitlement 
 To make a test purchase, run one search (free), then run a second one. The paywall appears. Pick the product and choose the successful-purchase option in the Test Store dialog. The search reruns and goes through, and the customer shows `meetspot_pro` active in the RevenueCat dashboard.
 
 Known limitation: the app user id is anonymous and device-local. Anyone who learns that id could reuse its entitlement. The production fix is to tie the id to a MeetSpot account (`app/auth`). Without the header or the RevenueCat keys, MeetSpot behaves exactly as before, and the web build keeps its existing payment flow.
+
+---
+
+## Free Tier and Pricing
+
+The live web app gives each visitor (tracked by IP) one free search a day. After that, searches use credits bought through the existing web payment flow (302.ai checkout, `api/routers/payment.py`). Self-hosted instances use the same default (`FREE_DAILY_LIMIT=1`); set `FREE_DAILY_LIMIT=0` to turn the limit off.
 
 ---
 
@@ -318,7 +348,7 @@ Optional `tastes` (one string per location, English path only) turns on Qloo gro
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript, Boxicons |
 | **Maps** | Amap (Gaode) for China + Google Maps Platform for international (auto-routed by language) |
 | **AI** | DeepSeek (default `deepseek-flash`) via OpenAI-compatible API |
-| **Deploy** | Render, Railway, Docker, Vercel |
+| **Deploy** | Docker (the live demo runs on Render) |
 
 ### Docker Quick Start
 
@@ -363,7 +393,7 @@ ruff check . && flake8 . --select=E9,F63,F7,F82
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -379,7 +409,7 @@ Contributions are welcome! Please:
 <tr>
 <td>
 
-**Email:** Johnrobertdestiny@gmail.com
+**Email:** johnrobertdestiny@gmail.com
 
 **GitHub:** [Issues](https://github.com/calderbuild/MeetSpot/issues)
 
@@ -411,11 +441,11 @@ Special thanks to [AIGC Link](https://xhslink.com/m/80ngts127cA) for the promoti
 
 ---
 
-## GOAI 2026 Roadmap
+## Roadmap
 
-- Preliminary (by Aug 16): 500-word intro and a 12-page deck, positioned as a multi-person offline collaboration decision agent in local life services
-- Semi-finals (Aug 25 - Sep 3): stability fixes, Agent loop upgrades (intent classification, tool traces, confidence and quality gates), enterprise meeting planning mode, and a benchmark suite
-- Finals (Sep 22): live demo, explainable reasoning showcase, and open-source ecosystem narrative
+- Tie the RevenueCat app user id to a MeetSpot account so a Pro entitlement cannot be reused from another device
+- Enterprise meeting planning mode (team offsites, external meetings with special requirements)
+- A benchmark suite for recommendation quality
 
 ---
 
