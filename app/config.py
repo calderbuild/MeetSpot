@@ -100,7 +100,7 @@ class Config:
                 # 创建默认配置
                 default_config = {
                     "llm": {
-                        "model": "gpt-3.5-turbo",
+                        "model": "",
                         "api_key": "",
                         "base_url": "",
                         "max_tokens": 4096,
@@ -121,7 +121,7 @@ class Config:
             print(f"Failed to load config file, using defaults: {e}")
             return {
                 "llm": {
-                    "model": "gpt-3.5-turbo",
+                    "model": "",
                     "api_key": "",
                     "base_url": "",
                     "max_tokens": 4096,
