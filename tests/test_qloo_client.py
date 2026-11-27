@@ -197,6 +197,19 @@ def test_heat_at_looks_up_cell_by_coordinate():
         ("cocktail bar", VENUE_TAGS["bar"]),
         ("restaurant", VENUE_TAGS["restaurant"]),
         ("", VENUE_TAGS["restaurant"]),
+        # whole words only: "steakhouse" contains "tea", "barbecue" contains "bar"
+        ("steakhouse", VENUE_TAGS["restaurant"]),
+        ("Steak restaurant", VENUE_TAGS["restaurant"]),
+        ("barbecue", VENUE_TAGS["restaurant"]),
+        ("team dinner", VENUE_TAGS["restaurant"]),
+        ("Teahouse", VENUE_TAGS["cafe"]),
+        ("bubble tea", VENUE_TAGS["cafe"]),
+        ("Cafés", VENUE_TAGS["cafe"]),
+        ("coffeeshop", VENUE_TAGS["cafe"]),
+        ("茶馆", VENUE_TAGS["cafe"]),
+        ("wine bars", VENUE_TAGS["bar"]),
+        ("sushi bar", VENUE_TAGS["bar"]),
+        ("酒吧", VENUE_TAGS["bar"]),
     ],
 )
 def test_venue_tag_for(keywords, tag):
