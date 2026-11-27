@@ -29,6 +29,8 @@ from app.tool.qloo_client import (
     resolve_people,
 )
 
+EARTH_RADIUS_M = 6371008.8  # 地球平均半径（米）
+
 # LLM 智能评分（延迟导入以避免循环依赖）
 _llm_instance = None
 
@@ -3026,11 +3028,17 @@ Return exactly 3 travel and parking suggestions as a JSON array:
     def _calculate_distance(
         self, point1: Tuple[float, float], point2: Tuple[float, float]
     ) -> float:
+        """两点间的球面距离（米），Haversine 公式。坐标为 (lng, lat)。"""
         lng1, lat1 = point1
         lng2, lat2 = point2
-        x = (lng2 - lng1) * 85000
-        y = (lat2 - lat1) * 111000
-        return math.sqrt(x * x + y * y)
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        d_phi = phi2 - phi1
+        d_lambda = math.radians(lng2 - lng1)
+        a = (
+            math.sin(d_phi / 2) ** 2
+            + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        )
+        return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(min(1.0, a)))
 
     def _cleanup_old_html_files(self, directory: str, max_files: int = 50):
         """清理旧的 HTML 文件，保留最新的 max_files 个"""
