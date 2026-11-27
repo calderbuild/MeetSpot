@@ -5,6 +5,7 @@ API 文档: https://302ai.apifox.cn/376945253e0
 """
 
 import os
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -214,7 +215,10 @@ async def payment_success(request: Request):
 
     checkout_id = request.query_params.get("checkout_id", "")
     base_url = str(request.base_url).rstrip("/")
-    redirect_url = f"{base_url}/public/meetspot_finder.html?payment=success&checkout_id={checkout_id}"
+    redirect_url = (
+        f"{base_url}/public/meetspot_finder.html"
+        f"?payment=success&checkout_id={quote(checkout_id, safe='')}"
+    )
     return RedirectResponse(url=redirect_url)
 
 

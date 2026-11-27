@@ -4139,7 +4139,9 @@
         const poll = async () => {
           attempts++;
           try {
-            const resp = await fetch(`/api/payment/status/${checkoutId}`);
+            const resp = await fetch(
+              `/api/payment/status/${encodeURIComponent(checkoutId)}`,
+            );
             if (!resp.ok)
               throw new Error(
                 _currentLang === "en" ? "Query failed" : "查询失败",
