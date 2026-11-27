@@ -3836,7 +3836,7 @@
                 const rem = parseInt(
                   document.getElementById("psFreeRemaining").textContent,
                 );
-                if (rem === 0) {
+                if (rem === 0 && !_paymentState.freeUnlimited) {
                   showInfo(_t("finder.info_quota_used"), "");
                 }
               });
@@ -3952,7 +3952,12 @@
       // ========== Payment System ==========
 
       // Payment state fallback keeps UI clear when status API is temporarily unavailable.
-      let _paymentState = { freeRemaining: 1, freeLimit: 1, balance: 0 };
+      let _paymentState = {
+        freeRemaining: 1,
+        freeLimit: 1,
+        freeUnlimited: false,
+        balance: 0,
+      };
 
       async function refreshPaymentStatus() {
         try {
@@ -3966,6 +3971,18 @@
           ]);
 
           if (freeRes) {
+            // FREE_DAILY_LIMIT=0 on the server: searches are not counted, so
+            // "0/0" must not be read as "no free searches left"
+            _paymentState.freeUnlimited = freeRes.unlimited === true;
+            if (_paymentState.freeUnlimited) {
+              document
+                .getElementById("psFreeRemaining")
+                .closest(".payment-status__item").style.display = "none";
+              const sep = document.querySelector(
+                "#paymentStatus .payment-status__sep",
+              );
+              if (sep) sep.style.display = "none";
+            }
             _paymentState.freeRemaining = freeRes.remaining;
             _paymentState.freeLimit = freeRes.daily_limit;
             document.getElementById("psFreeRemaining").textContent =
@@ -3983,6 +4000,7 @@
           const buyLink = document.getElementById("psBuyLink");
           if (
             !IS_MACOS_APP &&
+            !_paymentState.freeUnlimited &&
             _paymentState.freeRemaining === 0 &&
             _paymentState.balance === 0
           ) {
@@ -4010,6 +4028,7 @@
         if (!btn || !btnText) return;
         if (
           !IS_MACOS_APP &&
+          !_paymentState.freeUnlimited &&
           _paymentState.freeRemaining === 0 &&
           _paymentState.balance === 0
         ) {

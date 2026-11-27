@@ -254,7 +254,11 @@ async def get_balance(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/free-remaining", response_model=FreeRemainingResponse)
 async def get_free_remaining(request: Request, db: AsyncSession = Depends(get_db)):
-    """查询今日剩余免费次数。"""
+    """查询今日剩余免费次数。FREE_DAILY_LIMIT <= 0 表示不限次数。"""
+    if FREE_DAILY_LIMIT <= 0:
+        return FreeRemainingResponse(
+            remaining=0, daily_limit=0, used_today=0, unlimited=True
+        )
     client_ip = _get_client_ip(request)
     used = await payment_crud.get_free_usage_today(db, client_ip)
     remaining = max(0, FREE_DAILY_LIMIT - used)

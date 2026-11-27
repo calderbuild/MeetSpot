@@ -99,3 +99,4 @@ class FreeRemainingResponse(BaseModel):
     remaining: int
     daily_limit: int
     used_today: int
+    unlimited: bool = False
