@@ -11,6 +11,7 @@
 
 import asyncio
 import os
+import re
 from itertools import combinations
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -28,8 +29,11 @@ VENUE_TAGS = {
     "cafe": "urn:tag:category:place:cafe",
     "bar": "urn:tag:category:place:bar",
 }
-_CAFE_WORDS = ("cafe", "café", "coffee", "tea", "咖啡", "茶")
-_BAR_WORDS = ("bar", "pub", "cocktail", "wine", "beer", "酒吧", "酒")
+# 英文按整词匹配：按子串匹配时 "steakhouse" 含 "tea"、"barbecue" 含 "bar"，会搜错场馆类型
+_CAFE_RE = re.compile(
+    r"\b(?:caf[eé]s?|coffee(?:house|shop)?s?|tea(?:house|room|shop)?s?)\b|咖啡|茶"
+)
+_BAR_RE = re.compile(r"\b(?:bars?|pubs?|cocktails?|wines?|beers?)\b|酒吧|酒")
 
 # 口味解析只搜文化类实体；不限类型时 "sushi" 会搜成专辑、"Taylor Swift" 先命中 person
 TASTE_TYPES = ",".join(
@@ -51,9 +55,9 @@ def _resolve_api_key(api_key: Optional[str] = None) -> str:
 def venue_tag_for(keywords: str) -> str:
     """把 MeetSpot 的场馆关键词映射成 Qloo 场馆 tag，默认餐厅。"""
     text = (keywords or "").lower()
-    if any(w in text for w in _CAFE_WORDS):
+    if _CAFE_RE.search(text):
         return VENUE_TAGS["cafe"]
-    if any(w in text for w in _BAR_WORDS):
+    if _BAR_RE.search(text):
         return VENUE_TAGS["bar"]
     return VENUE_TAGS["restaurant"]
 
