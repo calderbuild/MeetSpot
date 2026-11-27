@@ -9,6 +9,19 @@ from __future__ import annotations
 from typing import Dict
 
 
+def clip_meta(text: str, limit: int) -> str:
+    """把 Meta 文本截到 limit 个字符以内, 不把英文单词截成两半."""
+    if len(text) <= limit:
+        return text
+    cut = text[: limit - 1]
+    if not text[limit - 1].isspace():
+        space = cut.rfind(" ")
+        # 中文文本很少有空格, 只在空格离截断点不远时才回退到它
+        if space >= limit - 25:
+            cut = cut[:space]
+    return cut.rstrip(" ,;:.-—") + "…"
+
+
 class SEOContentGenerator:
     """封装SEO内容生成逻辑."""
 
@@ -92,8 +105,8 @@ class SEOContentGenerator:
             keywords = "MeetSpot,聚会地点推荐,中点计算"
 
         return {
-            "title": title[:60],
-            "description": description[:155],
+            "title": clip_meta(title, 60),
+            "description": clip_meta(description, 155),
             "keywords": keywords,
         }
 
@@ -200,7 +213,7 @@ class SEOContentGenerator:
                     "Step-by-step guide to plan a fair meetup with MeetSpot.",
                 ),
                 "totalTime": data.get("total_time", "PT15M"),
-                "inLanguage": "zh-CN",
+                "inLanguage": "en" if data.get("lang") == "en" else "zh-CN",
                 "step": [
                     {
                         "@type": "HowToStep",
@@ -481,7 +494,7 @@ class SEOContentGenerator:
                 <section class="cta-section">
                     <h2>{_t("city.cta_title")}</h2>
                     <p>{_t("city.cta_desc")}</p>
-                    <a href="/public/meetspot_finder.html" class="cta-button" data-track="cta_click" data-track-label="city_{city_data.get("slug", "unknown")}">{_t("city.cta_btn")}</a>
+                    <a href="/public/meetspot_finder.html?lang={lang}" class="cta-button" data-track="cta_click" data-track-label="city_{city_data.get("slug", "unknown")}">{_t("city.cta_btn")}</a>
                 </section>""",
         }
 

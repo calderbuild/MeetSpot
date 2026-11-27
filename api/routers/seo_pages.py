@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from api.services.seo_content import clip_meta
 from api.services.seo_content import seo_content_generator as seo_generator
 from app.i18n import get_translations
 
@@ -134,8 +135,8 @@ def _render_homepage(request: Request, lang: str):
         "pages/home.html",
         {
             **_common_context(request, lang),
-            "meta_title": meta_tags["title"][:60],
-            "meta_description": meta_tags["description"][:155],
+            "meta_title": clip_meta(meta_tags["title"], 60),
+            "meta_description": clip_meta(meta_tags["description"], 155),
             "meta_keywords": meta_tags["keywords"],
             "canonical_url": canonical,
             "schema_jsonld": schema_list,
@@ -212,8 +213,8 @@ def _render_city_page(request: Request, city_slug: str, lang: str):
         "pages/city.html",
         {
             **_common_context(request, lang),
-            "meta_title": meta_tags["title"][:60],
-            "meta_description": meta_tags["description"][:155],
+            "meta_title": clip_meta(meta_tags["title"], 60),
+            "meta_description": clip_meta(meta_tags["description"], 155),
             "meta_keywords": meta_tags["keywords"],
             "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
@@ -264,8 +265,8 @@ def _render_about(request: Request, lang: str):
         "pages/about.html",
         {
             **_common_context(request, lang),
-            "meta_title": meta_tags["title"][:60],
-            "meta_description": meta_tags["description"][:155],
+            "meta_title": clip_meta(meta_tags["title"], 60),
+            "meta_description": clip_meta(meta_tags["description"], 155),
             "meta_keywords": meta_tags["keywords"],
             "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
@@ -306,6 +307,7 @@ def _render_how_it_works(request: Request, lang: str):
             "name": t.get("how.hero_title", "How It Works"),
             "description": t.get("how.hero_desc", ""),
             "total_time": "PT1M",
+            "lang": lang,
             "steps": [
                 {
                     "name": t.get("how.step1_title", ""),
@@ -355,8 +357,8 @@ def _render_how_it_works(request: Request, lang: str):
         "pages/how_it_works.html",
         {
             **_common_context(request, lang),
-            "meta_title": meta_tags["title"][:60],
-            "meta_description": meta_tags["description"][:155],
+            "meta_title": clip_meta(meta_tags["title"], 60),
+            "meta_description": clip_meta(meta_tags["description"], 155),
             "meta_keywords": meta_tags["keywords"],
             "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
@@ -408,8 +410,8 @@ def _render_faq(request: Request, lang: str):
         "pages/faq.html",
         {
             **_common_context(request, lang),
-            "meta_title": meta_tags["title"][:60],
-            "meta_description": meta_tags["description"][:155],
+            "meta_title": clip_meta(meta_tags["title"], 60),
+            "meta_description": clip_meta(meta_tags["description"], 155),
             "meta_keywords": meta_tags["keywords"],
             "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
@@ -488,8 +490,8 @@ def _render_compare(request: Request, lang: str):
         "pages/compare.html",
         {
             **_common_context(request, lang),
-            "meta_title": meta_tags["title"][:60],
-            "meta_description": meta_tags["description"][:155],
+            "meta_title": clip_meta(meta_tags["title"], 60),
+            "meta_description": clip_meta(meta_tags["description"], 155),
             "meta_keywords": meta_tags["keywords"],
             "canonical_url": f"{BASE_URL}{prefix}{path}",
             "schema_jsonld": schema_list,
