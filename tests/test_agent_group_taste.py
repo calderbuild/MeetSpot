@@ -135,18 +135,23 @@ def test_english_text_reply_ends_the_agent_loop(monkeypatch):
 
 def test_taste_requests_skip_the_free_limit_during_judging(monkeypatch):
     import api.index as index
-    from datetime import date
+    from datetime import date, timedelta
+
+    def pin_today(day: date) -> None:
+        class Pinned(date):
+            @classmethod
+            def today(cls):
+                return day
+
+        monkeypatch.setattr(index, "date", Pinned)
 
     taste = MeetSpotRequest(locations=["a", "b"], tastes=["Barbie", ""])
     plain = MeetSpotRequest(locations=["a", "b"])
+
+    pin_today(index.QLOO_JUDGING_ENDS - timedelta(days=1))
     assert index._judging_exempt(taste) and not index._judging_exempt(plain)
 
-    class After(date):
-        @classmethod
-        def today(cls):
-            return date(2026, 11, 17)
-
-    monkeypatch.setattr(index, "date", After)
+    pin_today(index.QLOO_JUDGING_ENDS)
     assert not index._judging_exempt(taste)
 
 
