@@ -3666,7 +3666,19 @@
             }
           });
 
-          locations = [...new Set(locations)];
+          // Drop a repeated address together with its coordinates, budget and
+          // taste: the four arrays are sent only while they have the same length
+          const seenLocations = new Set();
+          const isFirst = locations.map((loc) => {
+            if (seenLocations.has(loc)) return false;
+            seenLocations.add(loc);
+            return true;
+          });
+          const firstOnly = (items) => items.filter((_, i) => isFirst[i]);
+          locations = firstOnly(locations);
+          coordsArray = firstOnly(coordsArray);
+          commuteBudgetsArray = firstOnly(commuteBudgetsArray);
+          tastesArray = firstOnly(tastesArray);
 
           if (locations.length < 2) {
             showError(_t("finder.error_too_few"), _t("finder.error_too_few"));
