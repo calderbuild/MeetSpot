@@ -2137,7 +2137,32 @@
     <script>
       // i18n stub - full implementation at end of body
       var _translations = {};
-      var _currentLang = "zh";
+
+      /**
+       * The page language: URL > cookie > browser, English unless the browser
+       * asks for Chinese (same default as the server-rendered pages).
+       * Decided once, here, because it also picks the map SDK (Google for en,
+       * Amap for zh) and the `language` sent with the search; the three must agree.
+       */
+      function detectLang() {
+        const path = window.location.pathname.toLowerCase();
+        if (path.startsWith("/en")) return "en";
+        if (path.startsWith("/zh")) return "zh";
+        const urlLang = new URLSearchParams(window.location.search).get("lang");
+        if (urlLang === "en" || urlLang === "zh") {
+          document.cookie = `lang=${urlLang};path=/;max-age=${365 * 86400};SameSite=Lax`;
+          return urlLang;
+        }
+        const match = document.cookie.match(/(?:^|;\s*)lang=([^;]*)/);
+        if (match) {
+          const lang = match[1].trim();
+          if (lang === "en" || lang === "zh") return lang;
+        }
+        const browserLang = navigator.language || navigator.userLanguage || "";
+        return browserLang.toLowerCase().startsWith("zh") ? "zh" : "en";
+      }
+
+      var _currentLang = detectLang();
       var _i18nReady = null;
       function _t(key) {
         return (_translations && _translations[key]) || key;
@@ -2976,16 +3001,9 @@
       let autocompleteInstances = {}; // Store Autocomplete instances for cleanup
 
       // ========== Map Provider Detection ==========
-      // /en/ 路径前缀 或 ?lang=en 查询参数 → Google Maps；其他 → 高德
-      // 三层检测保持与后端 detect_language 一致：path / query / Accept-Language
-      const _urlParams = new URLSearchParams(window.location.search);
-      const _navLang = (navigator.language || "").toLowerCase();
-      const IS_INTERNATIONAL =
-        window.location.pathname.toLowerCase().startsWith("/en") ||
-        _urlParams.get("lang") === "en" ||
-        (!_urlParams.get("lang") &&
-          !window.location.pathname.toLowerCase().startsWith("/zh") &&
-          !_navLang.startsWith("zh"));
+      // 英文 → Google Maps；中文 → 高德。跟随页面语言（见 detectLang），
+      // 否则会出现中文界面配 Google 地址补全、请求却走高德的情况
+      const IS_INTERNATIONAL = _currentLang === "en";
       // 通勤时间公平性核验（真实 Google Routes API）目前只在国际/Google 路径提供，
       // 高德路径没有对应能力；输入框默认隐藏（见 .commute-input-wrap CSS），这里显式打开
       if (IS_INTERNATIONAL) {
@@ -4307,29 +4325,6 @@
       };
 
       /**
-       * Detect language: cookie > browser > default 'zh'
-       */
-      function detectLang() {
-        // 1. Check URL parameter (from SSR pages linking here)
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlLang = urlParams.get("lang");
-        if (urlLang === "en" || urlLang === "zh") {
-          document.cookie = `lang=${urlLang};path=/;max-age=${365 * 86400}`;
-          return urlLang;
-        }
-        // 2. Check cookie
-        const match = document.cookie.match(/(?:^|;\s*)lang=([^;]*)/);
-        if (match) {
-          const lang = match[1].trim();
-          if (lang === "en" || lang === "zh") return lang;
-        }
-        // 3. Check browser language
-        const browserLang = navigator.language || navigator.userLanguage || "";
-        if (browserLang.startsWith("en")) return "en";
-        return "zh";
-      }
-
-      /**
        * Apply translations to DOM elements
        */
       function applyTranslations() {
@@ -4407,7 +4402,17 @@
       }
 
       /**
-       * Toggle language and reload translations
+       * This page's URL in another language.
+       */
+      function finderUrlForLang(lang) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("lang", lang);
+        return url.toString();
+      }
+
+      /**
+       * Switch language. The page is reloaded with ?lang= so the map SDK and
+       * the commute / taste fields follow the language, not only the text.
        */
       function toggleFinderLang() {
         const newLang = _currentLang === "zh" ? "en" : "zh";
@@ -4417,8 +4422,7 @@
           label: newLang,
         });
         document.cookie = `lang=${newLang};path=/;max-age=31536000;SameSite=Lax`;
-        _currentLang = newLang;
-        initI18n();
+        window.location.assign(finderUrlForLang(newLang));
       }
 
       /**
