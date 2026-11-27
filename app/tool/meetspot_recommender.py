@@ -2075,18 +2075,34 @@ class CafeRecommender(BaseTool):
         match = re.search(r"\d+(?:\.\d+)?", cost or "")
         return float(match.group()) if match else None
 
+    @staticmethod
+    def _extract_rating(place: Dict) -> float:
+        """读取场所评分，没有评分或无法解析时返回 0。
+
+        高德、Google、Qloo 的 POI 都把评分放在 biz_ext.rating（高德无评分时是 []），
+        顶层 rating 只作兼容。
+        """
+        biz_ext = place.get("biz_ext")
+        candidates = (
+            biz_ext.get("rating") if isinstance(biz_ext, dict) else None,
+            place.get("rating"),
+        )
+        for raw in candidates:
+            try:
+                rating = float(raw)
+            except (ValueError, TypeError):
+                continue
+            if rating > 0:
+                return rating
+        return 0.0
+
     def _calculate_base_score(self, place: Dict) -> Tuple[float, float]:
         """计算基础评分 (满分30分)
 
         Returns:
             (score, raw_rating): 评分和原始rating值
         """
-        biz_ext = place.get("biz_ext", {}) or {}
-        rating_str = biz_ext.get("rating", "0") or "0"
-        try:
-            rating = float(rating_str)
-        except (ValueError, TypeError):
-            rating = 0
+        rating = self._extract_rating(place)
 
         # 无评分场所使用默认3.5分
         if rating == 0:
@@ -2851,7 +2867,7 @@ Return exactly 3 travel and parking suggestions as a JSON array:
 
         # 1. 评分筛选
         if min_rating > 0:
-            places = [p for p in places if float(p.get("rating", 0) or 0) >= min_rating]
+            places = [p for p in places if self._extract_rating(p) >= min_rating]
             logger.info(f"评分筛选(>={min_rating}): {original_count} -> {len(places)}")
 
         # 2. 距离筛选

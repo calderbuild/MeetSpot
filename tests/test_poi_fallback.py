@@ -154,7 +154,6 @@ def test_rank_places_filters_by_min_rating():
             "name": "低分店",
             "location": "116.3100,39.9920",
             "address": "低分地址",
-            "rating": 4.0,
             "biz_ext": {"rating": "4.0"},
             "tag": [],
         },
@@ -162,8 +161,14 @@ def test_rank_places_filters_by_min_rating():
             "name": "高分店",
             "location": "116.3110,39.9930",
             "address": "高分地址",
-            "rating": 4.6,
             "biz_ext": {"rating": "4.6"},
+            "tag": [],
+        },
+        {
+            "name": "无评分店",
+            "location": "116.3120,39.9940",
+            "address": "无评分地址",
+            "biz_ext": {"rating": []},
             "tag": [],
         },
     ]
@@ -178,6 +183,21 @@ def test_rank_places_filters_by_min_rating():
     )
 
     assert [p["name"] for p in ranked] == ["高分店"]
+
+
+def test_extract_rating_reads_provider_shapes():
+    extract = CafeRecommender._extract_rating
+
+    assert extract({"biz_ext": {"rating": "4.6", "cost": "40"}}) == 4.6
+    # Google 路径：无评分时是空字符串
+    assert extract({"biz_ext": {"rating": "", "review_count": ""}}) == 0.0
+    # 高德：无评分时字段是 []
+    assert extract({"biz_ext": {"rating": []}}) == 0.0
+    assert extract({"biz_ext": []}) == 0.0
+    assert extract({}) == 0.0
+    # 顶层 rating 仅在 biz_ext 没有评分时兼容
+    assert extract({"rating": 4.2}) == 4.2
+    assert extract({"rating": "N/A", "biz_ext": {"rating": "3.9"}}) == 3.9
 
 
 def test_rank_places_filters_by_price_range():
