@@ -596,8 +596,9 @@ async function sendMessage() {
 
     if (!message || isTyping) return;
 
-    // Add user message
+    // Add user message; the history sent along holds earlier turns only
     addMessage(message, 'user');
+    const earlierTurns = conversationHistory.slice(-10);
     conversationHistory.push({ role: 'user', content: message });
 
     // Clear input
@@ -614,7 +615,7 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: message,
-                conversation_history: conversationHistory.slice(-10),
+                conversation_history: earlierTurns,
                 lang: '{{ lang }}'
             })
         });
@@ -650,7 +651,7 @@ function addMessage(content, type) {
     if (type === 'ai') {
         formattedContent = parseMarkdown(content);
     } else {
-        formattedContent = content.replace(/\n/g, '<br>');
+        formattedContent = escapeHtml(content).replace(/\n/g, '<br>');
     }
 
     messageDiv.innerHTML = `
@@ -662,13 +663,17 @@ function addMessage(content, type) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-// Simple markdown parser for chat messages
-function parseMarkdown(text) {
-    // Escape HTML first to prevent XSS
-    let html = text
+function escapeHtml(text) {
+    return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+// Simple markdown parser for chat messages
+function parseMarkdown(text) {
+    // Escape HTML first to prevent XSS
+    let html = escapeHtml(text);
 
     // Parse markdown patterns
     // Bold: **text** or __text__

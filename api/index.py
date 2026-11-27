@@ -715,6 +715,24 @@ async def get_preset_questions(raw_request: Request):
     return {"success": True, "questions": questions}
 
 
+def _chat_history(history: Optional[List[dict]], message: str) -> List[dict]:
+    """客服对话历史：只保留最近 10 条 user / assistant 文本轮次。
+
+    历史来自浏览器：唯一的 system 消息由服务端给出；聊天组件旧版本会把本次提问
+    也放进历史末尾，这里去掉，避免同一句话发给模型两遍。
+    """
+    turns = [
+        {"role": item["role"], "content": item["content"]}
+        for item in history or []
+        if isinstance(item, dict)
+        and item.get("role") in ("user", "assistant")
+        and isinstance(item.get("content"), str)
+    ]
+    if turns and turns[-1] == {"role": "user", "content": message}:
+        turns.pop()
+    return turns[-10:]
+
+
 @app.post("/api/ai_chat")
 async def ai_chat(request: AIChatRequest, raw_request: Request = None):
     """AI chat endpoint - bilingual."""
@@ -755,11 +773,7 @@ async def ai_chat(request: AIChatRequest, raw_request: Request = None):
             MEETSPOT_SYSTEM_PROMPT_EN if lang == "en" else MEETSPOT_SYSTEM_PROMPT
         )
         messages = [{"role": "system", "content": system_prompt}]
-
-        if request.conversation_history:
-            recent_history = request.conversation_history[-10:]
-            messages.extend(recent_history)
-
+        messages.extend(_chat_history(request.conversation_history, request.message))
         messages.append({"role": "user", "content": request.message})
 
         print(f"[AI Chat] calling LLM ({llm_model}), messages: {len(messages)}")
