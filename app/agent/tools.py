@@ -200,7 +200,7 @@ class CalculateCenterTool(BaseTool):
                 "input_count": len(coordinates),
                 "distances": distances,
                 "max_distance": max_dist,
-                "fairness_score": round(100 - (max_dist - min_dist) / 100, 1)
+                "fairness_score": max(0.0, round(100 - (max_dist - min_dist) / 100, 1))
             }
 
             # 添加智能算法的评估详情
