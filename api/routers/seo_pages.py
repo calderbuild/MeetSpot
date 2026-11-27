@@ -608,35 +608,18 @@ async def sitemap():
 async def robots_txt():
     robots = f"""# MeetSpot Robots.txt
 
+# Disallow comes first for parsers that stop at the first matching rule.
 User-agent: *
-Allow: /
 Disallow: /admin/
 Disallow: /api/
+Allow: /
 
 Sitemap: {BASE_URL}/sitemap.xml
 
-# Search engines
-User-agent: Googlebot
-Allow: /
-
-User-agent: Baiduspider
-Allow: /
-
-# AI search bots -- allow citation
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
+# Search engines (Googlebot, Baiduspider) and AI search bots (GPTBot,
+# ChatGPT-User, PerplexityBot, ClaudeBot, Google-Extended) are allowed by the
+# rules above. They get no group of their own: a crawler follows only the most
+# specific group that names it, so one would lift the Disallow rules for it.
 
 # Training-only crawlers -- block
 User-agent: CCBot
@@ -660,12 +643,12 @@ async def llms_txt():
 
 ## Key Pages
 
-- [{BASE_URL}/](Homepage): Product overview, features, city directory
-- [{BASE_URL}/public/meetspot_finder.html](App): The main tool -- enter addresses, get fair midpoint recommendations
-- [{BASE_URL}/faq](FAQ): 12 common questions about how MeetSpot works
-- [{BASE_URL}/how-it-works](Guide): 5-step AI reasoning process explained
-- [{BASE_URL}/compare](Compare): MeetSpot vs group chat vs one-person decisions
-- [{BASE_URL}/about](About): Project background, technical architecture, team
+- [Homepage]({BASE_URL}/): Product overview, features, city directory
+- [App]({BASE_URL}/public/meetspot_finder.html): The main tool -- enter addresses, get fair midpoint recommendations
+- [FAQ]({BASE_URL}/faq): 12 common questions about how MeetSpot works
+- [Guide]({BASE_URL}/how-it-works): 5-step AI reasoning process explained
+- [Compare]({BASE_URL}/compare): MeetSpot vs group chat vs one-person decisions
+- [About]({BASE_URL}/about): Project background, technical architecture, team
 
 ## How It Works
 
